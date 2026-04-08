@@ -1,0 +1,7313 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>泌尿组销售看板</title>
+<script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'PingFang SC', 'Microsoft YaHei', sans-serif;
+  background: #fff;
+  color: #1a1a2e;
+  font-size: 14px;
+}
+/* ===== 顶部标题栏 ===== */
+.header {
+  background: linear-gradient(135deg, #1565c0 0%, #0d47a1 100%);
+  padding: 16px 28px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  box-shadow: 0 2px 12px rgba(21,101,192,.35);
+}
+.header h1 { color: #fff; font-size: 22px; font-weight: 700; letter-spacing: 1px; }
+.header .meta { color: rgba(255,255,255,.85); font-size: 13px; text-align: right; line-height: 1.8; }
+.header .meta span.highlight { color: #ffd740; font-weight: 700; }
+/* ===== 数据加载区 ===== */
+.load-bar {
+  max-width: 1600px; margin: 16px auto 0; padding: 0 24px;
+  display: flex; gap: 12px; align-items: center;
+}
+.load-hint { font-size: 12px; color: #9ca3af; white-space: nowrap; }
+.load-bar label {
+  font-size: 13px; color: #1565c0; cursor: pointer;
+  padding: 5px 14px; border: 1.5px solid #1565c0;
+  border-radius: 20px; transition: all .15s; font-weight: 500;
+}
+.load-bar label:hover { background: #eff6ff; }
+.load-bar input[type="file"] { display: none; }
+.load-bar .msg { font-size: 12px; color: #10b981; font-weight: 600; }
+/* ===== 部门切换按钮 ===== */
+.dept-row {
+  background: #f8fafc;
+  border-bottom: 1px solid #e2e8f0;
+  padding: 10px 24px;
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+.dept-row .dept-label {
+  font-size: 13px;
+  color: #64748b;
+  font-weight: 600;
+  margin-right: 4px;
+}
+.dept-btn {
+  font-size: 13px;
+  padding: 5px 16px;
+  border-radius: 20px;
+  border: 1.5px solid #d1d5db;
+  background: #fff;
+  color: #374151;
+  cursor: pointer;
+  font-weight: 500;
+  transition: all .15s;
+}
+.dept-btn:hover { border-color: #1565c0; color: #1565c0; }
+.dept-btn.active {
+  background: #1565c0;
+  border-color: #1565c0;
+  color: #fff;
+}
+
+/* ===== 主体容器 ===== */
+.container { max-width: 1600px; margin: 0 auto; padding: 16px 24px 40px; }
+/* ===== KPI 区 ===== */
+.kpi-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 20px; }
+.kpi-card {
+  background: #fff; border-radius: 12px; padding: 18px 20px;
+  box-shadow: 0 2px 12px rgba(0,0,0,.08); border-left: 4px solid #1565c0; transition: transform .2s;
+}
+.kpi-card:hover { transform: translateY(-2px); }
+.kpi-card .label { color: #6b7280; font-size: 12px; margin-bottom: 6px; }
+.kpi-card .value { font-size: 26px; font-weight: 700; color: #1565c0; }
+.kpi-card .sub { font-size: 12px; color: #9ca3af; margin-top: 4px; }
+.kpi-card.green { border-left-color: #10b981; }
+.kpi-card.green .value { color: #10b981; }
+.kpi-card.orange { border-left-color: #f59e0b; }
+.kpi-card.orange .value { color: #f59e0b; }
+.kpi-card.red { border-left-color: #ef4444; }
+.kpi-card.red .value { color: #ef4444; }
+/* ===== 产品卡片 ===== */
+.section-title {
+  font-size: 15px; font-weight: 700; color: #1a1a2e;
+  margin-bottom: 12px; padding-left: 10px; border-left: 3px solid #1565c0;
+}
+.product-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 20px; }
+.product-card {
+  background: #fff; border-radius: 12px; padding: 18px 22px;
+  box-shadow: 0 2px 12px rgba(0,0,0,.08); cursor: pointer;
+  border: 2px solid transparent; transition: all .2s;
+  position: relative; overflow: hidden;
+}
+.product-card::after {
+  content: ''; position: absolute; top: 0; left: 0; right: 0; height: 4px;
+  background: #e0e7ff; transition: background .2s;
+}
+.product-card.active { border-color: #1565c0; box-shadow: 0 4px 20px rgba(21,101,192,.25); }
+.product-card.active::after { background: #1565c0; }
+.product-card:hover { box-shadow: 0 4px 18px rgba(0,0,0,.13); }
+.product-card .pname { font-size: 17px; font-weight: 700; color: #1a1a2e; margin-bottom: 8px; }
+.product-card .status-badge {
+  display: inline-block; padding: 2px 10px; border-radius: 20px;
+  font-size: 12px; font-weight: 600; margin-bottom: 10px;
+}
+.badge-achieve { background: #d1fae5; color: #065f46; }
+.badge-fail { background: #fee2e2; color: #991b1b; }
+.product-card .pstats { display: flex; gap: 24px; }
+.product-card .pstat-item .plabel { font-size: 11px; color: #9ca3af; }
+.product-card .pstat-item .pval { font-size: 20px; font-weight: 700; color: #1565c0; }
+/* ===== 大区切换 ===== */
+.filter-row { display: flex; gap: 10px; align-items: center; margin-bottom: 20px; flex-wrap: wrap; }
+.region-btn {
+  padding: 7px 20px; border-radius: 20px; border: 1.5px solid #d1d5db;
+  background: #fff; color: #374151; font-size: 13px; cursor: pointer;
+  transition: all .15s; font-weight: 500;
+}
+.region-btn:hover { background: #eff6ff; border-color: #1565c0; color: #1565c0; }
+.region-btn.active { background: #1565c0; border-color: #1565c0; color: #fff; }
+@media (max-width: 1100px) {
+  .kpi-row { grid-template-columns: 1fr 1fr; }
+  .product-row { grid-template-columns: 1fr; }
+}
+/* ===== 表格 ===== */
+.card-box {
+  background: #fff; border-radius: 12px; box-shadow: 0 2px 12px rgba(0,0,0,.08);
+  padding: 18px; overflow: hidden;
+}
+.table-wrap { overflow-x: auto; max-height: 420px; overflow-y: auto; }
+table { width: 100%; border-collapse: collapse; font-size: 13px; }
+table th {
+  background: #f8fafc; padding: 9px 10px; text-align: center; color: #4b5563;
+  font-weight: 600; cursor: pointer; position: sticky; top: 0; z-index: 1;
+  white-space: nowrap; user-select: none; border-bottom: 2px solid #e5e7eb;
+}
+table th:hover { background: #eff6ff; color: #1565c0; }
+table td { padding: 8px 10px; text-align: center; border-bottom: 1px solid #f3f4f6; white-space: nowrap; }
+table tr:hover td { background: #f0f7ff; }
+.rank-no {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 22px; height: 22px; border-radius: 50%; font-size: 12px; font-weight: 700;
+  background: #f3f4f6; color: #6b7280;
+}
+.rank-no.top1 { background: #ffd700; color: #7c5e00; }
+.rank-no.top2 { background: #c0c0c0; color: #4b5563; }
+.rank-no.top3 { background: #cd7f32; color: #fff; }
+.rate-bar { display: flex; align-items: center; gap: 6px; justify-content: center; }
+.rate-bar .bar { width: 60px; height: 6px; background: #e5e7eb; border-radius: 3px; overflow: hidden; }
+.rate-bar .fill { height: 100%; border-radius: 3px; background: linear-gradient(90deg, #1565c0, #42a5f5); transition: width .4s; }
+.yoy-pos { color: #ef4444; font-weight: 600; }
+.yoy-neg { color: #10b981; font-weight: 600; }
+/* ===== 图表 ===== */
+.chart-container { width: 100%; height: 320px; }
+.charts-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 24px; }
+@media (max-width: 900px) { .charts-grid { grid-template-columns: 1fr; } }
+/* ===== 医院进度区 ===== */
+.hospital-section {
+  background: linear-gradient(135deg, #f0f9ff 0%, #e8f5e9 100%);
+  border-radius: 16px; padding: 22px; box-shadow: 0 2px 16px rgba(0,0,0,.07);
+  border: 1px solid #e0f2fe; margin-bottom: 24px;
+}
+.hospital-section .section-title { color: #0277bd; border-left-color: #0277bd; }
+.hosp-stats-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; margin-bottom: 20px; }
+.hosp-stat-card {
+  background: #fff; border-radius: 10px; padding: 14px 16px;
+  box-shadow: 0 1px 6px rgba(0,0,0,.07); text-align: center;
+}
+.hosp-stat-card .label { font-size: 12px; color: #6b7280; margin-bottom: 4px; }
+.hosp-stat-card .value { font-size: 24px; font-weight: 700; color: #0277bd; }
+.stage-chart {
+  background: #fff; border-radius: 10px; padding: 16px;
+  box-shadow: 0 1px 6px rgba(0,0,0,.07); margin-bottom: 18px;
+}
+.stage-chart .chart-title { font-size: 13px; color: #374151; font-weight: 600; margin-bottom: 12px; }
+.hosp-table-wrap { overflow-x: auto; max-height: 360px; overflow-y: auto; }
+.hosp-filter-row { display: flex; gap: 8px; align-items: center; margin-bottom: 12px; flex-wrap: wrap; }
+.stage-filter-btn {
+  padding: 4px 12px; border-radius: 14px; border: 1px solid #b3e5fc;
+  background: #fff; color: #0277bd; font-size: 12px; cursor: pointer; transition: all .15s;
+}
+.stage-filter-btn:hover { background: #e1f5fe; }
+.stage-filter-btn.active { background: #0277bd; color: #fff; border-color: #0277bd; }
+.stage-tag {
+  display: inline-block; padding: 2px 8px; border-radius: 10px;
+  font-size: 11px; font-weight: 600;
+}
+.tag-意向客户 { background: #e0f2fe; color: #0277bd; }
+.tag-提单中 { background: #fef3c7; color: #92400e; }
+.tag-已提单 { background: #dbeafe; color: #1e40af; }
+.tag-已过会 { background: #ede9fe; color: #5b21b6; }
+.tag-已进药 { background: #d1fae5; color: #065f46; }
+.tag-临采 { background: #fce7f3; color: #9d174d; }
+.days-warn { color: #ef4444; font-weight: 600; }
+.days-ok { color: #10b981; }
+.progress-bar-wrap { background: #e5e7eb; border-radius: 6px; height: 8px; overflow: hidden; margin-top: 8px; }
+.progress-bar-fill { height: 100%; border-radius: 6px; background: linear-gradient(90deg, #1565c0, #42a5f5); transition: width .5s; }
+.sort-icon { font-size: 10px; color: #9ca3af; margin-left: 2px; }
+</style>
+</head>
+<body>
+
+<!-- ===== 顶部标题 ===== -->
+<div class="header">
+  <h1>&#x1F3E5; 泌尿组销售看板</h1>
+  <div class="meta">
+    数据更新至：<span class="highlight" id="latestDateDisplay">2026-03-31</span><br>
+    当期进度：<span class="highlight" id="timeProgressDisplay">--</span>% &nbsp;|&nbsp; 看板生成：2026-03-31
+  </div>
+</div>
+
+<!-- ===== 部门切换按钮 ===== -->
+<div class="dept-row">
+  <span class="dept-label">&#x1F3E5; 部门筛选：</span>
+  <button class="dept-btn active" data-dept="整体">整体</button>
+  <button class="dept-btn" data-dept="医院销售部">医院销售部</button>
+  <button class="dept-btn" data-dept="新营销部">新营销部</button>
+</div>
+
+<!-- ===== 数据加载入口 ===== -->
+<div class="load-bar">
+  <span class="load-hint">&#x1F4C2; 替换数据文件：</span>
+  <label for="fileInput">&#x1F4C4; 上传 JSON / CSV / Excel 文件刷新数据</label>
+  <input type="file" id="fileInput" accept=".json,.csv,.xlsx,.xls">
+  <span class="msg" id="loadMsg"></span>
+</div>
+
+<div class="container">
+
+  <!-- ===== KPI 区 ===== -->
+  <div class="kpi-row">
+    <div class="kpi-card" id="kpi-target">
+      <div class="label">年度目标金额</div>
+      <div class="value" id="kpiTarget">--</div>
+      <div class="sub">万元</div>
+    </div>
+    <div class="kpi-card green" id="kpi-actual">
+      <div class="label">已完成金额</div>
+      <div class="value" id="kpiActual">--</div>
+      <div class="sub">万元</div>
+    </div>
+    <div class="kpi-card orange" id="kpi-rate">
+      <div class="label">完成率</div>
+      <div class="value" id="kpiRate">--</div>
+      <div class="sub">vs 时间进度 <span id="kpiTimeProgress">--</span>%</div>
+    </div>
+    <div class="kpi-card" id="kpi-yoy">
+      <div class="label">同比增幅</div>
+      <div class="value" id="kpiYoy">--</div>
+      <div class="sub">vs 2025年同期</div>
+    </div>
+  </div>
+
+  <!-- ===== 产品卡片 ===== -->
+  <div class="section-title">产品切换</div>
+  <div class="product-row" id="productRow"></div>
+
+  <!-- ===== 大区切换 ===== -->
+  <div class="filter-row">
+    <span style="font-size:13px;color:#6b7280;font-weight:600;">大区筛选：</span>
+    <button class="region-btn active" data-region="全部">全部</button>
+    <button class="region-btn" data-region="华西">华西</button>
+    <button class="region-btn" data-region="华东">华东</button>
+    <button class="region-btn" data-region="华北">华北</button>
+    <button class="region-btn" data-region="华南">华南</button>
+  </div>
+
+  <!-- ===== 图表区 ===== -->
+  <div class="charts-grid">
+    <div class="card-box">
+      <div class="section-title">各地区完成金额（万元）</div>
+      <div id="barChart" class="chart-container"></div>
+    </div>
+    <div class="card-box">
+      <div class="section-title">各地区同比增幅（%）</div>
+      <div id="lineChart" class="chart-container"></div>
+    </div>
+  </div>
+
+  <!-- ===== 地区明细表格 ===== -->
+  <div class="card-box" style="margin-bottom:24px;">
+    <div class="section-title" style="margin-bottom:14px;">地区完成情况明细</div>
+    <div class="table-wrap">
+      <table id="detailTable">
+        <thead>
+          <tr>
+            <th>排名</th>
+            <th data-col="region">大区 <span class="sort-icon">&#x2195;</span></th>
+            <th data-col="area">地区 <span class="sort-icon">&#x2195;</span></th>
+            <th data-col="owner">责任人</th>
+            <th data-col="target">目标金额(万) <span class="sort-icon">&#x2195;</span></th>
+            <th data-col="actual">完成金额(万) <span class="sort-icon">&#x2195;</span></th>
+            <th>2025年(万)</th>
+            <th data-col="yoy">同比增幅 <span class="sort-icon">&#x2195;</span></th>
+            <th data-col="rate">完成率 <span class="sort-icon">&#x2195;</span></th>
+          </tr>
+        </thead>
+        <tbody id="tableBody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- ===== 萘哌地尔新开发医院进度（独立区块，始终展示萘哌地尔数据）===== -->
+  <div class="hospital-section">
+    <div class="section-title">&#x1F48A; 萘哌地尔 &middot; 新开发医院进度追踪</div>
+
+    <!-- 指标卡片 -->
+    <div class="hosp-stats-row">
+      <div class="hosp-stat-card">
+        <div class="label">总开发医院数</div>
+        <div class="value" id="hospTotal">--</div>
+      </div>
+      <div class="hosp-stat-card">
+        <div class="label">已进院成功（历史累计）</div>
+        <div class="value" id="hospSuccess">58</div>
+      </div>
+      <div class="hosp-stat-card">
+        <div class="label">进行中医院数</div>
+        <div class="value" id="hospActive">--</div>
+      </div>
+    </div>
+
+    <!-- 阶段条形图 -->
+    <div class="stage-chart">
+      <div class="chart-title">各进度阶段医院数量分布</div>
+      <div id="stageBarChart" style="height:220px;"></div>
+    </div>
+
+    <!-- 医院明细筛选 -->
+    <div class="hosp-filter-row">
+      <span style="font-size:12px;color:#0277bd;font-weight:600;">阶段筛选：</span>
+      <button class="stage-filter-btn active" data-stage="全部">全部</button>
+      <button class="stage-filter-btn" data-stage="意向客户">意向客户</button>
+      <button class="stage-filter-btn" data-stage="提单中">提单中</button>
+      <button class="stage-filter-btn" data-stage="已提单">已提单</button>
+      <button class="stage-filter-btn" data-stage="已过会">已过会</button>
+      <button class="stage-filter-btn" data-stage="已进药">已进药</button>
+      <button class="stage-filter-btn" data-stage="临采">临采</button>
+      <span style="margin-left:auto;font-size:12px;color:#9ca3af;">
+        共 <strong id="hospFilterCount">--</strong> 家医院
+      </span>
+    </div>
+    <div class="hosp-table-wrap">
+      <table id="hospTable">
+        <thead>
+          <tr>
+            <th>序号</th>
+            <th>大区</th>
+            <th>地区</th>
+            <th>医院名称</th>
+            <th>当前阶段</th>
+            <th>计划进药时间</th>
+            <th>负责人</th>
+            <th>距计划剩余天数</th>
+            <th>认定结果</th>
+          </tr>
+        </thead>
+        <tbody id="hospTableBody"></tbody>
+      </table>
+    </div>
+  </div>
+
+</div>
+
+<script>
+/**
+ * =========================================================
+ * 【统一数据加载函数 loadData(customData)】— 核心 API
+ *
+ * 传入完整数据对象，重新渲染所有图表和指标：
+ *
+ *   const newData = {
+ *     latestDate: "2026-03-31",
+ *     salesData: [
+ *       { product:"炎琥宁80mg", region:"华西", area:"重庆", owner:"张三",
+ *         target:5425.5, actual:1574.9, actual2025:1600, yoy:-1.6, rate:29.0 },
+ *       // ...更多记录
+ *     ],
+ *     hospitalData: [
+ *       { hospital:"xx医院", city:"重庆", region:"华西", stage:"已拜访",
+ *         planDate:"2026-05-01", owner:"李四", vp:"", result:"" },
+ *       // ...更多记录
+ *     ],
+ *     stageData: { "意向客户":5, "提单中":3, "已提单":2, "已过会":1, "已进药":8, "临采":1 },
+ *     successTotal: 35
+ *   };
+ *   loadData(newData);  // 一行代码，全量刷新
+ *
+ * 【salesData 字段说明】
+ *   product    : 产品名称（"炎琥宁80mg" / "萘哌地尔"）
+ *   region     : 大区（"华西" / "华东" / "华北" / "华南"）
+ *   area       : 地区/省份
+ *   owner      : 责任人
+ *   target     : 年度目标金额（万元）
+ *   actual     : 2026年已完成金额（万元）
+ *   actual2025 : 2025年同期完成金额（万元，用于同比计算）
+ *   yoy        : 同比增幅（%，可传 null 由看板自动计算）
+ *   rate       : 完成率（%，可传 null 由看板自动计算）
+ *
+ * 【hospitalData 字段说明】
+ *   hospital : 医院名称
+ *   city     : 所属城市/地区
+ *   region   : 大区
+ *   stage    : 当前阶段（"意向客户" / "提单中" / "已提单" / "已过会" / "已进药" / "临采"）
+ *   planDate : 计划进药时间（"YYYY-MM-DD"，可为 null）
+ *   owner    : 负责人（来自"萘哌地尔新开进度"表的负责人字段）
+ *   vp       : 副总（可选）
+ *   result   : 认定结果（如 "进院成功"）
+ *
+ * 【其他用法】
+ *   loadDataFromURL('./dashboard_data.json');  // 从文件 URL 加载
+ *   // 页面自带文件上传按钮，上传 JSON/CSV 后自动刷新
+ * =========================================================
+ */
+
+// ====== 初始数据（来自 dashboard_data.json）======
+var SALES_DATA    = [
+  {
+    "product": "炎琥宁80mg",
+    "region": "华北",
+    "area": "北京",
+    "owner": "卢俊",
+    "dept": "医院销售部",
+    "target": 13.0,
+    "actual": 0.0043,
+    "actual2025": 0.0,
+    "yoy": null,
+    "rate": 0.03
+  },
+  {
+    "product": "炎琥宁80mg",
+    "region": "华北",
+    "area": "河北",
+    "owner": "卢俊",
+    "dept": "医院销售部",
+    "target": 13.0,
+    "actual": 0.0,
+    "actual2025": 0.0,
+    "yoy": null,
+    "rate": 0.0
+  },
+  {
+    "product": "炎琥宁80mg",
+    "region": "华北",
+    "area": "黑龙江",
+    "owner": "卿毅",
+    "dept": "医院销售部",
+    "target": 130.0,
+    "actual": 23.5706,
+    "actual2025": 64.3728,
+    "yoy": -63.38,
+    "rate": 18.13
+  },
+  {
+    "product": "炎琥宁80mg",
+    "region": "华北",
+    "area": "吉林",
+    "owner": "卿毅",
+    "dept": "医院销售部",
+    "target": 78.0,
+    "actual": 2.13,
+    "actual2025": 53.2255,
+    "yoy": -96.0,
+    "rate": 2.73
+  },
+  {
+    "product": "炎琥宁80mg",
+    "region": "华北",
+    "area": "辽宁",
+    "owner": "卿毅",
+    "dept": "医院销售部",
+    "target": 104.0,
+    "actual": 6.1739,
+    "actual2025": 88.1362,
+    "yoy": -93.0,
+    "rate": 5.94
+  },
+  {
+    "product": "炎琥宁80mg",
+    "region": "华北",
+    "area": "内蒙古",
+    "owner": "卿毅",
+    "dept": "医院销售部",
+    "target": 52.0,
+    "actual": 2.1002,
+    "actual2025": 31.7484,
+    "yoy": -93.38,
+    "rate": 4.04
+  },
+  {
+    "product": "炎琥宁80mg",
+    "region": "华北",
+    "area": "山东",
+    "owner": "卿毅",
+    "dept": "医院销售部",
+    "target": 104.0,
+    "actual": 4.2632,
+    "actual2025": 23.4092,
+    "yoy": -81.79,
+    "rate": 4.1
+  },
+  {
+    "product": "炎琥宁80mg",
+    "region": "华北",
+    "area": "山西",
+    "owner": "卿毅",
+    "dept": "医院销售部",
+    "target": 65.0,
+    "actual": 9.2868,
+    "actual2025": 30.1987,
+    "yoy": -69.25,
+    "rate": 14.29
+  },
+  {
+    "product": "炎琥宁80mg",
+    "region": "华北",
+    "area": "天津",
+    "owner": "卢俊",
+    "dept": "医院销售部",
+    "target": 13.0,
+    "actual": 0.0341,
+    "actual2025": 0.0,
+    "yoy": null,
+    "rate": 0.26
+  },
+  {
+    "product": "炎琥宁80mg",
+    "region": "华东",
+    "area": "安徽",
+    "owner": "汪腾飞",
+    "dept": "医院销售部",
+    "target": 104.0,
+    "actual": 15.1076,
+    "actual2025": 43.2013,
+    "yoy": -65.03,
+    "rate": 14.53
+  },
+  {
+    "product": "炎琥宁80mg",
+    "region": "华东",
+    "area": "江苏",
+    "owner": "杨海波",
+    "dept": "医院销售部",
+    "target": 520.0,
+    "actual": 42.0973,
+    "actual2025": 265.9283,
+    "yoy": -84.17,
+    "rate": 8.1
+  },
+  {
+    "product": "炎琥宁80mg",
+    "region": "华东",
+    "area": "上海",
+    "owner": "高文龙",
+    "dept": "医院销售部",
+    "target": 13.0,
+    "actual": 0.0,
+    "actual2025": 0.0,
+    "yoy": null,
+    "rate": 0.0
+  },
+  {
+    "product": "炎琥宁80mg",
+    "region": "华东",
+    "area": "浙江",
+    "owner": "吴光建",
+    "dept": "医院销售部",
+    "target": 260.0,
+    "actual": 8.9149,
+    "actual2025": 401.018,
+    "yoy": -97.78,
+    "rate": 3.43
+  },
+  {
+    "product": "炎琥宁80mg",
+    "region": "华南",
+    "area": "福建",
+    "owner": "许占海",
+    "dept": "医院销售部",
+    "target": 13.0,
+    "actual": 0.0,
+    "actual2025": 0.0043,
+    "yoy": -100.0,
+    "rate": 0.0
+  },
+  {
+    "product": "炎琥宁80mg",
+    "region": "华南",
+    "area": "广东",
+    "owner": "许占海",
+    "dept": "医院销售部",
+    "target": 234.0,
+    "actual": 26.0183,
+    "actual2025": 372.0367,
+    "yoy": -93.01,
+    "rate": 11.12
+  },
+  {
+    "product": "炎琥宁80mg",
+    "region": "华南",
+    "area": "广西",
+    "owner": "罗险峰",
+    "dept": "医院销售部",
+    "target": 78.0,
+    "actual": 8.2744,
+    "actual2025": 63.1658,
+    "yoy": -86.9,
+    "rate": 10.61
+  },
+  {
+    "product": "炎琥宁80mg",
+    "region": "华南",
+    "area": "海南",
+    "owner": "许占海",
+    "dept": "医院销售部",
+    "target": 13.0,
+    "actual": 0.0,
+    "actual2025": 0.0,
+    "yoy": null,
+    "rate": 0.0
+  },
+  {
+    "product": "炎琥宁80mg",
+    "region": "华南",
+    "area": "湖南",
+    "owner": "罗险峰",
+    "dept": "医院销售部",
+    "target": 104.0,
+    "actual": 7.6126,
+    "actual2025": 47.0645,
+    "yoy": -83.83,
+    "rate": 7.32
+  },
+  {
+    "product": "炎琥宁80mg",
+    "region": "华南",
+    "area": "江西",
+    "owner": "罗险峰",
+    "dept": "医院销售部",
+    "target": 104.0,
+    "actual": 21.3773,
+    "actual2025": 142.7825,
+    "yoy": -85.03,
+    "rate": 20.56
+  },
+  {
+    "product": "炎琥宁80mg",
+    "region": "华西",
+    "area": "甘肃",
+    "owner": "耿福林",
+    "dept": "医院销售部",
+    "target": 78.0,
+    "actual": 0.0,
+    "actual2025": 8.6052,
+    "yoy": -100.0,
+    "rate": 0.0
+  },
+  {
+    "product": "炎琥宁80mg",
+    "region": "华西",
+    "area": "贵州",
+    "owner": "周辉",
+    "dept": "医院销售部",
+    "target": 520.0,
+    "actual": 97.243,
+    "actual2025": 1116.0861,
+    "yoy": -91.29,
+    "rate": 18.7
+  },
+  {
+    "product": "炎琥宁80mg",
+    "region": "华西",
+    "area": "河南",
+    "owner": "黄彩西",
+    "dept": "医院销售部",
+    "target": 78.0,
+    "actual": 4.0341,
+    "actual2025": 75.5276,
+    "yoy": -94.66,
+    "rate": 5.17
+  },
+  {
+    "product": "炎琥宁80mg",
+    "region": "华西",
+    "area": "湖北",
+    "owner": "陈辉",
+    "dept": "医院销售部",
+    "target": 260.0,
+    "actual": 27.7827,
+    "actual2025": 260.4039,
+    "yoy": -89.33,
+    "rate": 10.69
+  },
+  {
+    "product": "炎琥宁80mg",
+    "region": "华西",
+    "area": "宁夏",
+    "owner": "耿福林",
+    "dept": "医院销售部",
+    "target": 26.0,
+    "actual": 2.769,
+    "actual2025": 13.108,
+    "yoy": -78.88,
+    "rate": 10.65
+  },
+  {
+    "product": "炎琥宁80mg",
+    "region": "华西",
+    "area": "青海",
+    "owner": "耿福林",
+    "dept": "医院销售部",
+    "target": 13.0,
+    "actual": 0.6816,
+    "actual2025": 17.2134,
+    "yoy": -96.04,
+    "rate": 5.24
+  },
+  {
+    "product": "炎琥宁80mg",
+    "region": "华西",
+    "area": "陕西",
+    "owner": "耿福林",
+    "dept": "医院销售部",
+    "target": 104.0,
+    "actual": 9.3756,
+    "actual2025": 85.1659,
+    "yoy": -88.99,
+    "rate": 9.02
+  },
+  {
+    "product": "炎琥宁80mg",
+    "region": "华西",
+    "area": "四川",
+    "owner": "薛文",
+    "dept": "医院销售部",
+    "target": 156.0,
+    "actual": 24.8706,
+    "actual2025": 180.4955,
+    "yoy": -86.22,
+    "rate": 15.94
+  },
+  {
+    "product": "炎琥宁80mg",
+    "region": "华西",
+    "area": "西藏",
+    "owner": "薛文",
+    "dept": "医院销售部",
+    "target": 13.0,
+    "actual": 0.0341,
+    "actual2025": 0.0,
+    "yoy": null,
+    "rate": 0.26
+  },
+  {
+    "product": "炎琥宁80mg",
+    "region": "华西",
+    "area": "新疆",
+    "owner": "耿福林",
+    "dept": "医院销售部",
+    "target": 13.0,
+    "actual": 0.2343,
+    "actual2025": 5.7015,
+    "yoy": -95.89,
+    "rate": 1.8
+  },
+  {
+    "product": "炎琥宁80mg",
+    "region": "华西",
+    "area": "云南",
+    "owner": "周辉",
+    "dept": "医院销售部",
+    "target": 520.0,
+    "actual": 173.3799,
+    "actual2025": 831.5331,
+    "yoy": -79.15,
+    "rate": 33.34
+  },
+  {
+    "product": "炎琥宁80mg",
+    "region": "华西",
+    "area": "重庆",
+    "owner": "薛文",
+    "dept": "医院销售部",
+    "target": 624.0,
+    "actual": 109.1691,
+    "actual2025": 1350.6716,
+    "yoy": -91.92,
+    "rate": 17.5
+  },
+  {
+    "product": "萘哌地尔",
+    "region": "华东",
+    "area": "上海",
+    "owner": "高文龙",
+    "dept": "医院销售部",
+    "target": 525.0,
+    "actual": 50.769,
+    "actual2025": 41.796,
+    "yoy": 21.47,
+    "rate": 9.67
+  },
+  {
+    "product": "萘哌地尔",
+    "region": "华东",
+    "area": "浙江",
+    "owner": "吴光建",
+    "dept": "医院销售部",
+    "target": 450.0,
+    "actual": 0.0,
+    "actual2025": 0.0,
+    "yoy": null,
+    "rate": 0.0
+  },
+  {
+    "product": "萘哌地尔",
+    "region": "华东",
+    "area": "江苏",
+    "owner": "杨海波",
+    "dept": "医院销售部",
+    "target": 450.0,
+    "actual": 6.75,
+    "actual2025": 7.245,
+    "yoy": -6.83,
+    "rate": 1.5
+  },
+  {
+    "product": "萘哌地尔",
+    "region": "华东",
+    "area": "安徽",
+    "owner": "汪腾飞",
+    "dept": "医院销售部",
+    "target": 150.0,
+    "actual": 0.0,
+    "actual2025": 0.0,
+    "yoy": null,
+    "rate": 0.0
+  },
+  {
+    "product": "萘哌地尔",
+    "region": "华北",
+    "area": "辽宁",
+    "owner": "卿毅",
+    "dept": "医院销售部",
+    "target": 150.0,
+    "actual": 0.54,
+    "actual2025": 9.342,
+    "yoy": -94.22,
+    "rate": 0.36
+  },
+  {
+    "product": "萘哌地尔",
+    "region": "华北",
+    "area": "吉林",
+    "owner": "卿毅",
+    "dept": "医院销售部",
+    "target": 26.25,
+    "actual": 0.0,
+    "actual2025": 0.0,
+    "yoy": null,
+    "rate": 0.0
+  },
+  {
+    "product": "萘哌地尔",
+    "region": "华北",
+    "area": "黑龙江",
+    "owner": "卿毅",
+    "dept": "医院销售部",
+    "target": 60.0,
+    "actual": 2.6976,
+    "actual2025": 0.8273,
+    "yoy": 226.07,
+    "rate": 4.5
+  },
+  {
+    "product": "萘哌地尔",
+    "region": "华北",
+    "area": "北京",
+    "owner": "卢俊",
+    "dept": "医院销售部",
+    "target": 292.5,
+    "actual": 4.14,
+    "actual2025": 0.729,
+    "yoy": 467.9,
+    "rate": 1.42
+  },
+  {
+    "product": "萘哌地尔",
+    "region": "华北",
+    "area": "天津",
+    "owner": "卢俊",
+    "dept": "医院销售部",
+    "target": 90.0,
+    "actual": 0.0,
+    "actual2025": 0.0,
+    "yoy": null,
+    "rate": 0.0
+  },
+  {
+    "product": "萘哌地尔",
+    "region": "华北",
+    "area": "山西",
+    "owner": "卿毅",
+    "dept": "医院销售部",
+    "target": 33.75,
+    "actual": 0.0,
+    "actual2025": 0.0,
+    "yoy": null,
+    "rate": 0.0
+  },
+  {
+    "product": "萘哌地尔",
+    "region": "华北",
+    "area": "山东",
+    "owner": "卿毅",
+    "dept": "医院销售部",
+    "target": 292.5,
+    "actual": 2.4263,
+    "actual2025": 8.3204,
+    "yoy": -70.84,
+    "rate": 0.83
+  },
+  {
+    "product": "萘哌地尔",
+    "region": "华北",
+    "area": "河北",
+    "owner": "卢俊",
+    "dept": "医院销售部",
+    "target": 105.0,
+    "actual": 0.81,
+    "actual2025": 4.6117,
+    "yoy": -82.44,
+    "rate": 0.77
+  },
+  {
+    "product": "萘哌地尔",
+    "region": "华北",
+    "area": "内蒙古",
+    "owner": "卿毅",
+    "dept": "医院销售部",
+    "target": 26.25,
+    "actual": 0.0,
+    "actual2025": 0.0,
+    "yoy": null,
+    "rate": 0.0
+  },
+  {
+    "product": "萘哌地尔",
+    "region": "华南",
+    "area": "广东",
+    "owner": "许占海",
+    "dept": "医院销售部",
+    "target": 225.0,
+    "actual": 1.458,
+    "actual2025": 0.45,
+    "yoy": 224.0,
+    "rate": 0.65
+  },
+  {
+    "product": "萘哌地尔",
+    "region": "华南",
+    "area": "广西",
+    "owner": "罗险峰",
+    "dept": "医院销售部",
+    "target": 82.5,
+    "actual": 0.0,
+    "actual2025": 0.0,
+    "yoy": null,
+    "rate": 0.0
+  },
+  {
+    "product": "萘哌地尔",
+    "region": "华南",
+    "area": "福建",
+    "owner": "许占海",
+    "dept": "医院销售部",
+    "target": 37.5,
+    "actual": 0.0,
+    "actual2025": 0.0,
+    "yoy": null,
+    "rate": 0.0
+  },
+  {
+    "product": "萘哌地尔",
+    "region": "华南",
+    "area": "江西",
+    "owner": "罗险峰",
+    "dept": "医院销售部",
+    "target": 26.25,
+    "actual": 0.0,
+    "actual2025": 0.0,
+    "yoy": null,
+    "rate": 0.0
+  },
+  {
+    "product": "萘哌地尔",
+    "region": "华南",
+    "area": "湖南",
+    "owner": "罗险峰",
+    "dept": "医院销售部",
+    "target": 225.0,
+    "actual": 33.489,
+    "actual2025": 82.764,
+    "yoy": -59.54,
+    "rate": 14.88
+  },
+  {
+    "product": "萘哌地尔",
+    "region": "华西",
+    "area": "湖北",
+    "owner": "陈辉",
+    "dept": "医院销售部",
+    "target": 90.0,
+    "actual": 1.242,
+    "actual2025": 3.96,
+    "yoy": -68.64,
+    "rate": 1.38
+  },
+  {
+    "product": "萘哌地尔",
+    "region": "华西",
+    "area": "河南",
+    "owner": "黄彩西",
+    "dept": "医院销售部",
+    "target": 45.0,
+    "actual": 0.0,
+    "actual2025": 0.0,
+    "yoy": null,
+    "rate": 0.0
+  },
+  {
+    "product": "萘哌地尔",
+    "region": "华南",
+    "area": "海南",
+    "owner": "许占海",
+    "dept": "医院销售部",
+    "target": 0.0,
+    "actual": 0.0,
+    "actual2025": 0.0,
+    "yoy": null,
+    "rate": 0.0
+  },
+  {
+    "product": "萘哌地尔",
+    "region": "华西",
+    "area": "重庆",
+    "owner": "薛文",
+    "dept": "医院销售部",
+    "target": 45.0,
+    "actual": 4.068,
+    "actual2025": 6.363,
+    "yoy": -36.07,
+    "rate": 9.04
+  },
+  {
+    "product": "萘哌地尔",
+    "region": "华西",
+    "area": "云南",
+    "owner": "周辉",
+    "dept": "医院销售部",
+    "target": 45.0,
+    "actual": 0.918,
+    "actual2025": 2.772,
+    "yoy": -66.88,
+    "rate": 2.04
+  },
+  {
+    "product": "萘哌地尔",
+    "region": "华西",
+    "area": "贵州",
+    "owner": "周辉",
+    "dept": "医院销售部",
+    "target": 33.75,
+    "actual": 0.18,
+    "actual2025": 0.18,
+    "yoy": 0.0,
+    "rate": 0.53
+  },
+  {
+    "product": "萘哌地尔",
+    "region": "华西",
+    "area": "四川",
+    "owner": "薛文",
+    "dept": "医院销售部",
+    "target": 90.0,
+    "actual": 0.0,
+    "actual2025": 0.0,
+    "yoy": null,
+    "rate": 0.0
+  },
+  {
+    "product": "萘哌地尔",
+    "region": "华西",
+    "area": "西藏",
+    "owner": "薛文",
+    "dept": "医院销售部",
+    "target": 0.0,
+    "actual": 0.0,
+    "actual2025": 0.0,
+    "yoy": null,
+    "rate": 0.0
+  },
+  {
+    "product": "萘哌地尔",
+    "region": "华西",
+    "area": "陕西",
+    "owner": "耿福林",
+    "dept": "医院销售部",
+    "target": 45.0,
+    "actual": 0.0,
+    "actual2025": 0.0,
+    "yoy": null,
+    "rate": 0.0
+  },
+  {
+    "product": "萘哌地尔",
+    "region": "华西",
+    "area": "甘肃",
+    "owner": "耿福林",
+    "dept": "医院销售部",
+    "target": 82.5,
+    "actual": 0.0,
+    "actual2025": 0.0,
+    "yoy": null,
+    "rate": 0.0
+  },
+  {
+    "product": "萘哌地尔",
+    "region": "华西",
+    "area": "宁夏",
+    "owner": "耿福林",
+    "dept": "医院销售部",
+    "target": 0.0,
+    "actual": 0.0,
+    "actual2025": 0.0,
+    "yoy": null,
+    "rate": 0.0
+  },
+  {
+    "product": "萘哌地尔",
+    "region": "华西",
+    "area": "青海",
+    "owner": "耿福林",
+    "dept": "医院销售部",
+    "target": 0.0,
+    "actual": 0.0,
+    "actual2025": 0.0,
+    "yoy": null,
+    "rate": 0.0
+  },
+  {
+    "product": "萘哌地尔",
+    "region": "华西",
+    "area": "新疆",
+    "owner": "耿福林",
+    "dept": "医院销售部",
+    "target": 26.25,
+    "actual": 0.0,
+    "actual2025": 0.0,
+    "yoy": null,
+    "rate": 0.0
+  },
+  {
+    "product": "萘哌地尔",
+    "region": "新营销",
+    "area": "C端-京东",
+    "owner": "贠嘉宏",
+    "dept": "新营销部",
+    "target": 1155.0,
+    "actual": 0.0,
+    "actual2025": 0.0,
+    "yoy": null,
+    "rate": 0.0
+  },
+  {
+    "product": "萘哌地尔",
+    "region": "新营销",
+    "area": "KA",
+    "owner": "张宇航",
+    "dept": "新营销部",
+    "target": 1925.0,
+    "actual": 0.0,
+    "actual2025": 0.0,
+    "yoy": null,
+    "rate": 0.0
+  },
+  {
+    "product": "萘哌地尔",
+    "region": "新营销",
+    "area": "C端-阿里",
+    "owner": "贠嘉宏",
+    "dept": "新营销部",
+    "target": 616.0,
+    "actual": 0.0,
+    "actual2025": 0.0,
+    "yoy": null,
+    "rate": 0.0
+  },
+  {
+    "product": "萘哌地尔",
+    "region": "新营销",
+    "area": "C端-其他",
+    "owner": "贠嘉宏",
+    "dept": "新营销部",
+    "target": 154.0,
+    "actual": 0.0,
+    "actual2025": 0.0,
+    "yoy": null,
+    "rate": 0.0
+  }
+];
+var HOSP_DATA     = [
+  {
+    "hospital": "红河州滇南中心医院",
+    "city": "云南",
+    "region": "华西",
+    "stage": "提单中",
+    "planDate": "2026-12-01",
+    "owner": "高俊",
+    "vp": "周辉",
+    "result": "申报通过"
+  },
+  {
+    "hospital": "蒙自市人民医院",
+    "city": "云南",
+    "region": "华西",
+    "stage": "提单中",
+    "planDate": "2026-12-01",
+    "owner": "高俊",
+    "vp": "周辉",
+    "result": "申报通过"
+  },
+  {
+    "hospital": "文山市人民医院",
+    "city": "云南",
+    "region": "华西",
+    "stage": "提单中",
+    "planDate": "2026-12-01",
+    "owner": "高俊",
+    "vp": "周辉",
+    "result": "申报通过"
+  },
+  {
+    "hospital": "昆明医科大学第一附属医院",
+    "city": "云南",
+    "region": "华西",
+    "stage": "提单中",
+    "planDate": "2026-12-01",
+    "owner": "高俊",
+    "vp": "周辉",
+    "result": "申报通过"
+  },
+  {
+    "hospital": "玉溪市中医医院",
+    "city": "云南",
+    "region": "华西",
+    "stage": "提单中",
+    "planDate": "2026-12-01",
+    "owner": "高俊",
+    "vp": "周辉",
+    "result": "申报通过"
+  },
+  {
+    "hospital": "昆明医科大学第二附属医院",
+    "city": "云南",
+    "region": "华西",
+    "stage": "提单中",
+    "planDate": "2026-12-01",
+    "owner": "高俊",
+    "vp": "周辉",
+    "result": "申报通过"
+  },
+  {
+    "hospital": "大理大学第一附属医院",
+    "city": "云南",
+    "region": "华西",
+    "stage": "提单中",
+    "planDate": "2026-12-01",
+    "owner": "高俊",
+    "vp": "周辉",
+    "result": "申报通过"
+  },
+  {
+    "hospital": "陆良培芳医院",
+    "city": "云南",
+    "region": "华西",
+    "stage": "已进药",
+    "planDate": "2026-12-01",
+    "owner": "高俊",
+    "vp": "周辉",
+    "result": "进院成功"
+  },
+  {
+    "hospital": "弥勒佛城医院",
+    "city": "云南",
+    "region": "华西",
+    "stage": "已进药",
+    "planDate": "2026-12-01",
+    "owner": "高俊",
+    "vp": "周辉",
+    "result": "进院成功"
+  },
+  {
+    "hospital": "云南省中西医结合医院",
+    "city": "云南",
+    "region": "华西",
+    "stage": "已进药",
+    "planDate": "2026-12-01",
+    "owner": "高俊",
+    "vp": "周辉",
+    "result": "进院成功"
+  },
+  {
+    "hospital": "建水县康华医院",
+    "city": "云南",
+    "region": "华西",
+    "stage": "已进药",
+    "planDate": "2026-12-01",
+    "owner": "高俊",
+    "vp": "周辉",
+    "result": "进院成功"
+  },
+  {
+    "hospital": "楚雄彝族自治州人民医院",
+    "city": "云南",
+    "region": "华西",
+    "stage": "提单中",
+    "planDate": "2026-12-01",
+    "owner": "高俊",
+    "vp": "周辉",
+    "result": "申报通过"
+  },
+  {
+    "hospital": "富源县人民医院",
+    "city": "云南",
+    "region": "华西",
+    "stage": "提单中",
+    "planDate": "2026-12-01",
+    "owner": "高俊",
+    "vp": "周辉",
+    "result": "申报通过"
+  },
+  {
+    "hospital": "玉溪市人民医院",
+    "city": "云南",
+    "region": "华西",
+    "stage": "提单中",
+    "planDate": "2026-12-01",
+    "owner": "高俊",
+    "vp": "周辉",
+    "result": "申报通过"
+  },
+  {
+    "hospital": "瓦房店市中心医院",
+    "city": "辽宁",
+    "region": "华北",
+    "stage": "意向客户",
+    "planDate": "2026-09-01",
+    "owner": "卿毅",
+    "vp": "卿毅",
+    "result": "申报通过"
+  },
+  {
+    "hospital": "上海市闵行区梅陇社区卫生服务中心",
+    "city": "上海",
+    "region": "华东",
+    "stage": "意向客户",
+    "planDate": "2026-09-01",
+    "owner": "刘雨田",
+    "vp": "高文龙",
+    "result": "申报通过"
+  },
+  {
+    "hospital": "大连大学附属新华医院（大连市肛肠病医院）",
+    "city": "辽宁",
+    "region": "华北",
+    "stage": "意向客户",
+    "planDate": "2026-08-01",
+    "owner": "卿毅",
+    "vp": "卿毅",
+    "result": "申报通过"
+  },
+  {
+    "hospital": "大连经济技术开发区医院",
+    "city": "辽宁",
+    "region": "华北",
+    "stage": "意向客户",
+    "planDate": "2026-08-01",
+    "owner": "卿毅",
+    "vp": "卿毅",
+    "result": "申报通过"
+  },
+  {
+    "hospital": "大连市金州区第一人民医院",
+    "city": "辽宁",
+    "region": "华北",
+    "stage": "意向客户",
+    "planDate": "2026-08-01",
+    "owner": "卿毅",
+    "vp": "卿毅",
+    "result": "申报通过"
+  },
+  {
+    "hospital": "鞍钢集团公司总医院",
+    "city": "辽宁",
+    "region": "华北",
+    "stage": "意向客户",
+    "planDate": "2026-08-01",
+    "owner": "卿毅",
+    "vp": "卿毅",
+    "result": "申报通过"
+  },
+  {
+    "hospital": "中国医科大学附属第一医院",
+    "city": "辽宁",
+    "region": "华北",
+    "stage": "意向客户",
+    "planDate": "2026-08-01",
+    "owner": "卿毅",
+    "vp": "卿毅",
+    "result": "申报通过"
+  },
+  {
+    "hospital": "辽宁省人民医院",
+    "city": "辽宁",
+    "region": "华北",
+    "stage": "意向客户",
+    "planDate": "2026-08-01",
+    "owner": "卿毅",
+    "vp": "卿毅",
+    "result": "申报通过"
+  },
+  {
+    "hospital": "辽宁中医药大学附属医院",
+    "city": "辽宁",
+    "region": "华北",
+    "stage": "意向客户",
+    "planDate": "2026-08-01",
+    "owner": "卿毅",
+    "vp": "卿毅",
+    "result": "申报通过"
+  },
+  {
+    "hospital": "上海市中医药大学附属龙华医院浦东分院",
+    "city": "上海",
+    "region": "华东",
+    "stage": "提单中",
+    "planDate": "2026-08-01",
+    "owner": "刘雨田",
+    "vp": "高文龙",
+    "result": "0"
+  },
+  {
+    "hospital": "上海市杨浦区控江医院",
+    "city": "上海",
+    "region": "华东",
+    "stage": "意向客户",
+    "planDate": "2026-06-01",
+    "owner": "朱列",
+    "vp": "高文龙",
+    "result": "申报通过"
+  },
+  {
+    "hospital": "大连市第二人民医院（大连市中西医结合医院、大连市骨科医院、大连市体检中心）",
+    "city": "辽宁",
+    "region": "华北",
+    "stage": "意向客户",
+    "planDate": "2026-06-01",
+    "owner": "卿毅",
+    "vp": "卿毅",
+    "result": "申报通过"
+  },
+  {
+    "hospital": "大连市旅顺口区人民医院",
+    "city": "辽宁",
+    "region": "华北",
+    "stage": "意向客户",
+    "planDate": "2026-06-01",
+    "owner": "卿毅",
+    "vp": "卿毅",
+    "result": "申报通过"
+  },
+  {
+    "hospital": "大连市第五人民医院（大连市胸科肿瘤医院）",
+    "city": "辽宁",
+    "region": "华北",
+    "stage": "意向客户",
+    "planDate": "2026-06-01",
+    "owner": "卿毅",
+    "vp": "卿毅",
+    "result": "申报通过"
+  },
+  {
+    "hospital": "抚顺市中心医院",
+    "city": "辽宁",
+    "region": "华北",
+    "stage": "意向客户",
+    "planDate": "2026-06-01",
+    "owner": "卿毅",
+    "vp": "卿毅",
+    "result": "申报通过"
+  },
+  {
+    "hospital": "锦州医科大学附属第一医院",
+    "city": "辽宁",
+    "region": "华北",
+    "stage": "提单中",
+    "planDate": "2026-06-01",
+    "owner": "卿毅",
+    "vp": "卿毅",
+    "result": "申报通过"
+  },
+  {
+    "hospital": "朝阳市中心医院",
+    "city": "辽宁",
+    "region": "华北",
+    "stage": "意向客户",
+    "planDate": "2026-06-01",
+    "owner": "卿毅",
+    "vp": "卿毅",
+    "result": "申报通过"
+  },
+  {
+    "hospital": "中国医科大学附属第一医院大东医院（沈阳市大东区人民医院）",
+    "city": "辽宁",
+    "region": "华北",
+    "stage": "意向客户",
+    "planDate": "2026-06-01",
+    "owner": "卿毅",
+    "vp": "卿毅",
+    "result": "申报通过"
+  },
+  {
+    "hospital": "葫芦岛市第二人民医院",
+    "city": "辽宁",
+    "region": "华北",
+    "stage": "意向客户",
+    "planDate": "2026-06-01",
+    "owner": "卿毅",
+    "vp": "卿毅",
+    "result": "申报通过"
+  },
+  {
+    "hospital": "葫芦岛市中心医院",
+    "city": "辽宁",
+    "region": "华北",
+    "stage": "意向客户",
+    "planDate": "2026-06-01",
+    "owner": "卿毅",
+    "vp": "卿毅",
+    "result": "申报通过"
+  },
+  {
+    "hospital": "锦州市中心医院",
+    "city": "辽宁",
+    "region": "华北",
+    "stage": "意向客户",
+    "planDate": "2026-06-01",
+    "owner": "卿毅",
+    "vp": "卿毅",
+    "result": "申报通过"
+  },
+  {
+    "hospital": "上海交通大学医学院附属仁济医院",
+    "city": "上海",
+    "region": "华东",
+    "stage": "意向客户",
+    "planDate": "2026-06-01",
+    "owner": "朱列",
+    "vp": "高文龙",
+    "result": "申报通过"
+  },
+  {
+    "hospital": "上海市浦东新区周浦医院",
+    "city": "上海",
+    "region": "华东",
+    "stage": "意向客户",
+    "planDate": "2026-06-01",
+    "owner": "朱列",
+    "vp": "高文龙",
+    "result": "申报通过"
+  },
+  {
+    "hospital": "上海市杨浦区定海社区卫生服务中心",
+    "city": "上海",
+    "region": "华东",
+    "stage": "意向客户",
+    "planDate": "2026-06-01",
+    "owner": "朱列",
+    "vp": "高文龙",
+    "result": "申报通过"
+  },
+  {
+    "hospital": "上海市杨浦区控江社区卫生服务中心",
+    "city": "上海",
+    "region": "华东",
+    "stage": "意向客户",
+    "planDate": "2026-06-01",
+    "owner": "朱列",
+    "vp": "高文龙",
+    "result": "申报通过"
+  },
+  {
+    "hospital": "上海市杨浦区长白社区卫生服务中心",
+    "city": "上海",
+    "region": "华东",
+    "stage": "意向客户",
+    "planDate": "2026-06-01",
+    "owner": "朱列",
+    "vp": "高文龙",
+    "result": "申报通过"
+  },
+  {
+    "hospital": "上海市杨浦区平凉社区卫生服务中心",
+    "city": "上海",
+    "region": "华东",
+    "stage": "意向客户",
+    "planDate": "2026-06-01",
+    "owner": "朱列",
+    "vp": "高文龙",
+    "result": "申报通过"
+  },
+  {
+    "hospital": "辛集市第一医院",
+    "city": "河北",
+    "region": "华北",
+    "stage": "意向客户",
+    "planDate": "2026-06-01",
+    "owner": "郑森",
+    "vp": "卢俊",
+    "result": "申报通过"
+  },
+  {
+    "hospital": "庄河市中心医院",
+    "city": "辽宁",
+    "region": "华北",
+    "stage": "意向客户",
+    "planDate": "2026-05-01",
+    "owner": "卿毅",
+    "vp": "卿毅",
+    "result": "申报通过"
+  },
+  {
+    "hospital": "盘锦市中心医院",
+    "city": "辽宁",
+    "region": "华北",
+    "stage": "意向客户",
+    "planDate": "2026-05-01",
+    "owner": "卿毅",
+    "vp": "卿毅",
+    "result": "申报通过"
+  },
+  {
+    "hospital": "盘锦辽油宝石花医院",
+    "city": "辽宁",
+    "region": "华北",
+    "stage": "意向客户",
+    "planDate": "2026-05-01",
+    "owner": "卿毅",
+    "vp": "卿毅",
+    "result": "申报通过"
+  },
+  {
+    "hospital": "营口经济技术开发区中心医院（营口市人民医院）",
+    "city": "辽宁",
+    "region": "华北",
+    "stage": "意向客户",
+    "planDate": "2026-05-01",
+    "owner": "卿毅",
+    "vp": "卿毅",
+    "result": "申报通过"
+  },
+  {
+    "hospital": "鞍山市中心医院",
+    "city": "辽宁",
+    "region": "华北",
+    "stage": "意向客户",
+    "planDate": "2026-05-01",
+    "owner": "卿毅",
+    "vp": "卿毅",
+    "result": "申报通过"
+  },
+  {
+    "hospital": "中国医科大学附属盛京医院",
+    "city": "辽宁",
+    "region": "华北",
+    "stage": "意向客户",
+    "planDate": "2026-05-01",
+    "owner": "卿毅",
+    "vp": "卿毅",
+    "result": "申报通过"
+  },
+  {
+    "hospital": "辽宁省肿瘤医院",
+    "city": "辽宁",
+    "region": "华北",
+    "stage": "意向客户",
+    "planDate": "2026-05-01",
+    "owner": "卿毅",
+    "vp": "卿毅",
+    "result": "申报通过"
+  },
+  {
+    "hospital": "中国人民解放军北部战区总医院",
+    "city": "辽宁",
+    "region": "华北",
+    "stage": "意向客户",
+    "planDate": "2026-05-01",
+    "owner": "卿毅",
+    "vp": "卿毅",
+    "result": "申报通过"
+  },
+  {
+    "hospital": "辽宁省金秋医院（辽宁省老年病研究院）",
+    "city": "辽宁",
+    "region": "华北",
+    "stage": "意向客户",
+    "planDate": "2026-05-01",
+    "owner": "卿毅",
+    "vp": "卿毅",
+    "result": "申报通过"
+  },
+  {
+    "hospital": "中国医科大学附属第四医院",
+    "city": "辽宁",
+    "region": "华北",
+    "stage": "已进药",
+    "planDate": "2026-05-01",
+    "owner": "卿毅",
+    "vp": "卿毅",
+    "result": "申报通过"
+  },
+  {
+    "hospital": "辽宁省中医药研究院（辽宁中医药大学附属第二医院）",
+    "city": "辽宁",
+    "region": "华北",
+    "stage": "意向客户",
+    "planDate": "2026-05-01",
+    "owner": "卿毅",
+    "vp": "卿毅",
+    "result": "申报通过"
+  },
+  {
+    "hospital": "沈阳市第五人民医院",
+    "city": "辽宁",
+    "region": "华北",
+    "stage": "意向客户",
+    "planDate": "2026-05-01",
+    "owner": "卿毅",
+    "vp": "卿毅",
+    "result": "申报通过"
+  },
+  {
+    "hospital": "沈阳市第四人民医院",
+    "city": "辽宁",
+    "region": "华北",
+    "stage": "意向客户",
+    "planDate": "2026-05-01",
+    "owner": "卿毅",
+    "vp": "卿毅",
+    "result": "申报通过"
+  },
+  {
+    "hospital": "沈阳医学院附属中心医院（沈阳医学院奉天医院）",
+    "city": "辽宁",
+    "region": "华北",
+    "stage": "意向客户",
+    "planDate": "2026-05-01",
+    "owner": "卿毅",
+    "vp": "卿毅",
+    "result": "申报通过"
+  },
+  {
+    "hospital": "本溪市中心医院",
+    "city": "辽宁",
+    "region": "华北",
+    "stage": "意向客户",
+    "planDate": "2026-05-01",
+    "owner": "卿毅",
+    "vp": "卿毅",
+    "result": "申报通过"
+  },
+  {
+    "hospital": "阜新市中心医院",
+    "city": "辽宁",
+    "region": "华北",
+    "stage": "已进药",
+    "planDate": "2026-05-01",
+    "owner": "卿毅",
+    "vp": "卿毅",
+    "result": "申报通过"
+  },
+  {
+    "hospital": "抚顺市第四医院",
+    "city": "辽宁",
+    "region": "华北",
+    "stage": "意向客户",
+    "planDate": "2026-05-01",
+    "owner": "卿毅",
+    "vp": "卿毅",
+    "result": "申报通过"
+  },
+  {
+    "hospital": "东港市中心医院",
+    "city": "辽宁",
+    "region": "华北",
+    "stage": "意向客户",
+    "planDate": "2026-05-01",
+    "owner": "卿毅",
+    "vp": "卿毅",
+    "result": "申报通过"
+  },
+  {
+    "hospital": "温州医科大学附属第二医院",
+    "city": "浙江",
+    "region": "华东",
+    "stage": "已提单",
+    "planDate": "2026-05-01",
+    "owner": "李雨飞",
+    "vp": "吴光建",
+    "result": "申报通过"
+  },
+  {
+    "hospital": "河北神威圣诺大药房连锁有限公司第二医药商场",
+    "city": "河北",
+    "region": "华北",
+    "stage": "意向客户",
+    "planDate": "2026-05-01",
+    "owner": "郑森",
+    "vp": "卢俊",
+    "result": "申报通过"
+  },
+  {
+    "hospital": "河北医科大学第三医院",
+    "city": "河北",
+    "region": "华北",
+    "stage": "临采",
+    "planDate": "2026-05-01",
+    "owner": "郑森",
+    "vp": "卢俊",
+    "result": "申报通过"
+  },
+  {
+    "hospital": "滨州市人民医院",
+    "city": "山东",
+    "region": "华北",
+    "stage": "意向客户",
+    "planDate": "2026-04-01",
+    "owner": "赵鹏",
+    "vp": "卿毅",
+    "result": "申报通过"
+  },
+  {
+    "hospital": "青岛市第八人民医院",
+    "city": "山东",
+    "region": "华北",
+    "stage": "意向客户",
+    "planDate": "2026-04-01",
+    "owner": "梁亚蕾",
+    "vp": "卿毅",
+    "result": "申报通过"
+  },
+  {
+    "hospital": "上海杨思医院",
+    "city": "上海",
+    "region": "华东",
+    "stage": "已过会",
+    "planDate": "2026-04-01",
+    "owner": "汪永刚",
+    "vp": "高文龙",
+    "result": "申报通过"
+  },
+  {
+    "hospital": "山西医科大学第二医院南院",
+    "city": "山西",
+    "region": "华北",
+    "stage": "意向客户",
+    "planDate": "2026-03-01",
+    "owner": "王飞虎",
+    "vp": "卿毅",
+    "result": "申报通过"
+  },
+  {
+    "hospital": "中铁十七局集团有限公司中心医院",
+    "city": "山西",
+    "region": "华北",
+    "stage": "已过会",
+    "planDate": "2026-03-01",
+    "owner": "王飞虎",
+    "vp": "卿毅",
+    "result": "申报通过"
+  },
+  {
+    "hospital": "西安市中心医院",
+    "city": "陕西",
+    "region": "华西",
+    "stage": "提单中",
+    "planDate": "2026-03-01",
+    "owner": "黄嵬",
+    "vp": "耿福林",
+    "result": "申报通过"
+  },
+  {
+    "hospital": "无锡市锡山人民医院",
+    "city": "江苏",
+    "region": "华东",
+    "stage": "已提单",
+    "planDate": "2026-03-01",
+    "owner": "刘雨田",
+    "vp": "杨海波",
+    "result": "0"
+  },
+  {
+    "hospital": "无锡市锡山人民医院东亭分院",
+    "city": "江苏",
+    "region": "华东",
+    "stage": "已提单",
+    "planDate": "2026-03-01",
+    "owner": "刘雨田",
+    "vp": "杨海波",
+    "result": "0"
+  },
+  {
+    "hospital": "杭州市第一人民医院",
+    "city": "浙江",
+    "region": "华东",
+    "stage": "意向客户",
+    "planDate": "2026-03-01",
+    "owner": "蔡磊",
+    "vp": "吴光建",
+    "result": "申报通过"
+  },
+  {
+    "hospital": "温州市人民医院",
+    "city": "浙江",
+    "region": "华东",
+    "stage": "已提单",
+    "planDate": "2026-03-01",
+    "owner": "蔡磊",
+    "vp": "吴光建",
+    "result": "申报通过"
+  },
+  {
+    "hospital": "温州市中心医院",
+    "city": "浙江",
+    "region": "华东",
+    "stage": "意向客户",
+    "planDate": "2026-03-01",
+    "owner": "蔡磊",
+    "vp": "吴光建",
+    "result": "申报通过"
+  },
+  {
+    "hospital": "上海市杨浦区大桥社区卫生服务中心",
+    "city": "上海",
+    "region": "华东",
+    "stage": "意向客户",
+    "planDate": "2026-03-01",
+    "owner": "朱列",
+    "vp": "高文龙",
+    "result": "申报通过"
+  },
+  {
+    "hospital": "上海市杨浦区长海社区卫生服务中心",
+    "city": "上海",
+    "region": "华东",
+    "stage": "意向客户",
+    "planDate": "2026-03-01",
+    "owner": "朱列",
+    "vp": "高文龙",
+    "result": "申报通过"
+  },
+  {
+    "hospital": "上海市杨浦区四平社区卫生服务中心",
+    "city": "上海",
+    "region": "华东",
+    "stage": "意向客户",
+    "planDate": "2026-03-01",
+    "owner": "朱列",
+    "vp": "高文龙",
+    "result": "申报通过"
+  },
+  {
+    "hospital": "武警陕西总队医院",
+    "city": "陕西",
+    "region": "华西",
+    "stage": "已提单",
+    "planDate": "2026-03-01",
+    "owner": "张校鹏",
+    "vp": "耿福林",
+    "result": "申报通过"
+  },
+  {
+    "hospital": "潍坊市人民医院（潍坊市公共卫生临床中心）",
+    "city": "山东",
+    "region": "华北",
+    "stage": "意向客户",
+    "planDate": "2026-03-01",
+    "owner": "赵鹏",
+    "vp": "卿毅",
+    "result": "0"
+  },
+  {
+    "hospital": "上海海阳九峰护理院",
+    "city": "上海",
+    "region": "华东",
+    "stage": "意向客户",
+    "planDate": "2026-03-01",
+    "owner": "朱列",
+    "vp": "高文龙",
+    "result": "申报通过"
+  },
+  {
+    "hospital": "上海青浦区冉升塔湾新天地养老院医务室",
+    "city": "上海",
+    "region": "华东",
+    "stage": "已进药",
+    "planDate": "2026-03-01",
+    "owner": "朱列",
+    "vp": "高文龙",
+    "result": "申报通过"
+  },
+  {
+    "hospital": "上海青浦区崧泽养护院护理院",
+    "city": "上海",
+    "region": "华东",
+    "stage": "意向客户",
+    "planDate": "2026-03-01",
+    "owner": "朱列",
+    "vp": "高文龙",
+    "result": "申报通过"
+  },
+  {
+    "hospital": "上海青浦区夏阳街道养护院护理院",
+    "city": "上海",
+    "region": "华东",
+    "stage": "意向客户",
+    "planDate": "2026-03-01",
+    "owner": "朱列",
+    "vp": "高文龙",
+    "result": "申报通过"
+  },
+  {
+    "hospital": "上海仁瑞护理院",
+    "city": "上海",
+    "region": "华东",
+    "stage": "意向客户",
+    "planDate": "2026-03-01",
+    "owner": "朱列",
+    "vp": "高文龙",
+    "result": "申报通过"
+  },
+  {
+    "hospital": "上海毅韬护理院",
+    "city": "上海",
+    "region": "华东",
+    "stage": "意向客户",
+    "planDate": "2026-03-01",
+    "owner": "朱列",
+    "vp": "高文龙",
+    "result": "申报通过"
+  },
+  {
+    "hospital": "上海市静安区市北医院",
+    "city": "上海",
+    "region": "华东",
+    "stage": "已提单",
+    "planDate": "2026-03-01",
+    "owner": "甘程升",
+    "vp": "高文龙",
+    "result": "0"
+  },
+  {
+    "hospital": "复旦大学附属金山医院",
+    "city": "上海",
+    "region": "华东",
+    "stage": "已进药",
+    "planDate": "2026-03-01",
+    "owner": "朱列",
+    "vp": "高文龙",
+    "result": "申报通过"
+  },
+  {
+    "hospital": "上海中医药大学附属岳阳中西医结合医院",
+    "city": "上海",
+    "region": "华东",
+    "stage": "已进药",
+    "planDate": "2026-03-01",
+    "owner": "朱列",
+    "vp": "高文龙",
+    "result": "申报通过"
+  },
+  {
+    "hospital": "浙江省立同德医院",
+    "city": "浙江",
+    "region": "华东",
+    "stage": "已提单",
+    "planDate": "2026-03-01",
+    "owner": "蔡磊",
+    "vp": "吴光建",
+    "result": "申报通过"
+  },
+  {
+    "hospital": "温州医科大学附属第一医院",
+    "city": "浙江",
+    "region": "华东",
+    "stage": "已提单",
+    "planDate": "2026-03-01",
+    "owner": "李雨飞",
+    "vp": "吴光建",
+    "result": "申报通过"
+  },
+  {
+    "hospital": "江苏省人民医院",
+    "city": "江苏",
+    "region": "华东",
+    "stage": "提单中",
+    "planDate": "2026-03-01",
+    "owner": "刘雨田",
+    "vp": "杨海波",
+    "result": "申报通过"
+  },
+  {
+    "hospital": "上海市嘉定区中心医院",
+    "city": "上海",
+    "region": "华东",
+    "stage": "已过会",
+    "planDate": "2026-03-01",
+    "owner": "朱列",
+    "vp": "高文龙",
+    "result": "申报通过"
+  },
+  {
+    "hospital": "山东第一医科大学附属内分泌与代谢病医院（山东省内分泌与代谢病研究所、山东省内分泌与代谢病医院）",
+    "city": "山东",
+    "region": "华北",
+    "stage": "已进药",
+    "planDate": "2026-02-01",
+    "owner": "赵鹏",
+    "vp": "卿毅",
+    "result": "申报通过"
+  },
+  {
+    "hospital": "莱佛士医院(上海)",
+    "city": "上海",
+    "region": "华东",
+    "stage": "已提单",
+    "planDate": "2026-02-01",
+    "owner": "甘程升",
+    "vp": "高文龙",
+    "result": "申报通过"
+  },
+  {
+    "hospital": "太平康复医院（上海）有限公司",
+    "city": "上海",
+    "region": "华东",
+    "stage": "已提单",
+    "planDate": "2026-02-01",
+    "owner": "甘程升",
+    "vp": "高文龙",
+    "result": "申报通过"
+  },
+  {
+    "hospital": "上海玄合元门诊部有限公司",
+    "city": "上海",
+    "region": "华东",
+    "stage": "已提单",
+    "planDate": "2026-02-01",
+    "owner": "甘程升",
+    "vp": "高文龙",
+    "result": "申报通过"
+  },
+  {
+    "hospital": "上海九洲医院",
+    "city": "上海",
+    "region": "华东",
+    "stage": "已提单",
+    "planDate": "2026-02-01",
+    "owner": "甘程升",
+    "vp": "高文龙",
+    "result": "申报通过"
+  },
+  {
+    "hospital": "上海九龙医院有限公司",
+    "city": "上海",
+    "region": "华东",
+    "stage": "已提单",
+    "planDate": "2026-02-01",
+    "owner": "甘程升",
+    "vp": "高文龙",
+    "result": "申报通过"
+  },
+  {
+    "hospital": "上海同康医院",
+    "city": "上海",
+    "region": "华东",
+    "stage": "已进药",
+    "planDate": "2026-02-01",
+    "owner": "甘程升",
+    "vp": "高文龙",
+    "result": "申报通过"
+  },
+  {
+    "hospital": "上海江东医院",
+    "city": "上海",
+    "region": "华东",
+    "stage": "已提单",
+    "planDate": "2026-02-01",
+    "owner": "甘程升",
+    "vp": "高文龙",
+    "result": "申报通过"
+  },
+  {
+    "hospital": "上海宏康医院",
+    "city": "上海",
+    "region": "华东",
+    "stage": "已提单",
+    "planDate": "2026-02-01",
+    "owner": "甘程升",
+    "vp": "高文龙",
+    "result": "申报通过"
+  },
+  {
+    "hospital": "上海市广群医院",
+    "city": "上海",
+    "region": "华东",
+    "stage": "已提单",
+    "planDate": "2026-02-01",
+    "owner": "甘程升",
+    "vp": "高文龙",
+    "result": "申报通过"
+  },
+  {
+    "hospital": "上海百汇医院",
+    "city": "上海",
+    "region": "华东",
+    "stage": "已提单",
+    "planDate": "2026-02-01",
+    "owner": "甘程升",
+    "vp": "高文龙",
+    "result": "0"
+  },
+  {
+    "hospital": "天津康汇医院",
+    "city": "天津",
+    "region": "华北",
+    "stage": "意向客户",
+    "planDate": "2026-02-01",
+    "owner": "王鹏",
+    "vp": "卢俊",
+    "result": "申报通过"
+  },
+  {
+    "hospital": "上海市浦东新区北蔡社区卫生服务中心",
+    "city": "上海",
+    "region": "华东",
+    "stage": "意向客户",
+    "planDate": "2026-02-01",
+    "owner": "甘程升",
+    "vp": "高文龙",
+    "result": "申报通过"
+  },
+  {
+    "hospital": "上海市浦东新区川沙华夏社区卫生服务中心",
+    "city": "上海",
+    "region": "华东",
+    "stage": "意向客户",
+    "planDate": "2026-02-01",
+    "owner": "甘程升",
+    "vp": "高文龙",
+    "result": "申报通过"
+  },
+  {
+    "hospital": "上海市浦东新区东明社区卫生服务中心",
+    "city": "上海",
+    "region": "华东",
+    "stage": "已进药",
+    "planDate": "2026-02-01",
+    "owner": "甘程升",
+    "vp": "高文龙",
+    "result": "申报通过"
+  },
+  {
+    "hospital": "上海市浦东新区高行社区卫生服务中心",
+    "city": "上海",
+    "region": "华东",
+    "stage": "已过会",
+    "planDate": "2026-02-01",
+    "owner": "甘程升",
+    "vp": "高文龙",
+    "result": "申报通过"
+  },
+  {
+    "hospital": "上海市浦东新区高桥社区卫生服务中心",
+    "city": "上海",
+    "region": "华东",
+    "stage": "已过会",
+    "planDate": "2026-02-01",
+    "owner": "甘程升",
+    "vp": "高文龙",
+    "result": "申报通过"
+  },
+  {
+    "hospital": "上海市浦东新区合庆社区卫生服务中心",
+    "city": "上海",
+    "region": "华东",
+    "stage": "已过会",
+    "planDate": "2026-02-01",
+    "owner": "甘程升",
+    "vp": "高文龙",
+    "result": "申报通过"
+  },
+  {
+    "hospital": "上海市浦东新区沪东社区卫生服务中心",
+    "city": "上海",
+    "region": "华东",
+    "stage": "意向客户",
+    "planDate": "2026-02-01",
+    "owner": "甘程升",
+    "vp": "高文龙",
+    "result": "申报通过"
+  },
+  {
+    "hospital": "上海市浦东新区金杨社区卫生服务中心",
+    "city": "上海",
+    "region": "华东",
+    "stage": "意向客户",
+    "planDate": "2026-02-01",
+    "owner": "甘程升",
+    "vp": "高文龙",
+    "result": "申报通过"
+  },
+  {
+    "hospital": "上海市浦东新区陆家嘴社区卫生服务中心",
+    "city": "上海",
+    "region": "华东",
+    "stage": "已进药",
+    "planDate": "2026-02-01",
+    "owner": "甘程升",
+    "vp": "高文龙",
+    "result": "申报通过"
+  },
+  {
+    "hospital": "上海市浦东新区浦兴社区卫生服务中心",
+    "city": "上海",
+    "region": "华东",
+    "stage": "已过会",
+    "planDate": "2026-02-01",
+    "owner": "甘程升",
+    "vp": "高文龙",
+    "result": "申报通过"
+  },
+  {
+    "hospital": "上海市浦东新区上钢社区卫生服务中心",
+    "city": "上海",
+    "region": "华东",
+    "stage": "已进药",
+    "planDate": "2026-02-01",
+    "owner": "甘程升",
+    "vp": "高文龙",
+    "result": "0"
+  },
+  {
+    "hospital": "上海市浦东新区潍坊社区卫生服务中心",
+    "city": "上海",
+    "region": "华东",
+    "stage": "意向客户",
+    "planDate": "2026-02-01",
+    "owner": "甘程升",
+    "vp": "高文龙",
+    "result": "0"
+  },
+  {
+    "hospital": "上海市浦东新区新场社区卫生服务中心",
+    "city": "上海",
+    "region": "华东",
+    "stage": "意向客户",
+    "planDate": "2026-02-01",
+    "owner": "甘程升",
+    "vp": "高文龙",
+    "result": "0"
+  },
+  {
+    "hospital": "上海市浦东新区张江社区卫生服务中心",
+    "city": "上海",
+    "region": "华东",
+    "stage": "意向客户",
+    "planDate": "2026-02-01",
+    "owner": "甘程升",
+    "vp": "高文龙",
+    "result": "0"
+  },
+  {
+    "hospital": "上海市浦东新区周家渡社区卫生服务中心",
+    "city": "上海",
+    "region": "华东",
+    "stage": "已过会",
+    "planDate": "2026-02-01",
+    "owner": "甘程升",
+    "vp": "高文龙",
+    "result": "0"
+  },
+  {
+    "hospital": "郴州市第一人民医院",
+    "city": "湖南",
+    "region": "华南",
+    "stage": "已提单",
+    "planDate": "2026-02-01",
+    "owner": "蔡庆亮",
+    "vp": "罗险峰",
+    "result": "申报通过"
+  },
+  {
+    "hospital": "上海市普陀区利群医院",
+    "city": "上海",
+    "region": "华东",
+    "stage": "已过会",
+    "planDate": "2026-02-01",
+    "owner": "汪永刚",
+    "vp": "高文龙",
+    "result": "0"
+  },
+  {
+    "hospital": "浙江大学医学院附属第二医院",
+    "city": "浙江",
+    "region": "华东",
+    "stage": "意向客户",
+    "planDate": "2026-02-01",
+    "owner": "李雨飞",
+    "vp": "吴光建",
+    "result": "申报通过"
+  },
+  {
+    "hospital": "浙江大学医学院附属第一医院",
+    "city": "浙江",
+    "region": "华东",
+    "stage": "意向客户",
+    "planDate": "2026-02-01",
+    "owner": "李雨飞",
+    "vp": "吴光建",
+    "result": "申报通过"
+  },
+  {
+    "hospital": "浙江省中医院",
+    "city": "浙江",
+    "region": "华东",
+    "stage": "已提单",
+    "planDate": "2026-02-01",
+    "owner": "李雨飞",
+    "vp": "吴光建",
+    "result": "申报通过"
+  },
+  {
+    "hospital": "平湖市第一人民医院",
+    "city": "浙江",
+    "region": "华东",
+    "stage": "已过会",
+    "planDate": "2026-01-01",
+    "owner": "蔡磊",
+    "vp": "吴光建",
+    "result": "申报通过"
+  },
+  {
+    "hospital": "上海市杨浦区新江湾城社区卫生服务中心",
+    "city": "上海",
+    "region": "华东",
+    "stage": "意向客户",
+    "planDate": "2026-01-01",
+    "owner": "朱列",
+    "vp": "高文龙",
+    "result": "申报通过"
+  },
+  {
+    "hospital": "上海市宝山区庙行镇社区卫生服务中心",
+    "city": "上海",
+    "region": "华东",
+    "stage": "已进药",
+    "planDate": "2026-01-01",
+    "owner": "朱列",
+    "vp": "高文龙",
+    "result": "申报通过"
+  },
+  {
+    "hospital": "上海市浦东新区唐镇社区卫生服务中心",
+    "city": "上海",
+    "region": "华东",
+    "stage": "已过会",
+    "planDate": "2026-01-01",
+    "owner": "甘程升",
+    "vp": "高文龙",
+    "result": "申报通过"
+  },
+  {
+    "hospital": "上海市浦东新区孙桥社区卫生服务中心",
+    "city": "上海",
+    "region": "华东",
+    "stage": "已过会",
+    "planDate": "2026-01-01",
+    "owner": "甘程升",
+    "vp": "高文龙",
+    "result": "申报通过"
+  },
+  {
+    "hospital": "上海市浦东新区三林社区卫生服务中心",
+    "city": "上海",
+    "region": "华东",
+    "stage": "意向客户",
+    "planDate": "2026-01-01",
+    "owner": "甘程升",
+    "vp": "高文龙",
+    "result": "申报通过"
+  },
+  {
+    "hospital": "上海市浦东新区祝桥社区卫生服务中心",
+    "city": "上海",
+    "region": "华东",
+    "stage": "意向客户",
+    "planDate": "2026-01-01",
+    "owner": "甘程升",
+    "vp": "高文龙",
+    "result": "申报通过"
+  },
+  {
+    "hospital": "上海市浦东新区迎博社区卫生服务中心",
+    "city": "上海",
+    "region": "华东",
+    "stage": "意向客户",
+    "planDate": "2026-01-01",
+    "owner": "甘程升",
+    "vp": "高文龙",
+    "result": "申报通过"
+  },
+  {
+    "hospital": "上海市浦东新区宣桥社区卫生服务中心",
+    "city": "上海",
+    "region": "华东",
+    "stage": "意向客户",
+    "planDate": "2026-01-01",
+    "owner": "甘程升",
+    "vp": "高文龙",
+    "result": "申报通过"
+  },
+  {
+    "hospital": "上海市浦东新区万祥社区卫生服务中心",
+    "city": "上海",
+    "region": "华东",
+    "stage": "意向客户",
+    "planDate": "2026-01-01",
+    "owner": "甘程升",
+    "vp": "高文龙",
+    "result": "申报通过"
+  },
+  {
+    "hospital": "上海市浦东新区塘桥社区卫生服务中心",
+    "city": "上海",
+    "region": "华东",
+    "stage": "意向客户",
+    "planDate": "2026-01-01",
+    "owner": "甘程升",
+    "vp": "高文龙",
+    "result": "申报通过"
+  },
+  {
+    "hospital": "上海市浦东新区金桥社区卫生服务中心",
+    "city": "上海",
+    "region": "华东",
+    "stage": "意向客户",
+    "planDate": "2026-01-01",
+    "owner": "甘程升",
+    "vp": "高文龙",
+    "result": "申报通过"
+  },
+  {
+    "hospital": "上海市浦东新区江镇社区卫生服务中心",
+    "city": "上海",
+    "region": "华东",
+    "stage": "意向客户",
+    "planDate": "2026-01-01",
+    "owner": "甘程升",
+    "vp": "高文龙",
+    "result": "申报通过"
+  },
+  {
+    "hospital": "上海市浦东新区机场社区卫生服务中心",
+    "city": "上海",
+    "region": "华东",
+    "stage": "意向客户",
+    "planDate": "2026-01-01",
+    "owner": "甘程升",
+    "vp": "高文龙",
+    "result": "申报通过"
+  },
+  {
+    "hospital": "上海市浦东新区洋泾社区卫生服务中心",
+    "city": "上海",
+    "region": "华东",
+    "stage": "意向客户",
+    "planDate": "2026-01-01",
+    "owner": "甘程升",
+    "vp": "高文龙",
+    "result": "申报通过"
+  },
+  {
+    "hospital": "上海市浦东新区三林康德社区卫生服务中心",
+    "city": "上海",
+    "region": "华东",
+    "stage": "意向客户",
+    "planDate": "2026-01-01",
+    "owner": "甘程升",
+    "vp": "高文龙",
+    "result": "申报通过"
+  },
+  {
+    "hospital": "上海市浦东新区南码头社区卫生服务中心",
+    "city": "上海",
+    "region": "华东",
+    "stage": "意向客户",
+    "planDate": "2026-01-01",
+    "owner": "甘程升",
+    "vp": "高文龙",
+    "result": "申报通过"
+  },
+  {
+    "hospital": "上海市浦东新区惠南社区卫生服务中心",
+    "city": "上海",
+    "region": "华东",
+    "stage": "意向客户",
+    "planDate": "2026-01-01",
+    "owner": "甘程升",
+    "vp": "高文龙",
+    "result": "申报通过"
+  },
+  {
+    "hospital": "上海市浦东新区花木社区卫生服务中心",
+    "city": "上海",
+    "region": "华东",
+    "stage": "意向客户",
+    "planDate": "2026-01-01",
+    "owner": "甘程升",
+    "vp": "高文龙",
+    "result": "申报通过"
+  },
+  {
+    "hospital": "上海市浦东新区高东社区卫生服务中心",
+    "city": "上海",
+    "region": "华东",
+    "stage": "意向客户",
+    "planDate": "2026-01-01",
+    "owner": "甘程升",
+    "vp": "高文龙",
+    "result": "申报通过"
+  },
+  {
+    "hospital": "上海市浦东新区川沙社区卫生服务中心",
+    "city": "上海",
+    "region": "华东",
+    "stage": "意向客户",
+    "planDate": "2026-01-01",
+    "owner": "甘程升",
+    "vp": "高文龙",
+    "result": "申报通过"
+  },
+  {
+    "hospital": "上海市浦东新区曹路社区卫生服务中心",
+    "city": "上海",
+    "region": "华东",
+    "stage": "意向客户",
+    "planDate": "2026-01-01",
+    "owner": "甘程升",
+    "vp": "高文龙",
+    "result": "申报通过"
+  },
+  {
+    "hospital": "上海市松江区车墩镇社区卫生服务中心",
+    "city": "上海",
+    "region": "华东",
+    "stage": "意向客户",
+    "planDate": "2026-01-01",
+    "owner": "甘程升",
+    "vp": "高文龙",
+    "result": "申报通过"
+  },
+  {
+    "hospital": "上海市松江区洞泾镇社区卫生服务中心",
+    "city": "上海",
+    "region": "华东",
+    "stage": "意向客户",
+    "planDate": "2026-01-01",
+    "owner": "甘程升",
+    "vp": "高文龙",
+    "result": "申报通过"
+  },
+  {
+    "hospital": "上海市松江区方松街道社区卫生服务中心",
+    "city": "上海",
+    "region": "华东",
+    "stage": "意向客户",
+    "planDate": "2026-01-01",
+    "owner": "甘程升",
+    "vp": "高文龙",
+    "result": "申报通过"
+  },
+  {
+    "hospital": "上海市松江区九亭镇社区卫生服务中心",
+    "city": "上海",
+    "region": "华东",
+    "stage": "意向客户",
+    "planDate": "2026-01-01",
+    "owner": "甘程升",
+    "vp": "高文龙",
+    "result": "申报通过"
+  },
+  {
+    "hospital": "上海市松江区泖港镇社区卫生服务中心",
+    "city": "上海",
+    "region": "华东",
+    "stage": "意向客户",
+    "planDate": "2026-01-01",
+    "owner": "甘程升",
+    "vp": "高文龙",
+    "result": "申报通过"
+  },
+  {
+    "hospital": "上海市松江区佘山镇社区卫生服务中心",
+    "city": "上海",
+    "region": "华东",
+    "stage": "意向客户",
+    "planDate": "2026-01-01",
+    "owner": "甘程升",
+    "vp": "高文龙",
+    "result": "申报通过"
+  },
+  {
+    "hospital": "上海市松江区石湖荡镇社区卫生服务中心",
+    "city": "上海",
+    "region": "华东",
+    "stage": "意向客户",
+    "planDate": "2026-01-01",
+    "owner": "甘程升",
+    "vp": "高文龙",
+    "result": "申报通过"
+  },
+  {
+    "hospital": "上海市松江区小昆山镇社区卫生服务中心",
+    "city": "上海",
+    "region": "华东",
+    "stage": "已进药",
+    "planDate": "2026-01-01",
+    "owner": "朱列",
+    "vp": "高文龙",
+    "result": "申报通过"
+  },
+  {
+    "hospital": "上海市松江区新浜镇社区卫生服务中心",
+    "city": "上海",
+    "region": "华东",
+    "stage": "意向客户",
+    "planDate": "2026-01-01",
+    "owner": "甘程升",
+    "vp": "高文龙",
+    "result": "申报通过"
+  },
+  {
+    "hospital": "上海市松江区新桥镇社区卫生服务中心",
+    "city": "上海",
+    "region": "华东",
+    "stage": "意向客户",
+    "planDate": "2026-01-01",
+    "owner": "甘程升",
+    "vp": "高文龙",
+    "result": "申报通过"
+  },
+  {
+    "hospital": "上海市松江区叶榭镇社区卫生服务中心",
+    "city": "上海",
+    "region": "华东",
+    "stage": "意向客户",
+    "planDate": "2026-01-01",
+    "owner": "甘程升",
+    "vp": "高文龙",
+    "result": "0"
+  },
+  {
+    "hospital": "上海市松江区永丰街道社区卫生服务中心",
+    "city": "上海",
+    "region": "华东",
+    "stage": "意向客户",
+    "planDate": "2026-01-01",
+    "owner": "甘程升",
+    "vp": "高文龙",
+    "result": "0"
+  },
+  {
+    "hospital": "上海市松江区岳阳街道社区卫生服务中心",
+    "city": "上海",
+    "region": "华东",
+    "stage": "已进药",
+    "planDate": "2026-01-01",
+    "owner": "甘程升",
+    "vp": "高文龙",
+    "result": "0"
+  },
+  {
+    "hospital": "上海市松江区中山街道社区卫生服务中心",
+    "city": "上海",
+    "region": "华东",
+    "stage": "意向客户",
+    "planDate": "2026-01-01",
+    "owner": "甘程升",
+    "vp": "高文龙",
+    "result": "0"
+  },
+  {
+    "hospital": "上海市松江区泗泾镇社区卫生服务中心",
+    "city": "上海",
+    "region": "华东",
+    "stage": "意向客户",
+    "planDate": "2026-01-01",
+    "owner": "甘程升",
+    "vp": "高文龙",
+    "result": "0"
+  },
+  {
+    "hospital": "上海市第十人民医院",
+    "city": "上海",
+    "region": "华东",
+    "stage": "意向客户",
+    "planDate": "2026-01-01",
+    "owner": "甘程升",
+    "vp": "高文龙",
+    "result": "申报通过"
+  },
+  {
+    "hospital": "上海市浦东新区公利医院",
+    "city": "上海",
+    "region": "华东",
+    "stage": "意向客户",
+    "planDate": "2026-01-01",
+    "owner": "甘程升",
+    "vp": "高文龙",
+    "result": "申报通过"
+  },
+  {
+    "hospital": "上海市松江区方塔中医医院",
+    "city": "上海",
+    "region": "华东",
+    "stage": "意向客户",
+    "planDate": "2026-01-01",
+    "owner": "甘程升",
+    "vp": "高文龙",
+    "result": "申报通过"
+  },
+  {
+    "hospital": "上海市嘉定区江桥医院",
+    "city": "上海",
+    "region": "华东",
+    "stage": "意向客户",
+    "planDate": "2026-01-01",
+    "owner": "甘程升",
+    "vp": "高文龙",
+    "result": "申报通过"
+  },
+  {
+    "hospital": "上海市奉贤区中心医院",
+    "city": "上海",
+    "region": "华东",
+    "stage": "已过会",
+    "planDate": "2026-01-01",
+    "owner": "甘程升",
+    "vp": "高文龙",
+    "result": "申报通过"
+  },
+  {
+    "hospital": "浙江大学医学院附属邵逸夫医院",
+    "city": "浙江",
+    "region": "华东",
+    "stage": "已过会",
+    "planDate": "2026-01-01",
+    "owner": "蔡磊",
+    "vp": "吴光建",
+    "result": "申报通过"
+  },
+  {
+    "hospital": "上海青浦区徐泾镇养护院护理院",
+    "city": "上海",
+    "region": "华东",
+    "stage": "已进药",
+    "planDate": "2026-01-01",
+    "owner": "朱列",
+    "vp": "高文龙",
+    "result": "申报通过"
+  },
+  {
+    "hospital": "上海盈康护理院",
+    "city": "上海",
+    "region": "华东",
+    "stage": "已进药",
+    "planDate": "2026-01-01",
+    "owner": "朱列",
+    "vp": "高文龙",
+    "result": "申报通过"
+  },
+  {
+    "hospital": "上海青浦区白鹤养护院护理院",
+    "city": "上海",
+    "region": "华东",
+    "stage": "已进药",
+    "planDate": "2026-01-01",
+    "owner": "朱列",
+    "vp": "高文龙",
+    "result": "申报通过"
+  },
+  {
+    "hospital": "上海同泽护理院",
+    "city": "上海",
+    "region": "华东",
+    "stage": "意向客户",
+    "planDate": "2026-01-01",
+    "owner": "朱列",
+    "vp": "高文龙",
+    "result": "申报通过"
+  },
+  {
+    "hospital": "吉林省伟诚大药房连锁有限公司",
+    "city": "吉林",
+    "region": "华北",
+    "stage": "已提单",
+    "planDate": "2026-01-01",
+    "owner": "冯运波",
+    "vp": "卿毅",
+    "result": "申报通过"
+  },
+  {
+    "hospital": "南宁市第三人民医院",
+    "city": "广西",
+    "region": "华南",
+    "stage": "已提单",
+    "planDate": "2026-01-01",
+    "owner": "张校鹏",
+    "vp": "罗险峰",
+    "result": "申报通过"
+  },
+  {
+    "hospital": "上海市长宁区华阳街道社区卫生服务中心",
+    "city": "上海",
+    "region": "华东",
+    "stage": "已提单",
+    "planDate": "2026-01-01",
+    "owner": "朱列",
+    "vp": "高文龙",
+    "result": "申报通过"
+  },
+  {
+    "hospital": "上海市长宁区天山路街道社区卫生服务中心",
+    "city": "上海",
+    "region": "华东",
+    "stage": "已提单",
+    "planDate": "2026-01-01",
+    "owner": "甘程升",
+    "vp": "高文龙",
+    "result": "申报通过"
+  },
+  {
+    "hospital": "黑龙江省大众平安医药连锁有限公司健民大药房",
+    "city": "黑龙江",
+    "region": "华北",
+    "stage": "已进药",
+    "planDate": "2025-12-01",
+    "owner": "马选平",
+    "vp": "卿毅",
+    "result": "进院成功"
+  },
+  {
+    "hospital": "黑龙江省大众平安医药连锁有限公司铁岭街分店",
+    "city": "黑龙江",
+    "region": "华北",
+    "stage": "已进药",
+    "planDate": "2025-12-01",
+    "owner": "马选平",
+    "vp": "卿毅",
+    "result": "进院成功"
+  },
+  {
+    "hospital": "黑龙江省大众平安医药连锁有限公司晋源堂大药房",
+    "city": "黑龙江",
+    "region": "华北",
+    "stage": "已进药",
+    "planDate": "2025-12-01",
+    "owner": "马选平",
+    "vp": "卿毅",
+    "result": "进院成功"
+  },
+  {
+    "hospital": "黑龙江省大众平安医药连锁有限公司千安堂大药房",
+    "city": "黑龙江",
+    "region": "华北",
+    "stage": "已进药",
+    "planDate": "2025-12-01",
+    "owner": "马选平",
+    "vp": "卿毅",
+    "result": "进院成功"
+  },
+  {
+    "hospital": "黑龙江省大众平安医药连锁有限公司信民大药房",
+    "city": "黑龙江",
+    "region": "华北",
+    "stage": "已进药",
+    "planDate": "2025-12-01",
+    "owner": "马选平",
+    "vp": "卿毅",
+    "result": "进院成功核算奖励"
+  },
+  {
+    "hospital": "黑龙江省大众平安医药连锁有限公司大直分店",
+    "city": "黑龙江",
+    "region": "华北",
+    "stage": "已进药",
+    "planDate": "2025-12-01",
+    "owner": "马选平",
+    "vp": "卿毅",
+    "result": "进院成功"
+  },
+  {
+    "hospital": "平湖益元大药房有限公司",
+    "city": "浙江",
+    "region": "华东",
+    "stage": "已进药",
+    "planDate": "2025-12-01",
+    "owner": "蔡磊",
+    "vp": "吴光建",
+    "result": "申报通过"
+  },
+  {
+    "hospital": "大庆康达服务总公司便民药店",
+    "city": "黑龙江",
+    "region": "华北",
+    "stage": "已进药",
+    "planDate": "2025-12-01",
+    "owner": "马选平",
+    "vp": "卿毅",
+    "result": "进院成功"
+  },
+  {
+    "hospital": "哈尔滨安首大药房有限公司",
+    "city": "黑龙江",
+    "region": "华北",
+    "stage": "已进药",
+    "planDate": "2025-12-01",
+    "owner": "马选平",
+    "vp": "卿毅",
+    "result": "申报通过"
+  },
+  {
+    "hospital": "长春市济仁显通大药房有限公司新二院店",
+    "city": "吉林",
+    "region": "华北",
+    "stage": "已进药",
+    "planDate": "2025-12-01",
+    "owner": "冯运波",
+    "vp": "卿毅",
+    "result": "申报通过"
+  },
+  {
+    "hospital": "黑龙江省大众平安医药连锁有限公司",
+    "city": "黑龙江",
+    "region": "华北",
+    "stage": "提单中",
+    "planDate": "2025-12-01",
+    "owner": "马选平",
+    "vp": "卿毅",
+    "result": "申报通过"
+  },
+  {
+    "hospital": "北京同仁堂哈尔滨药店有限责任公司",
+    "city": "黑龙江",
+    "region": "华北",
+    "stage": "已进药",
+    "planDate": "2025-12-01",
+    "owner": "马选平",
+    "vp": "卿毅",
+    "result": "申报通过"
+  },
+  {
+    "hospital": "哈药集团医药有限公司医药商场",
+    "city": "黑龙江",
+    "region": "华北",
+    "stage": "已进药",
+    "planDate": "2025-12-01",
+    "owner": "马选平",
+    "vp": "卿毅",
+    "result": "申报通过"
+  },
+  {
+    "hospital": "大连市中心医院",
+    "city": "辽宁",
+    "region": "华北",
+    "stage": "已进药",
+    "planDate": "2025-12-01",
+    "owner": "卿毅",
+    "vp": "卿毅",
+    "result": "进院成功"
+  },
+  {
+    "hospital": "大连市友谊医院",
+    "city": "辽宁",
+    "region": "华北",
+    "stage": "已进药",
+    "planDate": "2025-12-01",
+    "owner": "卿毅",
+    "vp": "卿毅",
+    "result": "进院成功"
+  },
+  {
+    "hospital": "大连机车医院",
+    "city": "辽宁",
+    "region": "华北",
+    "stage": "提单中",
+    "planDate": "2025-12-01",
+    "owner": "卿毅",
+    "vp": "卿毅",
+    "result": "申报通过"
+  },
+  {
+    "hospital": "大连医科大学附属第一医院",
+    "city": "辽宁",
+    "region": "华北",
+    "stage": "提单中",
+    "planDate": "2025-12-01",
+    "owner": "卿毅",
+    "vp": "卿毅",
+    "result": "申报通过"
+  },
+  {
+    "hospital": "大连医科大学附属第二医院",
+    "city": "辽宁",
+    "region": "华北",
+    "stage": "已过会",
+    "planDate": "2025-12-01",
+    "owner": "卿毅",
+    "vp": "卿毅",
+    "result": "申报通过"
+  },
+  {
+    "hospital": "大连大学附属中山医院",
+    "city": "辽宁",
+    "region": "华北",
+    "stage": "提单中",
+    "planDate": "2025-12-01",
+    "owner": "卿毅",
+    "vp": "卿毅",
+    "result": "申报通过"
+  },
+  {
+    "hospital": "大连市第三人民医院",
+    "city": "辽宁",
+    "region": "华北",
+    "stage": "已进药",
+    "planDate": "2025-12-01",
+    "owner": "卿毅",
+    "vp": "卿毅",
+    "result": "申报通过"
+  },
+  {
+    "hospital": "大连市中医医院",
+    "city": "辽宁",
+    "region": "华北",
+    "stage": "提单中",
+    "planDate": "2025-12-01",
+    "owner": "卿毅",
+    "vp": "卿毅",
+    "result": "申报通过"
+  },
+  {
+    "hospital": "中国人民解放军联勤保障部队第九六七医院",
+    "city": "辽宁",
+    "region": "华北",
+    "stage": "提单中",
+    "planDate": "2025-12-01",
+    "owner": "卿毅",
+    "vp": "卿毅",
+    "result": "申报通过"
+  },
+  {
+    "hospital": "大连市普兰店区中心医院",
+    "city": "辽宁",
+    "region": "华北",
+    "stage": "提单中",
+    "planDate": "2025-12-01",
+    "owner": "卿毅",
+    "vp": "卿毅",
+    "result": "申报通过"
+  },
+  {
+    "hospital": "鄄城马爱云医院",
+    "city": "山东",
+    "region": "华北",
+    "stage": "意向客户",
+    "planDate": "2025-12-01",
+    "owner": "赵鹏",
+    "vp": "卿毅",
+    "result": "申报通过"
+  },
+  {
+    "hospital": "青岛阜外心血管病医院",
+    "city": "山东",
+    "region": "华北",
+    "stage": "已提单",
+    "planDate": "2025-12-01",
+    "owner": "赵鹏",
+    "vp": "卿毅",
+    "result": "申报通过"
+  },
+  {
+    "hospital": "威海市文登区人民医院",
+    "city": "山东",
+    "region": "华北",
+    "stage": "已进药",
+    "planDate": "2025-12-01",
+    "owner": "肖中华",
+    "vp": "卿毅",
+    "result": "申报通过"
+  },
+  {
+    "hospital": "贵航贵阳医院",
+    "city": "贵州",
+    "region": "华西",
+    "stage": "提单中",
+    "planDate": "2025-12-01",
+    "owner": "周辉",
+    "vp": "周辉",
+    "result": "申报通过"
+  },
+  {
+    "hospital": "天津武清仁和医院",
+    "city": "天津",
+    "region": "华北",
+    "stage": "已提单",
+    "planDate": "2025-12-01",
+    "owner": "王鹏",
+    "vp": "卢俊",
+    "result": "申报通过"
+  },
+  {
+    "hospital": "上海市宝山区友谊街道社区卫生服务中心",
+    "city": "上海",
+    "region": "华东",
+    "stage": "意向客户",
+    "planDate": "2025-12-01",
+    "owner": "朱列",
+    "vp": "高文龙",
+    "result": "申报通过"
+  },
+  {
+    "hospital": "烟台市莱阳中心医院",
+    "city": "山东",
+    "region": "华北",
+    "stage": "已提单",
+    "planDate": "2025-12-01",
+    "owner": "赵鹏",
+    "vp": "卿毅",
+    "result": "申报通过"
+  },
+  {
+    "hospital": "南海经济开发区人民医院",
+    "city": "广东",
+    "region": "华南",
+    "stage": "已提单",
+    "planDate": "2025-12-01",
+    "owner": "林路",
+    "vp": "许占海",
+    "result": "申报通过"
+  },
+  {
+    "hospital": "佛山复星禅诚医院",
+    "city": "广东",
+    "region": "华南",
+    "stage": "已提单",
+    "planDate": "2025-12-01",
+    "owner": "林路",
+    "vp": "许占海",
+    "result": "申报通过"
+  },
+  {
+    "hospital": "上海市普陀区宜川街道社区卫生服务中心",
+    "city": "上海",
+    "region": "华东",
+    "stage": "意向客户",
+    "planDate": "2025-12-01",
+    "owner": "汪永刚",
+    "vp": "高文龙",
+    "result": "申报通过"
+  },
+  {
+    "hospital": "上海市普陀区桃浦镇社区卫生服务中心",
+    "city": "上海",
+    "region": "华东",
+    "stage": "意向客户",
+    "planDate": "2025-12-01",
+    "owner": "汪永刚",
+    "vp": "高文龙",
+    "result": "申报通过"
+  },
+  {
+    "hospital": "上海市普陀区桃浦镇第二社区卫生服务中心",
+    "city": "上海",
+    "region": "华东",
+    "stage": "意向客户",
+    "planDate": "2025-12-01",
+    "owner": "汪永刚",
+    "vp": "高文龙",
+    "result": "申报通过"
+  },
+  {
+    "hospital": "上海市普陀区长风街道白玉社区卫生服务中心",
+    "city": "上海",
+    "region": "华东",
+    "stage": "意向客户",
+    "planDate": "2025-12-01",
+    "owner": "汪永刚",
+    "vp": "高文龙",
+    "result": "申报通过"
+  },
+  {
+    "hospital": "上海市普陀区长寿街道社区卫生服务中心",
+    "city": "上海",
+    "region": "华东",
+    "stage": "意向客户",
+    "planDate": "2025-12-01",
+    "owner": "汪永刚",
+    "vp": "高文龙",
+    "result": "申报通过"
+  },
+  {
+    "hospital": "上海市普陀区石泉街道社区卫生服务中心",
+    "city": "上海",
+    "region": "华东",
+    "stage": "意向客户",
+    "planDate": "2025-12-01",
+    "owner": "汪永刚",
+    "vp": "高文龙",
+    "result": "申报通过"
+  },
+  {
+    "hospital": "哈尔滨医科大学附属第一医院",
+    "city": "黑龙江",
+    "region": "华北",
+    "stage": "提单中",
+    "planDate": "2025-12-01",
+    "owner": "马选平",
+    "vp": "卿毅",
+    "result": "申报通过"
+  },
+  {
+    "hospital": "哈尔滨医科大学附属第二医院",
+    "city": "黑龙江",
+    "region": "华北",
+    "stage": "提单中",
+    "planDate": "2025-12-01",
+    "owner": "马选平",
+    "vp": "卿毅",
+    "result": "申报通过"
+  },
+  {
+    "hospital": "哈尔滨医科大学附属第四医院",
+    "city": "黑龙江",
+    "region": "华北",
+    "stage": "提单中",
+    "planDate": "2025-12-01",
+    "owner": "马选平",
+    "vp": "卿毅",
+    "result": "申报通过"
+  },
+  {
+    "hospital": "黑龙江省医院",
+    "city": "黑龙江",
+    "region": "华北",
+    "stage": "提单中",
+    "planDate": "2025-12-01",
+    "owner": "马选平",
+    "vp": "卿毅",
+    "result": "申报通过"
+  },
+  {
+    "hospital": "哈尔滨市第一医院",
+    "city": "黑龙江",
+    "region": "华北",
+    "stage": "提单中",
+    "planDate": "2025-12-01",
+    "owner": "马选平",
+    "vp": "卿毅",
+    "result": "申报通过"
+  },
+  {
+    "hospital": "哈尔滨市第二医院",
+    "city": "黑龙江",
+    "region": "华北",
+    "stage": "提单中",
+    "planDate": "2025-12-01",
+    "owner": "马选平",
+    "vp": "卿毅",
+    "result": "申报通过"
+  },
+  {
+    "hospital": "哈尔滨市第四医院",
+    "city": "黑龙江",
+    "region": "华北",
+    "stage": "提单中",
+    "planDate": "2025-12-01",
+    "owner": "马选平",
+    "vp": "卿毅",
+    "result": "申报通过"
+  },
+  {
+    "hospital": "哈尔滨二四二医院",
+    "city": "黑龙江",
+    "region": "华北",
+    "stage": "提单中",
+    "planDate": "2025-12-01",
+    "owner": "马选平",
+    "vp": "卿毅",
+    "result": "申报通过"
+  },
+  {
+    "hospital": "大庆油田总医院",
+    "city": "黑龙江",
+    "region": "华北",
+    "stage": "提单中",
+    "planDate": "2025-12-01",
+    "owner": "马选平",
+    "vp": "卿毅",
+    "result": "申报通过"
+  },
+  {
+    "hospital": "大庆市人民医院",
+    "city": "黑龙江",
+    "region": "华北",
+    "stage": "提单中",
+    "planDate": "2025-12-01",
+    "owner": "马选平",
+    "vp": "卿毅",
+    "result": "0"
+  },
+  {
+    "hospital": "牡丹江医学院附属红旗医院",
+    "city": "黑龙江",
+    "region": "华北",
+    "stage": "提单中",
+    "planDate": "2025-12-01",
+    "owner": "马选平",
+    "vp": "卿毅",
+    "result": "0"
+  },
+  {
+    "hospital": "牡丹江市第一人民医院",
+    "city": "黑龙江",
+    "region": "华北",
+    "stage": "提单中",
+    "planDate": "2025-12-01",
+    "owner": "马选平",
+    "vp": "卿毅",
+    "result": "0"
+  },
+  {
+    "hospital": "牡丹江市第二人民医院",
+    "city": "黑龙江",
+    "region": "华北",
+    "stage": "提单中",
+    "planDate": "2025-12-01",
+    "owner": "马选平",
+    "vp": "卿毅",
+    "result": "0"
+  },
+  {
+    "hospital": "齐齐哈尔市第一医院",
+    "city": "黑龙江",
+    "region": "华北",
+    "stage": "提单中",
+    "planDate": "2025-12-01",
+    "owner": "马选平",
+    "vp": "卿毅",
+    "result": "0"
+  },
+  {
+    "hospital": "柳州市人民医院",
+    "city": "广西",
+    "region": "华南",
+    "stage": "已提单",
+    "planDate": "2025-12-01",
+    "owner": "马强",
+    "vp": "罗险峰",
+    "result": "申报通过"
+  },
+  {
+    "hospital": "上海市第七人民医院",
+    "city": "上海",
+    "region": "华东",
+    "stage": "意向客户",
+    "planDate": "2025-12-01",
+    "owner": "甘程升",
+    "vp": "高文龙",
+    "result": "申报通过"
+  },
+  {
+    "hospital": "上海市第四康复医院",
+    "city": "上海",
+    "region": "华东",
+    "stage": "已进药",
+    "planDate": "2025-12-01",
+    "owner": "甘程升",
+    "vp": "高文龙",
+    "result": "申报通过"
+  },
+  {
+    "hospital": "上海市徐汇区老年护理医院",
+    "city": "上海",
+    "region": "华东",
+    "stage": "意向客户",
+    "planDate": "2025-12-01",
+    "owner": "甘程升",
+    "vp": "高文龙",
+    "result": "申报通过"
+  },
+  {
+    "hospital": "上海交通大学医学院附属新华医院",
+    "city": "上海",
+    "region": "华东",
+    "stage": "意向客户",
+    "planDate": "2025-12-01",
+    "owner": "甘程升",
+    "vp": "高文龙",
+    "result": "申报通过"
+  },
+  {
+    "hospital": "上海中医药大学附属曙光医院",
+    "city": "上海",
+    "region": "华东",
+    "stage": "意向客户",
+    "planDate": "2025-12-01",
+    "owner": "甘程升",
+    "vp": "高文龙",
+    "result": "申报通过"
+  },
+  {
+    "hospital": "上海中医药大学附属龙华医院",
+    "city": "上海",
+    "region": "华东",
+    "stage": "意向客户",
+    "planDate": "2025-12-01",
+    "owner": "甘程升",
+    "vp": "高文龙",
+    "result": "申报通过"
+  },
+  {
+    "hospital": "胜利油田中心医院",
+    "city": "山东",
+    "region": "华北",
+    "stage": "意向客户",
+    "planDate": "2025-12-01",
+    "owner": "周辉",
+    "vp": "卿毅",
+    "result": "申报通过"
+  },
+  {
+    "hospital": "东营市人民医院",
+    "city": "山东",
+    "region": "华北",
+    "stage": "提单中",
+    "planDate": "2025-12-01",
+    "owner": "周辉",
+    "vp": "卿毅",
+    "result": "申报通过"
+  },
+  {
+    "hospital": "中国人民解放军联勤保障部队第九七〇医院",
+    "city": "山东",
+    "region": "华北",
+    "stage": "提单中",
+    "planDate": "2025-12-01",
+    "owner": "周辉",
+    "vp": "卿毅",
+    "result": "申报通过"
+  },
+  {
+    "hospital": "烟台市烟台山医院",
+    "city": "山东",
+    "region": "华北",
+    "stage": "已提单",
+    "planDate": "2025-12-01",
+    "owner": "周辉",
+    "vp": "卿毅",
+    "result": "申报通过"
+  },
+  {
+    "hospital": "上海市第十人民医院分院",
+    "city": "上海",
+    "region": "华东",
+    "stage": "提单中",
+    "planDate": "2025-12-01",
+    "owner": "刘雨田",
+    "vp": "高文龙",
+    "result": "申报通过"
+  },
+  {
+    "hospital": "上海市静安区彭浦新村街道社区卫生服务中心",
+    "city": "上海",
+    "region": "华东",
+    "stage": "已进药",
+    "planDate": "2025-12-01",
+    "owner": "刘雨田",
+    "vp": "高文龙",
+    "result": "进院成功"
+  },
+  {
+    "hospital": "上海市第一人民医院",
+    "city": "上海",
+    "region": "华东",
+    "stage": "意向客户",
+    "planDate": "2025-12-01",
+    "owner": "刘雨田",
+    "vp": "高文龙",
+    "result": "申报通过"
+  },
+  {
+    "hospital": "复旦大学附属华山医院北院",
+    "city": "上海",
+    "region": "华东",
+    "stage": "提单中",
+    "planDate": "2025-12-01",
+    "owner": "刘雨田",
+    "vp": "高文龙",
+    "result": "申报通过"
+  },
+  {
+    "hospital": "复旦大学附属华山医院东院",
+    "city": "上海",
+    "region": "华东",
+    "stage": "提单中",
+    "planDate": "2025-12-01",
+    "owner": "刘雨田",
+    "vp": "高文龙",
+    "result": "申报通过"
+  },
+  {
+    "hospital": "峨山彝族自治县人民医院",
+    "city": "云南",
+    "region": "华西",
+    "stage": "已提单",
+    "planDate": "2025-12-01",
+    "owner": "高俊",
+    "vp": "周辉",
+    "result": "申报通过"
+  },
+  {
+    "hospital": "兰州大学第二医院",
+    "city": "甘肃",
+    "region": "华西",
+    "stage": "已提单",
+    "planDate": "2025-12-01",
+    "owner": "张斌",
+    "vp": "耿福林",
+    "result": "申报通过"
+  },
+  {
+    "hospital": "楚雄彝族自治州人民医院(新院）",
+    "city": "云南",
+    "region": "华西",
+    "stage": "提单中",
+    "planDate": "2025-12-01",
+    "owner": "高俊",
+    "vp": "周辉",
+    "result": "申报通过"
+  },
+  {
+    "hospital": "曲靖市第一人民医院",
+    "city": "云南",
+    "region": "华西",
+    "stage": "提单中",
+    "planDate": "2025-12-01",
+    "owner": "高俊",
+    "vp": "周辉",
+    "result": "申报通过"
+  },
+  {
+    "hospital": "曲靖市第二人民医院",
+    "city": "云南",
+    "region": "华西",
+    "stage": "提单中",
+    "planDate": "2025-12-01",
+    "owner": "高俊",
+    "vp": "周辉",
+    "result": "申报通过"
+  },
+  {
+    "hospital": "成都京东方医院",
+    "city": "四川",
+    "region": "华西",
+    "stage": "已提单",
+    "planDate": "2025-12-01",
+    "owner": "邓华川",
+    "vp": "陈辉",
+    "result": "申报通过"
+  },
+  {
+    "hospital": "常德市第四人民医院",
+    "city": "湖南",
+    "region": "华南",
+    "stage": "已提单",
+    "planDate": "2025-12-01",
+    "owner": "蔡庆亮",
+    "vp": "罗险峰",
+    "result": "申报通过"
+  },
+  {
+    "hospital": "天水市第一人民医院（天水市紧急医疗救援中心、甘肃中医药大学附属天水医院）",
+    "city": "甘肃",
+    "region": "华西",
+    "stage": "已提单",
+    "planDate": "2025-12-01",
+    "owner": "张斌",
+    "vp": "耿福林",
+    "result": "申报通过"
+  },
+  {
+    "hospital": "中国人民解放军第四一一医院",
+    "city": "上海",
+    "region": "华东",
+    "stage": "提单中",
+    "planDate": "2025-12-01",
+    "owner": "刘雨田",
+    "vp": "高文龙",
+    "result": "申报通过"
+  },
+  {
+    "hospital": "上海市第十人民医院崇明分院（上海市崇明区第二人民医院）",
+    "city": "上海",
+    "region": "华东",
+    "stage": "提单中",
+    "planDate": "2025-12-01",
+    "owner": "刘雨田",
+    "vp": "高文龙",
+    "result": "申报通过"
+  },
+  {
+    "hospital": "上海市闵行区浦江社区卫生服务中心",
+    "city": "上海",
+    "region": "华东",
+    "stage": "提单中",
+    "planDate": "2025-12-01",
+    "owner": "刘雨田",
+    "vp": "高文龙",
+    "result": "0"
+  },
+  {
+    "hospital": "上海市奉贤区中医医院",
+    "city": "上海",
+    "region": "华东",
+    "stage": "提单中",
+    "planDate": "2025-12-01",
+    "owner": "刘雨田",
+    "vp": "高文龙",
+    "result": "0"
+  },
+  {
+    "hospital": "上海市普陀区中医医院",
+    "city": "上海",
+    "region": "华东",
+    "stage": "提单中",
+    "planDate": "2025-12-01",
+    "owner": "刘雨田",
+    "vp": "高文龙",
+    "result": "0"
+  },
+  {
+    "hospital": "上海市浦东新区航头社区卫生服务中心",
+    "city": "上海",
+    "region": "华东",
+    "stage": "提单中",
+    "planDate": "2025-12-01",
+    "owner": "刘雨田",
+    "vp": "高文龙",
+    "result": "0"
+  },
+  {
+    "hospital": "上海市浦东新区航头鹤沙社区卫生服务中心",
+    "city": "上海",
+    "region": "华东",
+    "stage": "提单中",
+    "planDate": "2025-12-01",
+    "owner": "刘雨田",
+    "vp": "高文龙",
+    "result": "0"
+  },
+  {
+    "hospital": "邯郸市中心医院",
+    "city": "河北",
+    "region": "华北",
+    "stage": "意向客户",
+    "planDate": "2025-12-01",
+    "owner": "吕天维",
+    "vp": "卢俊",
+    "result": "0"
+  },
+  {
+    "hospital": "湖南师范大学附属湘东医院",
+    "city": "湖南",
+    "region": "华南",
+    "stage": "已提单",
+    "planDate": "2025-12-01",
+    "owner": "沈娅琪",
+    "vp": "罗险峰",
+    "result": "申报通过"
+  },
+  {
+    "hospital": "株洲市人民医院",
+    "city": "湖南",
+    "region": "华南",
+    "stage": "意向客户",
+    "planDate": "2025-12-01",
+    "owner": "蔡庆亮",
+    "vp": "罗险峰",
+    "result": "申报通过"
+  },
+  {
+    "hospital": "河北医科大学第四医院（河北省肿瘤医院）",
+    "city": "河北",
+    "region": "华北",
+    "stage": "意向客户",
+    "planDate": "2025-12-01",
+    "owner": "吕天维",
+    "vp": "卢俊",
+    "result": "申报通过"
+  },
+  {
+    "hospital": "衡山县人民医院",
+    "city": "湖南",
+    "region": "华南",
+    "stage": "已提单",
+    "planDate": "2025-12-01",
+    "owner": "沈娅琪",
+    "vp": "罗险峰",
+    "result": "申报通过"
+  },
+  {
+    "hospital": "复旦大学附属华山医院",
+    "city": "上海",
+    "region": "华东",
+    "stage": "意向客户",
+    "planDate": "2025-12-01",
+    "owner": "刘雨田",
+    "vp": "高文龙",
+    "result": "申报通过"
+  },
+  {
+    "hospital": "上海交通大学医学院附属仁济医院南院",
+    "city": "上海",
+    "region": "华东",
+    "stage": "提单中",
+    "planDate": "2025-12-01",
+    "owner": "刘雨田",
+    "vp": "高文龙",
+    "result": "申报通过"
+  },
+  {
+    "hospital": "上海市第六人民医院",
+    "city": "上海",
+    "region": "华东",
+    "stage": "已提单",
+    "planDate": "2025-12-01",
+    "owner": "刘雨田",
+    "vp": "高文龙",
+    "result": "申报通过"
+  },
+  {
+    "hospital": "上海市徐汇区大华医院",
+    "city": "上海",
+    "region": "华东",
+    "stage": "意向客户",
+    "planDate": "2025-12-01",
+    "owner": "刘雨田",
+    "vp": "高文龙",
+    "result": "申报通过"
+  },
+  {
+    "hospital": "复旦大学附属中山医院",
+    "city": "上海",
+    "region": "华东",
+    "stage": "意向客户",
+    "planDate": "2025-12-01",
+    "owner": "刘雨田",
+    "vp": "高文龙",
+    "result": "申报通过"
+  },
+  {
+    "hospital": "复旦大学附属中山医院青浦分院",
+    "city": "上海",
+    "region": "华东",
+    "stage": "意向客户",
+    "planDate": "2025-12-01",
+    "owner": "刘雨田",
+    "vp": "高文龙",
+    "result": "申报通过"
+  },
+  {
+    "hospital": "上海市第六人民医院东院",
+    "city": "上海",
+    "region": "华东",
+    "stage": "提单中",
+    "planDate": "2025-12-01",
+    "owner": "刘雨田",
+    "vp": "高文龙",
+    "result": "申报通过"
+  },
+  {
+    "hospital": "上海市第六人民医院金山分院",
+    "city": "上海",
+    "region": "华东",
+    "stage": "提单中",
+    "planDate": "2025-12-01",
+    "owner": "刘雨田",
+    "vp": "高文龙",
+    "result": "申报通过"
+  },
+  {
+    "hospital": "广东医科大学附属医院",
+    "city": "广东",
+    "region": "华南",
+    "stage": "已提单",
+    "planDate": "2025-12-01",
+    "owner": "邝正林",
+    "vp": "许占海",
+    "result": "申报通过"
+  },
+  {
+    "hospital": "中国人民解放军海军第九〇五医院",
+    "city": "上海",
+    "region": "华东",
+    "stage": "意向客户",
+    "planDate": "2025-12-01",
+    "owner": "刘雨田",
+    "vp": "高文龙",
+    "result": "申报通过"
+  },
+  {
+    "hospital": "上海市同济医院",
+    "city": "上海",
+    "region": "华东",
+    "stage": "意向客户",
+    "planDate": "2025-12-01",
+    "owner": "刘雨田",
+    "vp": "高文龙",
+    "result": "申报通过"
+  },
+  {
+    "hospital": "中国中医科学院广安门医院(南区)",
+    "city": "北京",
+    "region": "华北",
+    "stage": "意向客户",
+    "planDate": "2025-12-01",
+    "owner": "刘雨田",
+    "vp": "卢俊",
+    "result": "申报通过"
+  },
+  {
+    "hospital": "重庆医科大学附属第三医院",
+    "city": "重庆",
+    "region": "华西",
+    "stage": "已提单",
+    "planDate": "2025-12-01",
+    "owner": "潘照瑜",
+    "vp": "薛文",
+    "result": "申报通过"
+  },
+  {
+    "hospital": "华中科技大学同济医学院附属协和医院",
+    "city": "湖北",
+    "region": "华西",
+    "stage": "已提单",
+    "planDate": "2025-12-01",
+    "owner": "江炫州",
+    "vp": "陈辉",
+    "result": "申报通过"
+  },
+  {
+    "hospital": "恩施土家族苗族自治州中心医院",
+    "city": "湖北",
+    "region": "华西",
+    "stage": "意向客户",
+    "planDate": "2025-12-01",
+    "owner": "江炫州",
+    "vp": "陈辉",
+    "result": "申报通过"
+  },
+  {
+    "hospital": "上海昌豪门诊部",
+    "city": "上海",
+    "region": "华东",
+    "stage": "已提单",
+    "planDate": "2025-12-01",
+    "owner": "刘雨田",
+    "vp": "高文龙",
+    "result": "0"
+  },
+  {
+    "hospital": "上海电力医院",
+    "city": "上海",
+    "region": "华东",
+    "stage": "意向客户",
+    "planDate": "2025-12-01",
+    "owner": "刘雨田",
+    "vp": "高文龙",
+    "result": "申报通过"
+  },
+  {
+    "hospital": "衡东县中医医院",
+    "city": "湖南",
+    "region": "华南",
+    "stage": "已过会",
+    "planDate": "2025-12-01",
+    "owner": "李振中",
+    "vp": "罗险峰",
+    "result": "申报通过"
+  },
+  {
+    "hospital": "哈尔滨宏泽医药有限公司学府店",
+    "city": "黑龙江",
+    "region": "华北",
+    "stage": "已进药",
+    "planDate": "2025-11-01",
+    "owner": "马选平",
+    "vp": "卿毅",
+    "result": "进院成功"
+  },
+  {
+    "hospital": "济宁市第二人民医院",
+    "city": "山东",
+    "region": "华北",
+    "stage": "意向客户",
+    "planDate": "2025-11-01",
+    "owner": "赵鹏",
+    "vp": "卿毅",
+    "result": "申报通过"
+  },
+  {
+    "hospital": "山东第一医科大学第一附属医院（山东省千佛山医院、山东省牙病防治指导中心）",
+    "city": "山东",
+    "region": "华北",
+    "stage": "意向客户",
+    "planDate": "2025-11-01",
+    "owner": "赵鹏",
+    "vp": "卿毅",
+    "result": "申报通过"
+  },
+  {
+    "hospital": "德州市人民医院",
+    "city": "山东",
+    "region": "华北",
+    "stage": "意向客户",
+    "planDate": "2025-11-01",
+    "owner": "赵鹏",
+    "vp": "卿毅",
+    "result": "申报通过"
+  },
+  {
+    "hospital": "德州市中医院",
+    "city": "山东",
+    "region": "华北",
+    "stage": "意向客户",
+    "planDate": "2025-11-01",
+    "owner": "赵鹏",
+    "vp": "卿毅",
+    "result": "申报通过"
+  },
+  {
+    "hospital": "临邑县人民医院",
+    "city": "山东",
+    "region": "华北",
+    "stage": "意向客户",
+    "planDate": "2025-11-01",
+    "owner": "赵鹏",
+    "vp": "卿毅",
+    "result": "申报通过"
+  },
+  {
+    "hospital": "聊城市人民医院",
+    "city": "山东",
+    "region": "华北",
+    "stage": "意向客户",
+    "planDate": "2025-11-01",
+    "owner": "赵鹏",
+    "vp": "卿毅",
+    "result": "申报通过"
+  },
+  {
+    "hospital": "聊城市第三人民医院",
+    "city": "山东",
+    "region": "华北",
+    "stage": "意向客户",
+    "planDate": "2025-11-01",
+    "owner": "赵鹏",
+    "vp": "卿毅",
+    "result": "申报通过"
+  },
+  {
+    "hospital": "聊城市第二人民医院",
+    "city": "山东",
+    "region": "华北",
+    "stage": "意向客户",
+    "planDate": "2025-11-01",
+    "owner": "赵鹏",
+    "vp": "卿毅",
+    "result": "申报通过"
+  },
+  {
+    "hospital": "苏州和康中医医院",
+    "city": "江苏",
+    "region": "华东",
+    "stage": "已进药",
+    "planDate": "2025-11-01",
+    "owner": "刘雨田",
+    "vp": "杨海波",
+    "result": "进院成功"
+  },
+  {
+    "hospital": "苏州明基医院",
+    "city": "江苏",
+    "region": "华东",
+    "stage": "已进药",
+    "planDate": "2025-11-01",
+    "owner": "刘雨田",
+    "vp": "杨海波",
+    "result": "进院成功核算奖励"
+  },
+  {
+    "hospital": "济宁国药关爱大药房连锁有限公司古槐路药店(济宁医学院附属医院)，",
+    "city": "山东",
+    "region": "华北",
+    "stage": "意向客户",
+    "planDate": "2025-11-01",
+    "owner": "赵鹏",
+    "vp": "卿毅",
+    "result": "申报通过"
+  },
+  {
+    "hospital": "老百姓（滕州）医药大药房",
+    "city": "山东",
+    "region": "华北",
+    "stage": "意向客户",
+    "planDate": "2025-11-01",
+    "owner": "赵鹏",
+    "vp": "卿毅",
+    "result": "申报通过"
+  },
+  {
+    "hospital": "烟台万华医院",
+    "city": "山东",
+    "region": "华北",
+    "stage": "意向客户",
+    "planDate": "2025-11-01",
+    "owner": "赵鹏",
+    "vp": "卿毅",
+    "result": "申报通过"
+  },
+  {
+    "hospital": "烟台海港医院",
+    "city": "山东",
+    "region": "华北",
+    "stage": "提单中",
+    "planDate": "2025-11-01",
+    "owner": "周辉",
+    "vp": "卿毅",
+    "result": "申报通过"
+  },
+  {
+    "hospital": "招远市人民医院",
+    "city": "山东",
+    "region": "华北",
+    "stage": "意向客户",
+    "planDate": "2025-11-01",
+    "owner": "周辉",
+    "vp": "卿毅",
+    "result": "申报通过"
+  },
+  {
+    "hospital": "烟台业达医院",
+    "city": "山东",
+    "region": "华北",
+    "stage": "意向客户",
+    "planDate": "2025-11-01",
+    "owner": "周辉",
+    "vp": "卿毅",
+    "result": "申报通过"
+  },
+  {
+    "hospital": "青岛西海岸第二医院",
+    "city": "山东",
+    "region": "华北",
+    "stage": "已进药",
+    "planDate": "2025-11-01",
+    "owner": "赵鹏",
+    "vp": "卿毅",
+    "result": "进院成功"
+  },
+  {
+    "hospital": "上海市闵行区颛桥社区卫生服务中心",
+    "city": "上海",
+    "region": "华东",
+    "stage": "提单中",
+    "planDate": "2025-11-01",
+    "owner": "刘雨田",
+    "vp": "高文龙",
+    "result": "0"
+  },
+  {
+    "hospital": "博兴县人民医院",
+    "city": "山东",
+    "region": "华北",
+    "stage": "意向客户",
+    "planDate": "2025-11-01",
+    "owner": "赵鹏",
+    "vp": "卿毅",
+    "result": "0"
+  },
+  {
+    "hospital": "滨州市中心医院",
+    "city": "山东",
+    "region": "华北",
+    "stage": "意向客户",
+    "planDate": "2025-11-01",
+    "owner": "赵鹏",
+    "vp": "卿毅",
+    "result": "0"
+  },
+  {
+    "hospital": "淄博市中西医结合医院",
+    "city": "山东",
+    "region": "华北",
+    "stage": "意向客户",
+    "planDate": "2025-11-01",
+    "owner": "赵鹏",
+    "vp": "卿毅",
+    "result": "0"
+  },
+  {
+    "hospital": "淄博市第一医院",
+    "city": "山东",
+    "region": "华北",
+    "stage": "意向客户",
+    "planDate": "2025-11-01",
+    "owner": "赵鹏",
+    "vp": "卿毅",
+    "result": "0"
+  },
+  {
+    "hospital": "山东省康复医院",
+    "city": "山东",
+    "region": "华北",
+    "stage": "意向客户",
+    "planDate": "2025-11-01",
+    "owner": "赵鹏",
+    "vp": "卿毅",
+    "result": "0"
+  },
+  {
+    "hospital": "淄博市临淄区人民医院（淄博市市立医院）",
+    "city": "山东",
+    "region": "华北",
+    "stage": "意向客户",
+    "planDate": "2025-11-01",
+    "owner": "赵鹏",
+    "vp": "卿毅",
+    "result": "0"
+  },
+  {
+    "hospital": "济南市机关医院",
+    "city": "山东",
+    "region": "华北",
+    "stage": "意向客户",
+    "planDate": "2025-11-01",
+    "owner": "赵鹏",
+    "vp": "卿毅",
+    "result": "0"
+  },
+  {
+    "hospital": "济南市第四人民医院",
+    "city": "山东",
+    "region": "华北",
+    "stage": "意向客户",
+    "planDate": "2025-11-01",
+    "owner": "赵鹏",
+    "vp": "卿毅",
+    "result": "0"
+  },
+  {
+    "hospital": "济南市第五人民医院",
+    "city": "山东",
+    "region": "华北",
+    "stage": "意向客户",
+    "planDate": "2025-11-01",
+    "owner": "赵鹏",
+    "vp": "卿毅",
+    "result": "0"
+  },
+  {
+    "hospital": "青岛西海岸新区磐石中医医院",
+    "city": "山东",
+    "region": "华北",
+    "stage": "意向客户",
+    "planDate": "2025-11-01",
+    "owner": "赵鹏",
+    "vp": "卿毅",
+    "result": "0"
+  },
+  {
+    "hospital": "南通市第六人民医院",
+    "city": "江苏",
+    "region": "华东",
+    "stage": "临采",
+    "planDate": "2025-11-01",
+    "owner": "赵甫家",
+    "vp": "杨海波",
+    "result": "进院成功"
+  },
+  {
+    "hospital": "上海市嘉定区南翔医院",
+    "city": "上海",
+    "region": "华东",
+    "stage": "意向客户",
+    "planDate": "2025-11-01",
+    "owner": "刘雨田",
+    "vp": "高文龙",
+    "result": "申报通过"
+  },
+  {
+    "hospital": "上海市浦东新区浦南医院",
+    "city": "上海",
+    "region": "华东",
+    "stage": "意向客户",
+    "planDate": "2025-11-01",
+    "owner": "刘雨田",
+    "vp": "高文龙",
+    "result": "申报通过"
+  },
+  {
+    "hospital": "南宁市第二人民医院",
+    "city": "广西",
+    "region": "华南",
+    "stage": "提单中",
+    "planDate": "2025-11-01",
+    "owner": "马强",
+    "vp": "罗险峰",
+    "result": "申报通过"
+  },
+  {
+    "hospital": "北京安达医院",
+    "city": "北京",
+    "region": "华北",
+    "stage": "已进药",
+    "planDate": "2025-11-01",
+    "owner": "贺云飞",
+    "vp": "卢俊",
+    "result": "进院成功核算奖励"
+  },
+  {
+    "hospital": "北京市第一中西医结合医院【本院】",
+    "city": "北京",
+    "region": "华北",
+    "stage": "已提单",
+    "planDate": "2025-11-01",
+    "owner": "贺云飞",
+    "vp": "卢俊",
+    "result": "暂停开发"
+  },
+  {
+    "hospital": "北京市海淀医院",
+    "city": "北京",
+    "region": "华北",
+    "stage": "意向客户",
+    "planDate": "2025-11-01",
+    "owner": "贺云飞",
+    "vp": "卢俊",
+    "result": "申报通过"
+  },
+  {
+    "hospital": "首都医科大学附属北京世纪坛医院",
+    "city": "北京",
+    "region": "华北",
+    "stage": "意向客户",
+    "planDate": "2025-11-01",
+    "owner": "贺云飞",
+    "vp": "卢俊",
+    "result": "申报通过"
+  },
+  {
+    "hospital": "华中科技大学同济医学院附属同济医院",
+    "city": "湖北",
+    "region": "华西",
+    "stage": "意向客户",
+    "planDate": "2025-11-01",
+    "owner": "江炫州",
+    "vp": "陈辉",
+    "result": "申报通过"
+  },
+  {
+    "hospital": "六盘水市人民医院",
+    "city": "贵州",
+    "region": "华西",
+    "stage": "已进药",
+    "planDate": "2025-11-01",
+    "owner": "吴梅",
+    "vp": "周辉",
+    "result": "进院成功核算奖励"
+  },
+  {
+    "hospital": "上海市闵行区马桥社区卫生服务中心",
+    "city": "上海",
+    "region": "华东",
+    "stage": "提单中",
+    "planDate": "2025-11-01",
+    "owner": "刘雨田",
+    "vp": "高文龙",
+    "result": "0"
+  },
+  {
+    "hospital": "上海博爱医院",
+    "city": "上海",
+    "region": "华东",
+    "stage": "已过会",
+    "planDate": "2025-11-01",
+    "owner": "刘雨田",
+    "vp": "高文龙",
+    "result": "0"
+  },
+  {
+    "hospital": "上海市闵行区中西医结合医院",
+    "city": "上海",
+    "region": "华东",
+    "stage": "提单中",
+    "planDate": "2025-11-01",
+    "owner": "刘雨田",
+    "vp": "高文龙",
+    "result": "0"
+  },
+  {
+    "hospital": "上海市青浦区中医医院",
+    "city": "上海",
+    "region": "华东",
+    "stage": "意向客户",
+    "planDate": "2025-11-01",
+    "owner": "刘雨田",
+    "vp": "高文龙",
+    "result": "申报通过"
+  },
+  {
+    "hospital": "上海市松江区中心医院",
+    "city": "上海",
+    "region": "华东",
+    "stage": "意向客户",
+    "planDate": "2025-11-01",
+    "owner": "刘雨田",
+    "vp": "高文龙",
+    "result": "申报通过"
+  },
+  {
+    "hospital": "中国人民解放军海军特色医学中心",
+    "city": "上海",
+    "region": "华东",
+    "stage": "意向客户",
+    "planDate": "2025-11-01",
+    "owner": "刘雨田",
+    "vp": "高文龙",
+    "result": "申报通过"
+  },
+  {
+    "hospital": "上海市浦东新区大团社区卫生服务中心",
+    "city": "上海",
+    "region": "华东",
+    "stage": "已进药",
+    "planDate": "2025-11-01",
+    "owner": "刘雨田",
+    "vp": "高文龙",
+    "result": "申报通过"
+  },
+  {
+    "hospital": "上海市浦东新区人民医院",
+    "city": "上海",
+    "region": "华东",
+    "stage": "已进药",
+    "planDate": "2025-11-01",
+    "owner": "刘雨田",
+    "vp": "高文龙",
+    "result": "申报通过"
+  },
+  {
+    "hospital": "中南大学湘雅二医院",
+    "city": "湖南",
+    "region": "华南",
+    "stage": "已提单",
+    "planDate": "2025-11-01",
+    "owner": "蔡庆亮",
+    "vp": "罗险峰",
+    "result": "申报通过"
+  },
+  {
+    "hospital": "长沙市中医医院",
+    "city": "湖南",
+    "region": "华南",
+    "stage": "意向客户",
+    "planDate": "2025-11-01",
+    "owner": "蔡庆亮",
+    "vp": "罗险峰",
+    "result": "申报通过"
+  },
+  {
+    "hospital": "上海市同仁医院",
+    "city": "上海",
+    "region": "华东",
+    "stage": "提单中",
+    "planDate": "2025-10-01",
+    "owner": "刘雨田",
+    "vp": "高文龙",
+    "result": "申报通过"
+  },
+  {
+    "hospital": "济宁叮铃大药房有限公司",
+    "city": "山东",
+    "region": "华北",
+    "stage": "已进药",
+    "planDate": "2025-10-01",
+    "owner": "赵鹏",
+    "vp": "卿毅",
+    "result": "申报通过"
+  },
+  {
+    "hospital": "深圳出入境边防检查总站医院",
+    "city": "广东",
+    "region": "华南",
+    "stage": "已进药",
+    "planDate": "2025-10-01",
+    "owner": "林路",
+    "vp": "许占海",
+    "result": "进院成功核算奖励"
+  },
+  {
+    "hospital": "济宁国药关爱大药房连锁有限公司济宁解放路店",
+    "city": "山东",
+    "region": "华北",
+    "stage": "意向客户",
+    "planDate": "2025-10-01",
+    "owner": "赵鹏",
+    "vp": "卿毅",
+    "result": "申报通过"
+  },
+  {
+    "hospital": "济宁国药关爱大药房连锁有限公司济宁高新区绿色家园店",
+    "city": "山东",
+    "region": "华北",
+    "stage": "意向客户",
+    "planDate": "2025-10-01",
+    "owner": "赵鹏",
+    "vp": "卿毅",
+    "result": "申报通过"
+  },
+  {
+    "hospital": "济宁国药关爱大药房连锁有限公司西院区药店",
+    "city": "山东",
+    "region": "华北",
+    "stage": "意向客户",
+    "planDate": "2025-10-01",
+    "owner": "赵鹏",
+    "vp": "卿毅",
+    "result": "申报通过"
+  },
+  {
+    "hospital": "单县东大医院",
+    "city": "山东",
+    "region": "华北",
+    "stage": "意向客户",
+    "planDate": "2025-10-01",
+    "owner": "赵鹏",
+    "vp": "卿毅",
+    "result": "申报通过"
+  },
+  {
+    "hospital": "山东省第二人民医院（山东省耳鼻喉医院）",
+    "city": "山东",
+    "region": "华北",
+    "stage": "已过会",
+    "planDate": "2025-10-01",
+    "owner": "赵鹏",
+    "vp": "卿毅",
+    "result": "申报通过"
+  },
+  {
+    "hospital": "龙口南山医院",
+    "city": "山东",
+    "region": "华北",
+    "stage": "意向客户",
+    "planDate": "2025-10-01",
+    "owner": "周辉",
+    "vp": "卿毅",
+    "result": "申报通过"
+  },
+  {
+    "hospital": "邢台医学高等专科学校第一附属医院（邢台市第一医院邢台市肿瘤医院）",
+    "city": "河北",
+    "region": "华北",
+    "stage": "意向客户",
+    "planDate": "2025-10-01",
+    "owner": "马选平",
+    "vp": "卢俊",
+    "result": "申报通过"
+  },
+  {
+    "hospital": "邢台医学高等专科学校第二附属医院",
+    "city": "河北",
+    "region": "华北",
+    "stage": "意向客户",
+    "planDate": "2025-10-01",
+    "owner": "马选平",
+    "vp": "卢俊",
+    "result": "申报通过"
+  },
+  {
+    "hospital": "上海市东方医院",
+    "city": "上海",
+    "region": "华东",
+    "stage": "意向客户",
+    "planDate": "2025-10-01",
+    "owner": "刘雨田",
+    "vp": "高文龙",
+    "result": "申报通过"
+  },
+  {
+    "hospital": "梧州市人民医院",
+    "city": "广西",
+    "region": "华南",
+    "stage": "意向客户",
+    "planDate": "2025-10-01",
+    "owner": "马强",
+    "vp": "罗险峰",
+    "result": "申报通过"
+  },
+  {
+    "hospital": "北京市通州区老年病医院",
+    "city": "北京",
+    "region": "华北",
+    "stage": "意向客户",
+    "planDate": "2025-10-01",
+    "owner": "贺云飞",
+    "vp": "卢俊",
+    "result": "申报通过"
+  },
+  {
+    "hospital": "上海市宝山区顾村镇社区卫生服务中心",
+    "city": "上海",
+    "region": "华东",
+    "stage": "意向客户",
+    "planDate": "2025-10-01",
+    "owner": "刘雨田",
+    "vp": "高文龙",
+    "result": "申报通过"
+  },
+  {
+    "hospital": "四川友谊医院",
+    "city": "四川",
+    "region": "华西",
+    "stage": "已提单",
+    "planDate": "2025-10-01",
+    "owner": "邓华川",
+    "vp": "陈辉",
+    "result": "申报通过"
+  },
+  {
+    "hospital": "四川泰康医院",
+    "city": "四川",
+    "region": "华西",
+    "stage": "提单中",
+    "planDate": "2025-10-01",
+    "owner": "邓华川",
+    "vp": "陈辉",
+    "result": "申报通过"
+  },
+  {
+    "hospital": "上海市浦东新区光明中医医院",
+    "city": "上海",
+    "region": "华东",
+    "stage": "已进药",
+    "planDate": "2025-10-01",
+    "owner": "刘雨田",
+    "vp": "高文龙",
+    "result": "进院成功"
+  },
+  {
+    "hospital": "上海市闵行区中心医院",
+    "city": "上海",
+    "region": "华东",
+    "stage": "意向客户",
+    "planDate": "2025-10-01",
+    "owner": "刘雨田",
+    "vp": "高文龙",
+    "result": "申报通过"
+  },
+  {
+    "hospital": "宁乡市人民医院",
+    "city": "湖南",
+    "region": "华南",
+    "stage": "意向客户",
+    "planDate": "2025-10-01",
+    "owner": "蔡庆亮",
+    "vp": "罗险峰",
+    "result": "申报通过"
+  },
+  {
+    "hospital": "长沙市第三医院",
+    "city": "湖南",
+    "region": "华南",
+    "stage": "已提单",
+    "planDate": "2025-10-01",
+    "owner": "蔡庆亮",
+    "vp": "罗险峰",
+    "result": "申报通过"
+  },
+  {
+    "hospital": "辽宁方大总医院有限公司",
+    "city": "辽宁",
+    "region": "华北",
+    "stage": "意向客户",
+    "planDate": "2025-10-01",
+    "owner": "梁亚蕾",
+    "vp": "卿毅",
+    "result": "申报通过"
+  },
+  {
+    "hospital": "上海市普陀区中心医院",
+    "city": "上海",
+    "region": "华东",
+    "stage": "已提单",
+    "planDate": "2025-10-01",
+    "owner": "刘雨田",
+    "vp": "高文龙",
+    "result": "申报通过"
+  },
+  {
+    "hospital": "中国航天科工集团七三一医院",
+    "city": "北京",
+    "region": "华北",
+    "stage": "已提单",
+    "planDate": "2025-10-01",
+    "owner": "刘雨田",
+    "vp": "卢俊",
+    "result": "申报通过"
+  },
+  {
+    "hospital": "宁津县人民医院",
+    "city": "山东",
+    "region": "华北",
+    "stage": "提单中",
+    "planDate": "2025-09-01",
+    "owner": "赵鹏",
+    "vp": "卿毅",
+    "result": "0"
+  },
+  {
+    "hospital": "济南市市中区人民医院",
+    "city": "山东",
+    "region": "华北",
+    "stage": "意向客户",
+    "planDate": "2025-09-01",
+    "owner": "赵鹏",
+    "vp": "卿毅",
+    "result": "0"
+  },
+  {
+    "hospital": "山东第一医科大学附属省立医院（山东省立医院）",
+    "city": "山东",
+    "region": "华北",
+    "stage": "意向客户",
+    "planDate": "2025-09-01",
+    "owner": "赵鹏",
+    "vp": "卿毅",
+    "result": "开发终止"
+  },
+  {
+    "hospital": "龙口南山养生谷肿瘤医院",
+    "city": "山东",
+    "region": "华北",
+    "stage": "已进药",
+    "planDate": "2025-09-01",
+    "owner": "赵鹏",
+    "vp": "卿毅",
+    "result": "进院成功"
+  },
+  {
+    "hospital": "上海安达大华医疗门诊部",
+    "city": "上海",
+    "region": "华东",
+    "stage": "已进药",
+    "planDate": "2025-09-01",
+    "owner": "刘雨田",
+    "vp": "高文龙",
+    "result": "进院成功"
+  },
+  {
+    "hospital": "上海南航医院",
+    "city": "上海",
+    "region": "华东",
+    "stage": "已进药",
+    "planDate": "2025-09-01",
+    "owner": "刘雨田",
+    "vp": "高文龙",
+    "result": "进院成功核算奖励"
+  },
+  {
+    "hospital": "上海御康医院",
+    "city": "上海",
+    "region": "华东",
+    "stage": "已进药",
+    "planDate": "2025-09-01",
+    "owner": "刘雨田",
+    "vp": "高文龙",
+    "result": "进院成功核算奖励"
+  },
+  {
+    "hospital": "北京市大兴区人民医院",
+    "city": "北京",
+    "region": "华北",
+    "stage": "临采",
+    "planDate": "2025-09-01",
+    "owner": "周辉",
+    "vp": "卢俊",
+    "result": "进院成功"
+  },
+  {
+    "hospital": "兰州大学第一医院",
+    "city": "甘肃",
+    "region": "华西",
+    "stage": "已提单",
+    "planDate": "2025-09-01",
+    "owner": "张斌",
+    "vp": "耿福林",
+    "result": "申报通过"
+  },
+  {
+    "hospital": "上海市宝山区张庙街道长江路社区卫生服务中心",
+    "city": "上海",
+    "region": "华东",
+    "stage": "已进药",
+    "planDate": "2025-09-01",
+    "owner": "刘雨田",
+    "vp": "高文龙",
+    "result": "进院成功核算奖励"
+  },
+  {
+    "hospital": "上海市宝山区顾村镇菊泉新城社区卫生服务中心",
+    "city": "上海",
+    "region": "华东",
+    "stage": "已进药",
+    "planDate": "2025-09-01",
+    "owner": "刘雨田",
+    "vp": "高文龙",
+    "result": "进院成功核算奖励"
+  },
+  {
+    "hospital": "上海市宝山区杨行镇社区卫生服务中心",
+    "city": "上海",
+    "region": "华东",
+    "stage": "意向客户",
+    "planDate": "2025-09-01",
+    "owner": "刘雨田",
+    "vp": "高文龙",
+    "result": "申报通过"
+  },
+  {
+    "hospital": "上海市宝山区大场镇祁连社区卫生服务中心",
+    "city": "上海",
+    "region": "华东",
+    "stage": "意向客户",
+    "planDate": "2025-09-01",
+    "owner": "刘雨田",
+    "vp": "高文龙",
+    "result": "申报通过"
+  },
+  {
+    "hospital": "孝感市第一人民医院",
+    "city": "湖北",
+    "region": "华西",
+    "stage": "意向客户",
+    "planDate": "2025-09-01",
+    "owner": "江炫州",
+    "vp": "陈辉",
+    "result": "申报通过"
+  },
+  {
+    "hospital": "应城市人民医院",
+    "city": "湖北",
+    "region": "华西",
+    "stage": "意向客户",
+    "planDate": "2025-09-01",
+    "owner": "江炫州",
+    "vp": "陈辉",
+    "result": "申报通过"
+  },
+  {
+    "hospital": "孝昌县第一人民医院",
+    "city": "湖北",
+    "region": "华西",
+    "stage": "意向客户",
+    "planDate": "2025-09-01",
+    "owner": "江炫州",
+    "vp": "陈辉",
+    "result": "申报通过"
+  },
+  {
+    "hospital": "上海市浦东医院",
+    "city": "上海",
+    "region": "华东",
+    "stage": "已提单",
+    "planDate": "2025-09-01",
+    "owner": "刘雨田",
+    "vp": "高文龙",
+    "result": "申报通过"
+  },
+  {
+    "hospital": "衡阳市中心医院",
+    "city": "湖南",
+    "region": "华南",
+    "stage": "意向客户",
+    "planDate": "2025-09-01",
+    "owner": "蔡庆亮",
+    "vp": "罗险峰",
+    "result": "申报通过"
+  },
+  {
+    "hospital": "耒阳市人民医院",
+    "city": "湖南",
+    "region": "华南",
+    "stage": "意向客户",
+    "planDate": "2025-09-01",
+    "owner": "蔡庆亮",
+    "vp": "罗险峰",
+    "result": "申报通过"
+  },
+  {
+    "hospital": "上海市宝山区淞南镇社区卫生服务中心",
+    "city": "上海",
+    "region": "华东",
+    "stage": "已进药",
+    "planDate": "2025-09-01",
+    "owner": "刘雨田",
+    "vp": "高文龙",
+    "result": "进院成功"
+  },
+  {
+    "hospital": "上海市宝山区月浦镇社区卫生服务中心",
+    "city": "上海",
+    "region": "华东",
+    "stage": "意向客户",
+    "planDate": "2025-09-01",
+    "owner": "刘雨田",
+    "vp": "高文龙",
+    "result": "申报通过"
+  },
+  {
+    "hospital": "航天中心医院",
+    "city": "北京",
+    "region": "华北",
+    "stage": "已提单",
+    "planDate": "2025-09-01",
+    "owner": "刘雨田",
+    "vp": "卢俊",
+    "result": "申报通过"
+  },
+  {
+    "hospital": "重庆黔江民族医院有限公司",
+    "city": "重庆",
+    "region": "华西",
+    "stage": "已进药",
+    "planDate": "2025-09-01",
+    "owner": "潘照瑜",
+    "vp": "薛文",
+    "result": "进院成功核算奖励"
+  },
+  {
+    "hospital": "中国人民解放军联勤保障部队第九八〇医院",
+    "city": "河北",
+    "region": "华北",
+    "stage": "已提单",
+    "planDate": "2025-09-01",
+    "owner": "吕天维",
+    "vp": "卢俊",
+    "result": "申报通过"
+  },
+  {
+    "hospital": "上海市宝山区大场镇大场社区卫生服务中心",
+    "city": "上海",
+    "region": "华东",
+    "stage": "已进药",
+    "planDate": "2025-09-01",
+    "owner": "刘雨田",
+    "vp": "高文龙",
+    "result": "进院成功核算奖励"
+  },
+  {
+    "hospital": "什邡第二医院",
+    "city": "四川",
+    "region": "华西",
+    "stage": "已提单",
+    "planDate": "2025-08-01",
+    "owner": "金齐治",
+    "vp": "陈辉",
+    "result": "申报通过"
+  },
+  {
+    "hospital": "苏州市中西医结合医院（苏州市木渎人民医院、苏州市吴门医派研究院士材学派研究所）",
+    "city": "江苏",
+    "region": "华东",
+    "stage": "已进药",
+    "planDate": "2025-08-01",
+    "owner": "刘雨田",
+    "vp": "杨海波",
+    "result": "进院成功"
+  },
+  {
+    "hospital": "如皋博爱医院有限公司",
+    "city": "江苏",
+    "region": "华东",
+    "stage": "临采",
+    "planDate": "2025-08-01",
+    "owner": "刘雨田",
+    "vp": "杨海波",
+    "result": "进院成功"
+  },
+  {
+    "hospital": "河北石药大药房连锁有限公司周通店",
+    "city": "河北",
+    "region": "华北",
+    "stage": "已进药",
+    "planDate": "2025-08-01",
+    "owner": "吕天维",
+    "vp": "卢俊",
+    "result": "进院成功"
+  },
+  {
+    "hospital": "河北神威冶金大药房连锁有限公司第五分店",
+    "city": "河北",
+    "region": "华北",
+    "stage": "已进药",
+    "planDate": "2025-08-01",
+    "owner": "吕天维",
+    "vp": "卢俊",
+    "result": "申报通过"
+  },
+  {
+    "hospital": "上海市第五人民医院",
+    "city": "上海",
+    "region": "华东",
+    "stage": "意向客户",
+    "planDate": "2025-08-01",
+    "owner": "刘雨田",
+    "vp": "高文龙",
+    "result": "申报通过"
+  },
+  {
+    "hospital": "上海市徐汇区中心医院",
+    "city": "上海",
+    "region": "华东",
+    "stage": "临采",
+    "planDate": "2025-08-01",
+    "owner": "刘雨田",
+    "vp": "高文龙",
+    "result": "进院成功核算奖励"
+  },
+  {
+    "hospital": "云阳县人民医院",
+    "city": "重庆",
+    "region": "华西",
+    "stage": "已提单",
+    "planDate": "2025-08-01",
+    "owner": "庹健",
+    "vp": "薛文",
+    "result": "申报通过"
+  },
+  {
+    "hospital": "华北石油管理局总医院",
+    "city": "河北",
+    "region": "华北",
+    "stage": "已过会",
+    "planDate": "2025-08-01",
+    "owner": "樊玮",
+    "vp": "卢俊",
+    "result": "暂停开发"
+  },
+  {
+    "hospital": "无锡市第二人民医院（无锡市神经外科研究所、南京医科大学附属无锡第二医院、无锡普仁医院）",
+    "city": "江苏",
+    "region": "华东",
+    "stage": "临采",
+    "planDate": "2025-08-01",
+    "owner": "刘雨田",
+    "vp": "杨海波",
+    "result": "进院成功"
+  },
+  {
+    "hospital": "衡阳市第一人民医院",
+    "city": "湖南",
+    "region": "华南",
+    "stage": "已过会",
+    "planDate": "2025-08-01",
+    "owner": "蔡庆亮",
+    "vp": "罗险峰",
+    "result": "申报通过"
+  },
+  {
+    "hospital": "山东爱新卓尔大药房有限公司济南文化西路分公司",
+    "city": "山东",
+    "region": "华北",
+    "stage": "已提单",
+    "planDate": "2025-07-01",
+    "owner": "赵鹏",
+    "vp": "卿毅",
+    "result": "申报未通过"
+  },
+  {
+    "hospital": "苏州一〇〇医院",
+    "city": "江苏",
+    "region": "华东",
+    "stage": "已提单",
+    "planDate": "2025-07-01",
+    "owner": "刘雨田",
+    "vp": "杨海波",
+    "result": "申报通过"
+  },
+  {
+    "hospital": "北京北亚骨科医院",
+    "city": "北京",
+    "region": "华北",
+    "stage": "已进药",
+    "planDate": "2025-07-01",
+    "owner": "刘雨田",
+    "vp": "卢俊",
+    "result": "进院成功"
+  },
+  {
+    "hospital": "北京密云云秀花园社区卫生服务站",
+    "city": "北京",
+    "region": "华北",
+    "stage": "已进药",
+    "planDate": "2025-07-01",
+    "owner": "刘雨田",
+    "vp": "卢俊",
+    "result": "进院成功"
+  },
+  {
+    "hospital": "苏州市中山百草堂国药有限公司",
+    "city": "江苏",
+    "region": "华东",
+    "stage": "已进药",
+    "planDate": "2025-07-01",
+    "owner": "刘雨田",
+    "vp": "杨海波",
+    "result": "进院成功"
+  },
+  {
+    "hospital": "上海安达医院",
+    "city": "上海",
+    "region": "华东",
+    "stage": "已进药",
+    "planDate": "2025-07-01",
+    "owner": "刘雨田",
+    "vp": "高文龙",
+    "result": "进院成功核算奖励"
+  },
+  {
+    "hospital": "上海安达绿苑门诊部",
+    "city": "上海",
+    "region": "华东",
+    "stage": "已进药",
+    "planDate": "2025-07-01",
+    "owner": "刘雨田",
+    "vp": "高文龙",
+    "result": "进院成功核算奖励"
+  },
+  {
+    "hospital": "北京市丰台区南苑乡石榴庄村社区卫生服务站",
+    "city": "北京",
+    "region": "华北",
+    "stage": "已提单",
+    "planDate": "2025-07-01",
+    "owner": "刘雨田",
+    "vp": "卢俊",
+    "result": "暂停开发"
+  },
+  {
+    "hospital": "京东誉美中西医结合肾病医院",
+    "city": "河北",
+    "region": "华北",
+    "stage": "意向客户",
+    "planDate": "2025-07-01",
+    "owner": "樊玮",
+    "vp": "卢俊",
+    "result": "申报通过"
+  },
+  {
+    "hospital": "京东中美医院",
+    "city": "河北",
+    "region": "华北",
+    "stage": "已提单",
+    "planDate": "2025-07-01",
+    "owner": "樊玮",
+    "vp": "卢俊",
+    "result": "申报通过"
+  },
+  {
+    "hospital": "淮安市第一人民医院",
+    "city": "江苏",
+    "region": "华东",
+    "stage": "意向客户",
+    "planDate": "2025-07-01",
+    "owner": "刘雨田",
+    "vp": "杨海波",
+    "result": "申报通过"
+  },
+  {
+    "hospital": "广西医科大学第一附属医院",
+    "city": "广西",
+    "region": "华南",
+    "stage": "已提单",
+    "planDate": "2025-07-01",
+    "owner": "马强",
+    "vp": "罗险峰",
+    "result": "申报通过"
+  },
+  {
+    "hospital": "浏阳市人民医院",
+    "city": "湖南",
+    "region": "华南",
+    "stage": "意向客户",
+    "planDate": "2025-07-01",
+    "owner": "刘海钧",
+    "vp": "罗险峰",
+    "result": "开发终止"
+  },
+  {
+    "hospital": "中南大学湘雅医院",
+    "city": "湖南",
+    "region": "华南",
+    "stage": "意向客户",
+    "planDate": "2025-07-01",
+    "owner": "刘海钧",
+    "vp": "罗险峰",
+    "result": "开发终止"
+  },
+  {
+    "hospital": "上海市第八人民医院",
+    "city": "上海",
+    "region": "华东",
+    "stage": "已进药",
+    "planDate": "2025-07-01",
+    "owner": "刘雨田",
+    "vp": "高文龙",
+    "result": "进院成功核算奖励"
+  },
+  {
+    "hospital": "南华大学附属第二医院",
+    "city": "湖南",
+    "region": "华南",
+    "stage": "意向客户",
+    "planDate": "2025-07-01",
+    "owner": "蔡庆亮",
+    "vp": "罗险峰",
+    "result": "申报通过"
+  },
+  {
+    "hospital": "湖南省第六工程有限公司建设医院",
+    "city": "湖南",
+    "region": "华南",
+    "stage": "已提单",
+    "planDate": "2025-07-01",
+    "owner": "蔡庆亮",
+    "vp": "罗险峰",
+    "result": "申报通过"
+  },
+  {
+    "hospital": "湖南省第二人民医院（湖南省脑科医院）",
+    "city": "湖南",
+    "region": "华南",
+    "stage": "已提单",
+    "planDate": "2025-07-01",
+    "owner": "蔡庆亮",
+    "vp": "罗险峰",
+    "result": "申报通过"
+  },
+  {
+    "hospital": "国药控股关爱大药房连锁（临沂）有限公司沂水健康路二店",
+    "city": "山东",
+    "region": "华北",
+    "stage": "已进药",
+    "planDate": "2025-06-01",
+    "owner": "赵鹏",
+    "vp": "卿毅",
+    "result": "进院成功核算奖励"
+  },
+  {
+    "hospital": "河北华北石油商业有限公司康宁会战道药房",
+    "city": "河北",
+    "region": "华北",
+    "stage": "已进药",
+    "planDate": "2025-06-01",
+    "owner": "樊玮",
+    "vp": "卢俊",
+    "result": "进院成功"
+  },
+  {
+    "hospital": "山东省齐天医药有限责任公司齐天药店",
+    "city": "山东",
+    "region": "华北",
+    "stage": "已进药",
+    "planDate": "2025-06-01",
+    "owner": "赵鹏",
+    "vp": "卿毅",
+    "result": "0"
+  },
+  {
+    "hospital": "首都医科大学附属北京潞河医院",
+    "city": "北京",
+    "region": "华北",
+    "stage": "已进药",
+    "planDate": "2025-06-01",
+    "owner": "贺云飞",
+    "vp": "卢俊",
+    "result": "进院成功"
+  },
+  {
+    "hospital": "云南省文山壮族苗族自治州人民医院",
+    "city": "云南",
+    "region": "华西",
+    "stage": "提单中",
+    "planDate": "2025-06-01",
+    "owner": "高俊",
+    "vp": "周辉",
+    "result": "申报通过"
+  },
+  {
+    "hospital": "云南省第二人民医院",
+    "city": "云南",
+    "region": "华西",
+    "stage": "提单中",
+    "planDate": "2025-06-01",
+    "owner": "高俊",
+    "vp": "周辉",
+    "result": "申报通过"
+  },
+  {
+    "hospital": "临西县人民医院",
+    "city": "河北",
+    "region": "华北",
+    "stage": "已进药",
+    "planDate": "2025-06-01",
+    "owner": "马选平",
+    "vp": "卢俊",
+    "result": "进院成功核算奖励"
+  },
+  {
+    "hospital": "涿州市中医医院",
+    "city": "河北",
+    "region": "华北",
+    "stage": "已进药",
+    "planDate": "2025-06-01",
+    "owner": "马选平",
+    "vp": "卢俊",
+    "result": "进院成功核算奖励"
+  },
+  {
+    "hospital": "祥云县人民医院",
+    "city": "云南",
+    "region": "华西",
+    "stage": "意向客户",
+    "planDate": "2025-06-01",
+    "owner": "高俊",
+    "vp": "周辉",
+    "result": "申报通过"
+  },
+  {
+    "hospital": "上海市宝山区高境镇社区卫生服务中心",
+    "city": "上海",
+    "region": "华东",
+    "stage": "已进药",
+    "planDate": "2025-06-01",
+    "owner": "刘雨田",
+    "vp": "高文龙",
+    "result": "进院成功核算奖励"
+  },
+  {
+    "hospital": "庆云县人民医院",
+    "city": "山东",
+    "region": "华北",
+    "stage": "已进药",
+    "planDate": "2025-05-01",
+    "owner": "赵鹏",
+    "vp": "卿毅",
+    "result": "进院成功核算奖励"
+  },
+  {
+    "hospital": "长沙市中心医院",
+    "city": "湖南",
+    "region": "华南",
+    "stage": "已进药",
+    "planDate": "2025-05-01",
+    "owner": "刘海钧",
+    "vp": "罗险峰",
+    "result": "进院成功核算奖励"
+  },
+  {
+    "hospital": "湖南省人民医院（湖南师范大学附属第一医院）",
+    "city": "湖南",
+    "region": "华南",
+    "stage": "已进药",
+    "planDate": "2025-05-01",
+    "owner": "蔡庆亮",
+    "vp": "罗险峰",
+    "result": "进院成功核算奖励"
+  },
+  {
+    "hospital": "湘乡市人民医院",
+    "city": "湖南",
+    "region": "华南",
+    "stage": "已提单",
+    "planDate": "2025-05-01",
+    "owner": "沈娅琪",
+    "vp": "罗险峰",
+    "result": "申报通过"
+  },
+  {
+    "hospital": "无锡市锡山人民医院鹅湖分院",
+    "city": "江苏",
+    "region": "华东",
+    "stage": "已提单",
+    "planDate": "2025-04-01",
+    "owner": "刘雨田",
+    "vp": "杨海波",
+    "result": "0"
+  },
+  {
+    "hospital": "长沙市第一医院",
+    "city": "湖南",
+    "region": "华南",
+    "stage": "已进药",
+    "planDate": "2025-04-01",
+    "owner": "蔡庆亮",
+    "vp": "罗险峰",
+    "result": "进院成功核算奖励"
+  },
+  {
+    "hospital": "武汉市汉阳医院",
+    "city": "湖北",
+    "region": "华西",
+    "stage": "临采",
+    "planDate": "2025-04-01",
+    "owner": "江炫州",
+    "vp": "陈辉",
+    "result": "进院成功核算奖励"
+  },
+  {
+    "hospital": "苏州京东方医院",
+    "city": "江苏",
+    "region": "华东",
+    "stage": "已进药",
+    "planDate": "2025-04-01",
+    "owner": "刘志锋",
+    "vp": "杨海波",
+    "result": "申报通过"
+  },
+  {
+    "hospital": "南京鼓楼医院集团宿迁医院有限公司",
+    "city": "江苏",
+    "region": "华东",
+    "stage": "提单中",
+    "planDate": "2025-04-01",
+    "owner": "刘雨田",
+    "vp": "杨海波",
+    "result": "0"
+  },
+  {
+    "hospital": "宿迁市第一人民医院",
+    "city": "江苏",
+    "region": "华东",
+    "stage": "已提单",
+    "planDate": "2025-04-01",
+    "owner": "刘雨田",
+    "vp": "杨海波",
+    "result": "0"
+  },
+  {
+    "hospital": "南通大学附属医院",
+    "city": "江苏",
+    "region": "华东",
+    "stage": "已提单",
+    "planDate": "2025-03-01",
+    "owner": "刘雨田",
+    "vp": "杨海波",
+    "result": "0"
+  },
+  {
+    "hospital": "武汉航天城医院",
+    "city": "湖北",
+    "region": "华西",
+    "stage": "已进药",
+    "planDate": "2025-03-01",
+    "owner": "江炫州",
+    "vp": "陈辉",
+    "result": "进院成功核算奖励"
+  },
+  {
+    "hospital": "昆明市晋宁区新街中心卫生院",
+    "city": "云南",
+    "region": "华西",
+    "stage": "已进药",
+    "planDate": "2025-03-01",
+    "owner": "夏婕",
+    "vp": "周辉",
+    "result": "进院成功核算奖励"
+  },
+  {
+    "hospital": "中国人民武装警察部队海警总队医院",
+    "city": "浙江",
+    "region": "华东",
+    "stage": "已过会",
+    "planDate": "2025-03-01",
+    "owner": "李雨飞",
+    "vp": "吴光建",
+    "result": "申报通过"
+  },
+  {
+    "hospital": "昆山市中医医院",
+    "city": "江苏",
+    "region": "华东",
+    "stage": "意向客户",
+    "planDate": "2025-02-01",
+    "owner": "刘雨田",
+    "vp": "杨海波",
+    "result": "0"
+  },
+  {
+    "hospital": "国药河北乐仁堂连锁新华店",
+    "city": "河北",
+    "region": "华北",
+    "stage": "意向客户",
+    "planDate": null,
+    "owner": "郑森",
+    "vp": "卢俊",
+    "result": "申报通过"
+  },
+  {
+    "hospital": "济南爱新卓尔医药有限公司",
+    "city": "山东",
+    "region": "华北",
+    "stage": "已进药",
+    "planDate": null,
+    "owner": "",
+    "vp": "卿毅",
+    "result": ""
+  },
+  {
+    "hospital": "苏州市天诚附元药房有限公司",
+    "city": "江苏",
+    "region": "华东",
+    "stage": "已进药",
+    "planDate": null,
+    "owner": "",
+    "vp": "杨海波",
+    "result": ""
+  },
+  {
+    "hospital": "启东市中医院",
+    "city": "江苏",
+    "region": "华东",
+    "stage": "临采",
+    "planDate": null,
+    "owner": "",
+    "vp": "杨海波",
+    "result": ""
+  },
+  {
+    "hospital": "北京市怀柔区庙城镇社区卫生服务中心（北京市怀柔区庙城镇卫生院）",
+    "city": "北京",
+    "region": "华北",
+    "stage": "已进药",
+    "planDate": null,
+    "owner": "",
+    "vp": "卢俊",
+    "result": ""
+  },
+  {
+    "hospital": "南通市海门区四甲镇中心卫生院",
+    "city": "江苏",
+    "region": "华东",
+    "stage": "已进药",
+    "planDate": null,
+    "owner": "",
+    "vp": "杨海波",
+    "result": ""
+  },
+  {
+    "hospital": "北京市朝阳区高碑店地区汇星苑社区卫生服务站",
+    "city": "北京",
+    "region": "华北",
+    "stage": "已进药",
+    "planDate": null,
+    "owner": "",
+    "vp": "卢俊",
+    "result": ""
+  },
+  {
+    "hospital": "启东市妇幼保健院",
+    "city": "江苏",
+    "region": "华东",
+    "stage": "已进药",
+    "planDate": null,
+    "owner": "",
+    "vp": "杨海波",
+    "result": ""
+  },
+  {
+    "hospital": "上海金高中西医结合医院",
+    "city": "上海",
+    "region": "华东",
+    "stage": "已进药",
+    "planDate": null,
+    "owner": "",
+    "vp": "高文龙",
+    "result": ""
+  },
+  {
+    "hospital": "上海市宝山区罗店医院",
+    "city": "上海",
+    "region": "华东",
+    "stage": "已进药",
+    "planDate": null,
+    "owner": "",
+    "vp": "高文龙",
+    "result": ""
+  },
+  {
+    "hospital": "如皋市第四人民医院",
+    "city": "江苏",
+    "region": "华东",
+    "stage": "临采",
+    "planDate": null,
+    "owner": "",
+    "vp": "杨海波",
+    "result": ""
+  },
+  {
+    "hospital": "云南省医药有限公司新特药德宏零售店",
+    "city": "云南",
+    "region": "华西",
+    "stage": "已进药",
+    "planDate": null,
+    "owner": "",
+    "vp": "周辉",
+    "result": ""
+  },
+  {
+    "hospital": "四川省南充药业(集团)有限公司大北街药房",
+    "city": "四川",
+    "region": "华西",
+    "stage": "已进药",
+    "planDate": null,
+    "owner": "",
+    "vp": "陈辉",
+    "result": ""
+  },
+  {
+    "hospital": "北京市东城区朝阳门社区卫生服务中心",
+    "city": "北京",
+    "region": "华北",
+    "stage": "已进药",
+    "planDate": null,
+    "owner": "",
+    "vp": "卢俊",
+    "result": ""
+  },
+  {
+    "hospital": "贵州省建筑医院",
+    "city": "贵州",
+    "region": "华西",
+    "stage": "已提单",
+    "planDate": "2026-04-01",
+    "owner": "周辉",
+    "vp": "周辉",
+    "result": "申报通过"
+  },
+  {
+    "hospital": "上海市中西医结合医院",
+    "city": "上海",
+    "region": "华东",
+    "stage": "已过会",
+    "planDate": "2026-03-01",
+    "owner": "汪永刚",
+    "vp": "高文龙",
+    "result": "申报通过"
+  },
+  {
+    "hospital": "上海市嘉定区安亭镇黄渡社区卫生服务中心",
+    "city": "上海",
+    "region": "华东",
+    "stage": "已过会",
+    "planDate": "2026-02-01",
+    "owner": "朱列",
+    "vp": "高文龙",
+    "result": "申报通过"
+  },
+  {
+    "hospital": "长春市仁合显通大药房有限公司东岭二院店",
+    "city": "吉林",
+    "region": "华北",
+    "stage": "已进药",
+    "planDate": null,
+    "owner": "",
+    "vp": "卿毅",
+    "result": ""
+  },
+  {
+    "hospital": "建水县人民医院",
+    "city": "云南",
+    "region": "华西",
+    "stage": "提单中",
+    "planDate": "2026-12-01",
+    "owner": "高俊",
+    "vp": "周辉",
+    "result": "申报通过"
+  },
+  {
+    "hospital": "石屏县人民医院",
+    "city": "云南",
+    "region": "华西",
+    "stage": "提单中",
+    "planDate": "2026-12-01",
+    "owner": "高俊",
+    "vp": "周辉",
+    "result": "申报通过"
+  },
+  {
+    "hospital": "邢台市第九医院（巨鹿县医院）",
+    "city": "河北",
+    "region": "华北",
+    "stage": "意向客户",
+    "planDate": "2026-06-01",
+    "owner": "郑森",
+    "vp": "卢俊",
+    "result": "申报通过"
+  },
+  {
+    "hospital": "清河县中心医院",
+    "city": "河北",
+    "region": "华北",
+    "stage": "意向客户",
+    "planDate": "2026-06-01",
+    "owner": "郑森",
+    "vp": "卢俊",
+    "result": "申报通过"
+  },
+  {
+    "hospital": "衡水市第三人民医院",
+    "city": "河北",
+    "region": "华北",
+    "stage": "意向客户",
+    "planDate": "2026-06-01",
+    "owner": "郑森",
+    "vp": "卢俊",
+    "result": "申报通过"
+  },
+  {
+    "hospital": "山西省人民医院",
+    "city": "山西",
+    "region": "华北",
+    "stage": "已提单",
+    "planDate": "2026-05-01",
+    "owner": "王飞虎",
+    "vp": "卿毅",
+    "result": "申报通过"
+  },
+  {
+    "hospital": "山西省中医药研究院（山西省中医院）",
+    "city": "山西",
+    "region": "华北",
+    "stage": "意向客户",
+    "planDate": "2026-04-01",
+    "owner": "王飞虎",
+    "vp": "卿毅",
+    "result": "申报通过"
+  },
+  {
+    "hospital": "阳泉市第一人民医院",
+    "city": "山西",
+    "region": "华北",
+    "stage": "已提单",
+    "planDate": "2026-04-01",
+    "owner": "王飞虎",
+    "vp": "卿毅",
+    "result": "申报通过"
+  },
+  {
+    "hospital": "长治医学院附属和平医院",
+    "city": "山西",
+    "region": "华北",
+    "stage": "意向客户",
+    "planDate": "2026-04-01",
+    "owner": "王飞虎",
+    "vp": "卿毅",
+    "result": "申报通过"
+  },
+  {
+    "hospital": "长治医学院附属和济医院",
+    "city": "山西",
+    "region": "华北",
+    "stage": "意向客户",
+    "planDate": "2026-04-01",
+    "owner": "王飞虎",
+    "vp": "卿毅",
+    "result": "申报通过"
+  },
+  {
+    "hospital": "长治市人民医院",
+    "city": "山西",
+    "region": "华北",
+    "stage": "意向客户",
+    "planDate": "2026-04-01",
+    "owner": "王飞虎",
+    "vp": "卿毅",
+    "result": "申报通过"
+  },
+  {
+    "hospital": "上海市普陀区人民医院",
+    "city": "上海",
+    "region": "华东",
+    "stage": "已过会",
+    "planDate": "2026-03-01",
+    "owner": "汪永刚",
+    "vp": "高文龙",
+    "result": "申报通过"
+  },
+  {
+    "hospital": "山西省第二人民医院",
+    "city": "山西",
+    "region": "华北",
+    "stage": "已提单",
+    "planDate": "2026-03-01",
+    "owner": "王飞虎",
+    "vp": "卿毅",
+    "result": "申报通过"
+  },
+  {
+    "hospital": "国药同煤总医院",
+    "city": "山西",
+    "region": "华北",
+    "stage": "已过会",
+    "planDate": "2026-03-01",
+    "owner": "王飞虎",
+    "vp": "卿毅",
+    "result": "申报通过"
+  },
+  {
+    "hospital": "介休市中医医院",
+    "city": "山西",
+    "region": "华北",
+    "stage": "已提单",
+    "planDate": "2026-03-01",
+    "owner": "王飞虎",
+    "vp": "卿毅",
+    "result": "申报未通过"
+  },
+  {
+    "hospital": "石家庄市桥西区新石社区卫生服务中心",
+    "city": "河北",
+    "region": "华北",
+    "stage": "已进药",
+    "planDate": "2026-02-01",
+    "owner": "樊玮",
+    "vp": "卢俊",
+    "result": "申报通过"
+  },
+  {
+    "hospital": "广州越秀区弘康大医汇综合门诊部",
+    "city": "广东",
+    "region": "华南",
+    "stage": "已进药",
+    "planDate": null,
+    "owner": "",
+    "vp": "许占海",
+    "result": ""
+  },
+  {
+    "hospital": "山东第二医科大学附属医院",
+    "city": "山东",
+    "region": "华北",
+    "stage": "已进药",
+    "planDate": null,
+    "owner": "",
+    "vp": "卿毅",
+    "result": ""
+  },
+  {
+    "hospital": "北京市怀柔区庙城镇卫生院三山社区卫生服务站",
+    "city": "北京",
+    "region": "华北",
+    "stage": "已进药",
+    "planDate": null,
+    "owner": "",
+    "vp": "卢俊",
+    "result": ""
+  },
+  {
+    "hospital": "邯郸医药大厦连锁有限公司大厦分店",
+    "city": "河北",
+    "region": "华北",
+    "stage": "已进药",
+    "planDate": null,
+    "owner": "",
+    "vp": "卢俊",
+    "result": ""
+  },
+  {
+    "hospital": "北京市石景山区广宁街道社区卫生服务中心",
+    "city": "北京",
+    "region": "华北",
+    "stage": "已进药",
+    "planDate": null,
+    "owner": "",
+    "vp": "卢俊",
+    "result": ""
+  },
+  {
+    "hospital": "北京来广营中医医院有限公司",
+    "city": "北京",
+    "region": "华北",
+    "stage": "临采",
+    "planDate": null,
+    "owner": "",
+    "vp": "卢俊",
+    "result": ""
+  },
+  {
+    "hospital": "威海卫人民医院",
+    "city": "山东",
+    "region": "华北",
+    "stage": "意向客户",
+    "planDate": "2026-04-01",
+    "owner": "赵鹏",
+    "vp": "卿毅",
+    "result": "申报通过"
+  },
+  {
+    "hospital": "荣成市人民医院",
+    "city": "山东",
+    "region": "华北",
+    "stage": "意向客户",
+    "planDate": "2026-04-01",
+    "owner": "赵鹏",
+    "vp": "卿毅",
+    "result": "申报通过"
+  },
+  {
+    "hospital": "荣成市中医院",
+    "city": "山东",
+    "region": "华北",
+    "stage": "意向客户",
+    "planDate": "2026-04-01",
+    "owner": "赵鹏",
+    "vp": "卿毅",
+    "result": "申报通过"
+  },
+  {
+    "hospital": "荣成市石岛人民医院",
+    "city": "山东",
+    "region": "华北",
+    "stage": "意向客户",
+    "planDate": "2026-04-01",
+    "owner": "赵鹏",
+    "vp": "卿毅",
+    "result": "申报通过"
+  },
+  {
+    "hospital": "威海市立医院",
+    "city": "山东",
+    "region": "华北",
+    "stage": "已进药",
+    "planDate": "2026-06-01",
+    "owner": "肖中华",
+    "vp": "卿毅",
+    "result": "申报通过"
+  },
+  {
+    "hospital": "上海市青浦区夏阳街道安康养护院",
+    "city": "上海",
+    "region": "华东",
+    "stage": "已进药",
+    "planDate": "2026-05-01",
+    "owner": "朱列",
+    "vp": "高文龙",
+    "result": "申报通过"
+  },
+  {
+    "hospital": "上海清河湾康复医院有限公司",
+    "city": "上海",
+    "region": "华东",
+    "stage": "意向客户",
+    "planDate": "2026-04-01",
+    "owner": "朱列",
+    "vp": "高文龙",
+    "result": "申报通过"
+  },
+  {
+    "hospital": "上海冬雷脑科医院",
+    "city": "上海",
+    "region": "华东",
+    "stage": "意向客户",
+    "planDate": "2026-04-01",
+    "owner": "朱列",
+    "vp": "高文龙",
+    "result": "申报通过"
+  },
+  {
+    "hospital": "上海禾滨康复医院",
+    "city": "上海",
+    "region": "华东",
+    "stage": "意向客户",
+    "planDate": "2026-05-01",
+    "owner": "朱列",
+    "vp": "高文龙",
+    "result": "申报通过"
+  },
+  {
+    "hospital": "上海统嘉护理院",
+    "city": "上海",
+    "region": "华东",
+    "stage": "意向客户",
+    "planDate": "2026-05-01",
+    "owner": "朱列",
+    "vp": "高文龙",
+    "result": "申报通过"
+  },
+  {
+    "hospital": "文登区县域医共体中西医结合医院",
+    "city": "山东",
+    "region": "华北",
+    "stage": "已进药",
+    "planDate": "2026-02-01",
+    "owner": "肖中华",
+    "vp": "卿毅",
+    "result": "进院成功"
+  },
+  {
+    "hospital": "上海沪东医院",
+    "city": "上海",
+    "region": "华东",
+    "stage": "已进药",
+    "planDate": "2026-03-01",
+    "owner": "汪永刚",
+    "vp": "高文龙",
+    "result": "申报通过"
+  },
+  {
+    "hospital": "绍兴市中心医院",
+    "city": "浙江",
+    "region": "华东",
+    "stage": "已进药",
+    "planDate": "2026-03-01",
+    "owner": "李雨飞",
+    "vp": "吴光建",
+    "result": "申报通过"
+  },
+  {
+    "hospital": "山东省立第三医院",
+    "city": "山东",
+    "region": "华北",
+    "stage": "意向客户",
+    "planDate": "2026-04-01",
+    "owner": "赵鹏",
+    "vp": "卿毅",
+    "result": "申报通过"
+  },
+  {
+    "hospital": "临沂临港康平医院",
+    "city": "山东",
+    "region": "华北",
+    "stage": "已过会",
+    "planDate": "2026-02-01",
+    "owner": "赵鹏",
+    "vp": "卿毅",
+    "result": "申报通过"
+  },
+  {
+    "hospital": "济宁医学院附属医院",
+    "city": "山东",
+    "region": "华北",
+    "stage": "意向客户",
+    "planDate": "2026-06-01",
+    "owner": "赵鹏",
+    "vp": "卿毅",
+    "result": "申报通过"
+  },
+  {
+    "hospital": "南通市通州区平潮中心卫生院(平南)",
+    "city": "江苏",
+    "region": "华东",
+    "stage": "已进药",
+    "planDate": null,
+    "owner": "",
+    "vp": "杨海波",
+    "result": ""
+  },
+  {
+    "hospital": "黔江区冉斌睿中医诊所",
+    "city": "重庆",
+    "region": "华西",
+    "stage": "已进药",
+    "planDate": null,
+    "owner": "",
+    "vp": "薛文",
+    "result": ""
+  },
+  {
+    "hospital": "黔江区肖钢诊所",
+    "city": "重庆",
+    "region": "华西",
+    "stage": "已进药",
+    "planDate": null,
+    "owner": "",
+    "vp": "薛文",
+    "result": ""
+  },
+  {
+    "hospital": "上海晚晴护理院",
+    "city": "上海",
+    "region": "华东",
+    "stage": "意向客户",
+    "planDate": "2026-06-01",
+    "owner": "朱列",
+    "vp": "高文龙",
+    "result": "0"
+  },
+  {
+    "hospital": "上海市嘉定区马陆镇社区卫生服务中心",
+    "city": "上海",
+    "region": "华东",
+    "stage": "意向客户",
+    "planDate": "2026-06-01",
+    "owner": "朱列",
+    "vp": "高文龙",
+    "result": "0"
+  },
+  {
+    "hospital": "河北北方学院附属第一医院",
+    "city": "河北",
+    "region": "华北",
+    "stage": "意向客户",
+    "planDate": "2026-12-01",
+    "owner": "周元军",
+    "vp": "卢俊",
+    "result": "申报通过"
+  },
+  {
+    "hospital": "张家口市第一医院",
+    "city": "河北",
+    "region": "华北",
+    "stage": "意向客户",
+    "planDate": "2026-08-01",
+    "owner": "周元军",
+    "vp": "卢俊",
+    "result": "申报通过"
+  },
+  {
+    "hospital": "张家口宣钢医院",
+    "city": "河北",
+    "region": "华北",
+    "stage": "已提单",
+    "planDate": "2026-08-01",
+    "owner": "周元军",
+    "vp": "卢俊",
+    "result": "申报通过"
+  },
+  {
+    "hospital": "河北北方学院附属第二医院",
+    "city": "河北",
+    "region": "华北",
+    "stage": "已提单",
+    "planDate": "2026-08-01",
+    "owner": "周元军",
+    "vp": "卢俊",
+    "result": "申报通过"
+  },
+  {
+    "hospital": "中国人民解放军陆军第八十一集团军医院",
+    "city": "河北",
+    "region": "华北",
+    "stage": "已提单",
+    "planDate": "2026-08-01",
+    "owner": "周元军",
+    "vp": "卢俊",
+    "result": "申报通过"
+  },
+  {
+    "hospital": "国药乐仁堂张家口医药有限公司建国路店（东院区）",
+    "city": "河北",
+    "region": "华北",
+    "stage": "意向客户",
+    "planDate": "2026-05-01",
+    "owner": "周元军",
+    "vp": "卢俊",
+    "result": "申报通过"
+  },
+  {
+    "hospital": "国药乐仁堂张家口医药有限公司第一医院店（西院区）",
+    "city": "河北",
+    "region": "华北",
+    "stage": "意向客户",
+    "planDate": "2026-05-01",
+    "owner": "周元军",
+    "vp": "卢俊",
+    "result": "申报通过"
+  },
+  {
+    "hospital": "石家庄市长安区华宸怡园社区卫生服务站",
+    "city": "河北",
+    "region": "华北",
+    "stage": "已提单",
+    "planDate": "2026-03-01",
+    "owner": "樊玮",
+    "vp": "卢俊",
+    "result": "申报通过"
+  },
+  {
+    "hospital": "红河哈尼族彝族自治州第三人民医院",
+    "city": "云南",
+    "region": "华西",
+    "stage": "提单中",
+    "planDate": "2026-12-01",
+    "owner": "高俊",
+    "vp": "周辉",
+    "result": "申报通过"
+  },
+  {
+    "hospital": "开远市人民医院(东城病区)",
+    "city": "云南",
+    "region": "华西",
+    "stage": "提单中",
+    "planDate": "2026-12-01",
+    "owner": "高俊",
+    "vp": "周辉",
+    "result": "申报通过"
+  },
+  {
+    "hospital": "中国人民解放军联勤保障部队第九二六医院",
+    "city": "云南",
+    "region": "华西",
+    "stage": "提单中",
+    "planDate": "2026-12-01",
+    "owner": "高俊",
+    "vp": "周辉",
+    "result": "申报通过"
+  },
+  {
+    "hospital": "临沂老年医院有限公司",
+    "city": "山东",
+    "region": "华北",
+    "stage": "意向客户",
+    "planDate": "2026-05-01",
+    "owner": "赵鹏",
+    "vp": "卿毅",
+    "result": "申报通过"
+  },
+  {
+    "hospital": "单县中心医院",
+    "city": "山东",
+    "region": "华北",
+    "stage": "意向客户",
+    "planDate": "2026-04-01",
+    "owner": "赵鹏",
+    "vp": "卿毅",
+    "result": "申报通过"
+  },
+  {
+    "hospital": "曲靖博大医院",
+    "city": "云南",
+    "region": "华西",
+    "stage": "提单中",
+    "planDate": "2026-04-01",
+    "owner": "周辉",
+    "vp": "周辉",
+    "result": "申报通过"
+  },
+  {
+    "hospital": "威海市环翠区妇幼保健院",
+    "city": "山东",
+    "region": "华北",
+    "stage": "意向客户",
+    "planDate": "2026-04-01",
+    "owner": "赵鹏",
+    "vp": "卿毅",
+    "result": "申报通过"
+  },
+  {
+    "hospital": "上海市松江区佘山镇第二社区卫生服务中心",
+    "city": "上海",
+    "region": "华东",
+    "stage": "意向客户",
+    "planDate": "2026-07-01",
+    "owner": "朱列",
+    "vp": "高文龙",
+    "result": "申报通过"
+  },
+  {
+    "hospital": "上海仁博医院",
+    "city": "上海",
+    "region": "华东",
+    "stage": "意向客户",
+    "planDate": "2026-07-01",
+    "owner": "朱列",
+    "vp": "高文龙",
+    "result": "申报通过"
+  },
+  {
+    "hospital": "云南省老年病医院",
+    "city": "云南",
+    "region": "华西",
+    "stage": "提单中",
+    "planDate": "2026-12-01",
+    "owner": "高俊",
+    "vp": "周辉",
+    "result": "申报通过"
+  },
+  {
+    "hospital": "上海市徐汇区徐家汇街道社区卫生服务中心",
+    "city": "上海",
+    "region": "华东",
+    "stage": "已进药",
+    "planDate": null,
+    "owner": "",
+    "vp": "高文龙",
+    "result": ""
+  },
+  {
+    "hospital": "北京市怀柔区龙山街道社区卫生服务中心",
+    "city": "北京",
+    "region": "华北",
+    "stage": "已进药",
+    "planDate": null,
+    "owner": "",
+    "vp": "卢俊",
+    "result": ""
+  },
+  {
+    "hospital": "如东县中医院",
+    "city": "江苏",
+    "region": "华东",
+    "stage": "已进药",
+    "planDate": null,
+    "owner": "",
+    "vp": "杨海波",
+    "result": ""
+  },
+  {
+    "hospital": "灵寿县中西医结合医院",
+    "city": "河北",
+    "region": "华北",
+    "stage": "意向客户",
+    "planDate": "2026-06-01",
+    "owner": "否",
+    "vp": "卢俊",
+    "result": ""
+  },
+  {
+    "hospital": "常德市第二人民医院",
+    "city": "湖南",
+    "region": "华南",
+    "stage": "已提单",
+    "planDate": "2026-06-01",
+    "owner": "蔡庆亮",
+    "vp": "罗险峰",
+    "result": "0"
+  },
+  {
+    "hospital": "常德职业技术学院附属第一医院",
+    "city": "湖南",
+    "region": "华南",
+    "stage": "提单中",
+    "planDate": "2026-06-01",
+    "owner": "蔡庆亮",
+    "vp": "罗险峰",
+    "result": "0"
+  },
+  {
+    "hospital": "湘雅常德医院",
+    "city": "湖南",
+    "region": "华南",
+    "stage": "提单中",
+    "planDate": "2026-07-01",
+    "owner": "蔡庆亮",
+    "vp": "罗险峰",
+    "result": "0"
+  },
+  {
+    "hospital": "威海市中心医院",
+    "city": "山东",
+    "region": "华北",
+    "stage": "意向客户",
+    "planDate": "2026-07-01",
+    "owner": "肖中华",
+    "vp": "卿毅",
+    "result": "0"
+  },
+  {
+    "hospital": "上海市浦东新区康桥社区卫生服务中心",
+    "city": "上海",
+    "region": "华东",
+    "stage": "已进药",
+    "planDate": "2026-03-01",
+    "owner": "甘程升",
+    "vp": "高文龙",
+    "result": "0"
+  },
+  {
+    "hospital": "上海市杨浦区市东医院",
+    "city": "上海",
+    "region": "华东",
+    "stage": "已进药",
+    "planDate": "2026-03-01",
+    "owner": "朱列",
+    "vp": "高文龙",
+    "result": "0"
+  },
+  {
+    "hospital": "右江民族医学院附属医院",
+    "city": "广西",
+    "region": "华南",
+    "stage": "已提单",
+    "planDate": "2025-12-01",
+    "owner": "马强",
+    "vp": "罗险峰",
+    "result": "申报通过"
+  },
+  {
+    "hospital": "黑龙江省大众平安医药连锁有限公司利民大药房",
+    "city": "黑龙江",
+    "region": "华北",
+    "stage": "已进药",
+    "planDate": null,
+    "owner": "",
+    "vp": "卿毅",
+    "result": ""
+  },
+  {
+    "hospital": "国药控股盐城亭湖附医北院药房有限公司",
+    "city": "江苏",
+    "region": "华东",
+    "stage": "已进药",
+    "planDate": null,
+    "owner": "",
+    "vp": "杨海波",
+    "result": ""
+  },
+  {
+    "hospital": "国药控股盐城有限公司中心药店",
+    "city": "江苏",
+    "region": "华东",
+    "stage": "已进药",
+    "planDate": null,
+    "owner": "",
+    "vp": "杨海波",
+    "result": ""
+  },
+  {
+    "hospital": "上海市浦东新区书院社区卫生服务中心",
+    "city": "上海",
+    "region": "华东",
+    "stage": "已进药",
+    "planDate": null,
+    "owner": "",
+    "vp": "高文龙",
+    "result": ""
+  },
+  {
+    "hospital": "上海市浦东新区周浦社区卫生服务中心",
+    "city": "上海",
+    "region": "华东",
+    "stage": "已进药",
+    "planDate": null,
+    "owner": "",
+    "vp": "高文龙",
+    "result": ""
+  },
+  {
+    "hospital": "重庆松山医院",
+    "city": "重庆",
+    "region": "华西",
+    "stage": "已提单",
+    "planDate": "2026-05-01",
+    "owner": "庹健",
+    "vp": "薛文",
+    "result": "0"
+  },
+  {
+    "hospital": "松阳县人民医院",
+    "city": "浙江",
+    "region": "华东",
+    "stage": "意向客户",
+    "planDate": "2026-04-01",
+    "owner": "蔡磊",
+    "vp": "吴光建",
+    "result": "0"
+  },
+  {
+    "hospital": "复旦大学附属华东医院",
+    "city": "上海",
+    "region": "华东",
+    "stage": "已提单",
+    "planDate": "2026-12-01",
+    "owner": "汪永刚",
+    "vp": "高文龙",
+    "result": "申报通过"
+  },
+  {
+    "hospital": "上海市虹口区江湾医院",
+    "city": "上海",
+    "region": "华东",
+    "stage": "意向客户",
+    "planDate": "2026-12-01",
+    "owner": "汪永刚",
+    "vp": "高文龙",
+    "result": "申报通过"
+  },
+  {
+    "hospital": "上海市静安区闸北中心医院",
+    "city": "上海",
+    "region": "华东 ",
+    "stage": "意向客户",
+    "planDate": "2026-10-01",
+    "owner": "汪永刚",
+    "vp": "高文龙",
+    "result": "申报通过"
+  },
+  {
+    "hospital": "上海同心护理院",
+    "city": "上海",
+    "region": "华东",
+    "stage": "已提单",
+    "planDate": "2026-03-01",
+    "owner": "甘程升",
+    "vp": "高文龙",
+    "result": "申报通过"
+  },
+  {
+    "hospital": "南华大学附属第一医院",
+    "city": "湖南",
+    "region": "华南",
+    "stage": "提单中",
+    "planDate": "2026-06-01",
+    "owner": "李振中",
+    "vp": "罗险峰",
+    "result": "0"
+  }
+];
+var STAGE_DATA    = {"意向客户": 228, "提单中": 75, "已提单": 79, "已过会": 26, "已进药": 117, "临采": 10};
+var LATEST_DATE   = '2026-03-31';
+var SUCCESS_TOTAL = 58;
+
+// ====== 全局状态 ======
+var currentDept    = '整体';
+var currentProduct = '炎琥宁80mg';
+var currentRegion  = '全部';
+var sortCol  = 'actual';
+var sortDir  = -1;
+var stageFilter = '全部';
+
+var barChart, lineChart, stageBarChart;
+
+// ====== 工具函数 ======
+function fmt(n, dec) {
+  dec = dec !== undefined ? dec : 2;
+  if (n === null || n === undefined || isNaN(n)) return '--';
+  return n.toFixed(dec);
+}
+function fmtPct(n) {
+  if (n === null || n === undefined || isNaN(n)) return '--';
+  return n.toFixed(1) + '%';
+}
+function getTimeProgress() {
+  var now = new Date();
+  var startOfYear = new Date(now.getFullYear(), 0, 1);
+  var endOfYear   = new Date(now.getFullYear() + 1, 0, 1);
+  return ((now - startOfYear) / (endOfYear - startOfYear) * 100).toFixed(1);
+}
+function filterSales(product, region) {
+  return SALES_DATA.filter(function(d) {
+    return (currentDept === '整体' || d.dept === currentDept) &&
+      d.product === product &&
+      (region === '全部' || d.region === region) &&
+      d.target > 0;
+  });
+}
+function filterSalesAll(region) {
+  // 返回当前部门+大区筛选后的所有产品数据
+  return SALES_DATA.filter(function(d) {
+    return (currentDept === '整体' || d.dept === currentDept) &&
+      (region === '全部' || d.region === region) &&
+      d.target > 0;
+  });
+}
+function calcKPI(rows) {
+  var totalTarget    = rows.reduce(function(s, r) { return s + r.target; }, 0);
+  var totalActual    = rows.reduce(function(s, r) { return s + r.actual; }, 0);
+  var totalActual2025 = rows.reduce(function(s, r) { return s + (r.actual2025 || 0); }, 0);
+  var rate = totalTarget > 0 ? (totalActual / totalTarget * 100) : 0;
+  var yoy  = totalActual2025 > 0
+    ? ((totalActual - totalActual2025) / totalActual2025 * 100)
+    : null;
+  return { totalTarget: totalTarget, totalActual: totalActual,
+           totalActual2025: totalActual2025, rate: rate, yoy: yoy };
+}
+function getProducts() {
+  var seen = {}, result = [];
+  var data = currentDept === '整体' ? SALES_DATA : SALES_DATA.filter(function(d) { return d.dept === currentDept; });
+  data.forEach(function(d) {
+    if (!seen[d.product]) { seen[d.product] = true; result.push(d.product); }
+  });
+  return result;
+}
+// 产品名称映射（显示名 -> 数据字段值）
+var PRODUCT_DISPLAY_MAP = {
+  '炎琥宁80mg': '注射用炎琥宁',
+  '萘哌地尔': '萘哌地尔'
+};
+function getProductDisplayName(p) {
+  return PRODUCT_DISPLAY_MAP[p] || p;
+}
+function getDepts() {
+  var seen = {};
+  SALES_DATA.forEach(function(d) {
+    if (d.dept) seen[d.dept] = true;
+  });
+  return Object.keys(seen).sort();
+}
+
+// ====== 渲染函数 ======
+
+function renderKPI() {
+  var rows = filterSales(currentProduct, currentRegion);
+  var kpi  = calcKPI(rows);
+  var tp   = parseFloat(getTimeProgress());
+
+  document.getElementById('kpiTarget').textContent = fmt(kpi.totalTarget, 1) + ' 万';
+  document.getElementById('kpiActual').textContent = fmt(kpi.totalActual, 1) + ' 万';
+  document.getElementById('kpiRate').textContent   = fmtPct(kpi.rate);
+  document.getElementById('kpiTimeProgress').textContent = tp;
+  document.getElementById('timeProgressDisplay').textContent = tp;
+
+  var yoyEl = document.getElementById('kpiYoy');
+  if (kpi.yoy !== null && !isNaN(kpi.yoy)) {
+    yoyEl.textContent = (kpi.yoy >= 0 ? '+' : '') + fmt(kpi.yoy, 1) + '%';
+    yoyEl.parentElement.className = 'kpi-card ' + (kpi.yoy >= 0 ? 'red' : 'green');
+  } else {
+    yoyEl.textContent = '--';
+    yoyEl.parentElement.className = 'kpi-card';
+  }
+
+  var rateCard = document.getElementById('kpi-rate');
+  if (kpi.rate >= tp) rateCard.className = 'kpi-card green';
+  else if (kpi.rate >= tp * 0.8) rateCard.className = 'kpi-card orange';
+  else rateCard.className = 'kpi-card red';
+}
+
+function renderProductCards() {
+  var products = getProducts();
+  var container = document.getElementById('productRow');
+  var tp = parseFloat(getTimeProgress());
+  if (products.length === 0) { container.innerHTML = ''; return; }
+  container.innerHTML = products.map(function(p) {
+    var rows = filterSales(p, currentRegion);
+    var kpi  = calcKPI(rows);
+    var achieved = kpi.rate >= tp;
+    var isActive = p === currentProduct;
+    var cls = isActive ? 'product-card active' : 'product-card';
+    var badgeCls = achieved ? 'status-badge badge-achieve' : 'status-badge badge-fail';
+    var badgeTxt = achieved ? '\u2713 达成当期进度' : '\u2717 未达当期进度';
+    var fillW = Math.min(kpi.rate || 0, 100);
+    return '<div class="' + cls + '" data-product="' + p + '" onclick="selectProduct(\'' + p.replace(/'/g, "\\'") + '\')">' +
+      '<div class="pname">' + getProductDisplayName(p) + '</div>' +
+      '<span class="' + badgeCls + '">' + badgeTxt + '</span>' +
+      '<div class="pstats">' +
+        '<div class="pstat-item">' +
+          '<div class="plabel">完成率</div>' +
+          '<div class="pval">' + fmtPct(kpi.rate) + '</div>' +
+          '<div class="progress-bar-wrap" style="width:120px;">' +
+            '<div class="progress-bar-fill" style="width:' + fillW + '%"></div>' +
+          '</div>' +
+        '</div>' +
+        '<div class="pstat-item">' +
+          '<div class="plabel">完成金额</div>' +
+          '<div class="pval" style="font-size:16px;">' + fmt(kpi.totalActual, 1) + ' 万</div>' +
+        '</div>' +
+        '<div class="pstat-item">' +
+          '<div class="plabel">年度目标</div>' +
+          '<div class="pval" style="font-size:16px;color:#6b7280;">' + fmt(kpi.totalTarget, 1) + ' 万</div>' +
+        '</div>' +
+      '</div>' +
+    '</div>';
+  }).join('');
+}
+
+var tableData = [];
+function renderTable() {
+  var rows = filterSales(currentProduct, currentRegion);
+  tableData = rows.slice().sort(function(a, b) {
+    var va = a[sortCol], vb = b[sortCol];
+    if (va === null || va === undefined) return 1;
+    if (vb === null || vb === undefined) return -1;
+    return (va - vb) * sortDir;
+  });
+  var tbody = document.getElementById('tableBody');
+  tbody.innerHTML = tableData.map(function(r, i) {
+    var rankClass = i === 0 ? 'top1' : i === 1 ? 'top2' : i === 2 ? 'top3' : '';
+    var yoyStr;
+    if (r.yoy !== null && !isNaN(r.yoy)) {
+      yoyStr = '<span class="' + (r.yoy >= 0 ? 'yoy-pos' : 'yoy-neg') + '">' +
+        (r.yoy >= 0 ? '+' : '') + fmt(r.yoy, 1) + '%</span>';
+    } else {
+      yoyStr = '<span style="color:#9ca3af">--</span>';
+    }
+    var fillW = Math.min(r.rate || 0, 100);
+    return '<tr>' +
+      '<td><span class="rank-no ' + rankClass + '">' + (i+1) + '</span></td>' +
+      '<td>' + r.region + '</td>' +
+      '<td>' + r.area + '</td>' +
+      '<td>' + r.owner + '</td>' +
+      '<td>' + fmt(r.target, 1) + '</td>' +
+      '<td><strong style="color:#1565c0">' + fmt(r.actual, 2) + '</strong></td>' +
+      '<td style="color:#9ca3af">' + fmt(r.actual2025 || 0, 2) + '</td>' +
+      '<td>' + yoyStr + '</td>' +
+      '<td>' +
+        '<div class="rate-bar">' +
+          '<div class="bar"><div class="fill" style="width:' + fillW + '%"></div></div>' +
+          '<span>' + fmtPct(r.rate) + '</span>' +
+        '</div>' +
+      '</td>' +
+    '</tr>';
+  }).join('');
+}
+
+function renderBarChart() {
+  var rows = filterSales(currentProduct, currentRegion).sort(function(a, b) { return b.actual - a.actual; });
+  var areas  = rows.map(function(r) { return r.area; });
+  var actuals = rows.map(function(r) { return r.actual; });
+  var targets = rows.map(function(r) { return r.target; });
+  if (!barChart) barChart = echarts.init(document.getElementById('barChart'));
+  barChart.setOption({
+    tooltip: {
+      trigger: 'axis',
+      formatter: function(params) {
+        var idx = params[0].dataIndex;
+        return areas[idx] + '<br>完成: ' + fmt(actuals[idx], 2) + ' 万<br>目标: ' + fmt(targets[idx], 2) + ' 万';
+      }
+    },
+    grid: { left: 60, right: 20, top: 20, bottom: 60 },
+    xAxis: { type: 'category', data: areas, axisLabel: { rotate: 35, fontSize: 11 } },
+    yAxis: { type: 'value', name: '万元', axisLabel: { fontSize: 11 } },
+    series: [
+      {
+        name: '年度目标', type: 'bar', data: targets, barMaxWidth: 28,
+        itemStyle: { color: '#e0e7ff' }, label: { show: false }
+      },
+      {
+        name: '已完成', type: 'bar', data: actuals, barMaxWidth: 18,
+        itemStyle: {
+          color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+            {offset: 0, color: '#1565c0'}, {offset: 1, color: '#42a5f5'}
+          ])
+        },
+        label: { show: true, position: 'top', fontSize: 10,
+          formatter: function(v) { return v > 0 ? fmt(v, 1) : ''; }
+        }
+      }
+    ],
+    legend: { data: ['年度目标','已完成'], bottom: 0, itemHeight: 10, textStyle: { fontSize: 12 } }
+  });
+}
+
+function renderLineChart() {
+  var rows = filterSales(currentProduct, currentRegion)
+    .filter(function(r) { return r.yoy !== null && !isNaN(r.yoy); })
+    .sort(function(a, b) { return b.actual - a.actual; });
+  var areas = rows.map(function(r) { return r.area; });
+  var yoys  = rows.map(function(r) { return r.yoy; });
+  if (!lineChart) lineChart = echarts.init(document.getElementById('lineChart'));
+  lineChart.setOption({
+    tooltip: {
+      trigger: 'axis',
+      formatter: function(params) {
+        return params[0].name + '<br>同比: ' + (params[0].value >= 0 ? '+' : '') + fmt(params[0].value, 1) + '%';
+      }
+    },
+    grid: { left: 60, right: 20, top: 20, bottom: 60 },
+    xAxis: { type: 'category', data: areas, axisLabel: { rotate: 35, fontSize: 11 } },
+    yAxis: {
+      type: 'value', name: '%', axisLabel: { fontSize: 11 },
+      axisLine: { onZero: true },
+      splitLine: { lineStyle: { color: '#f3f4f6' } }
+    },
+    series: [{
+      type: 'bar', data: yoys, barMaxWidth: 22,
+      label: {
+        show: true,
+        position: function(d) { return d.value >= 0 ? 'top' : 'bottom'; },
+        fontSize: 10,
+        formatter: function(p) { return (p.value >= 0 ? '+' : '') + fmt(p.value, 1) + '%'; }
+      }
+    }],
+    markLine: { data: [{ yAxis: 0 }] }
+  });
+}
+
+function renderStageChart() {
+  if (!stageBarChart) stageBarChart = echarts.init(document.getElementById('stageBarChart'));
+  var stages = ['意向客户','提单中','已提单','已过会','已进药','临采'];
+  var colors  = ['#93c5fd','#fbbf24','#60a5fa','#a78bfa','#34d399','#f9a8d4'];
+  var counts = stages.map(function(s) {
+    if (STAGE_DATA && STAGE_DATA[s] !== undefined) return STAGE_DATA[s];
+    return HOSP_DATA.filter(function(h) { return h.stage === s; }).length;
+  });
+  stageBarChart.setOption({
+    tooltip: { trigger: 'axis' },
+    grid: { left: 80, right: 20, top: 10, bottom: 30 },
+    xAxis: { type: 'value', axisLabel: { fontSize: 11 } },
+    yAxis: { type: 'category', data: stages, axisLabel: { fontSize: 12 } },
+    series: [{
+      type: 'bar',
+      data: counts.map(function(v, i) { return { value: v, itemStyle: { color: colors[i] } }; }),
+      barMaxWidth: 30,
+      label: {
+        show: true, position: 'right', fontSize: 12, fontWeight: 700,
+        formatter: function(p) { return p.value + ' 家'; }
+      }
+    }]
+  });
+  var active = stages.slice(0, 5).reduce(function(s, st) {
+    var n = (STAGE_DATA && STAGE_DATA[st] !== undefined) ? STAGE_DATA[st]
+             : HOSP_DATA.filter(function(h) { return h.stage === st; }).length;
+    return s + n;
+  }, 0);
+  document.getElementById('hospActive').textContent = active;
+}
+
+function renderHospTable() {
+  var today = new Date();
+  var filtered = HOSP_DATA.filter(function(h) { return stageFilter === '全部' || h.stage === stageFilter; });
+  document.getElementById('hospFilterCount').textContent = filtered.length;
+  document.getElementById('hospTotal').textContent = HOSP_DATA.length;
+
+  var resultMap = {
+    '申报通过': '\u2713 申报通过',
+    '进院成功': '\uD83C\uDF89 进院成功',
+    '进院成功核算奖励': '\uD83C\uDF89 进院成功',
+    '暂停开发': '\u23F8 暂停',
+    '开发终止': '\u2717 终止',
+    '申报未通过': '\u2717 未通过'
+  };
+
+  var tbody = document.getElementById('hospTableBody');
+  tbody.innerHTML = filtered.map(function(h, i) {
+    var daysLeft = '--';
+    var daysClass = '';
+    if (h.planDate) {
+      var plan = new Date(h.planDate);
+      var diff = Math.round((plan - today) / 86400000);
+      daysLeft = diff;
+      daysClass = diff < 0 ? 'days-warn' : diff <= 30 ? 'days-warn' : 'days-ok';
+    }
+    var resultStr = resultMap[h.result] || h.result || '--';
+    // ★★★ 修复：直接显示 owner（负责人），来自"萘哌地尔新开进度"表的负责人字段
+    var daysStr = typeof daysLeft === 'number'
+      ? (daysLeft < 0 ? '\u5DF2\u8D85\u671F ' + Math.abs(daysLeft) + ' \u5929' : daysLeft + ' \u5929')
+      : '--';
+    return '<tr>' +
+      '<td style="color:#9ca3af">' + (i+1) + '</td>' +
+      '<td>' + (h.region || '--') + '</td>' +
+      '<td>' + (h.city || '--') + '</td>' +
+      '<td style="text-align:left;max-width:200px;overflow:hidden;text-overflow:ellipsis;" title="' + (h.hospital || '') + '">' + (h.hospital || '--') + '</td>' +
+      '<td><span class="stage-tag tag-' + (h.stage || '') + '">' + (h.stage || '--') + '</span></td>' +
+      '<td>' + (h.planDate || '--') + '</td>' +
+      '<td>' + (h.owner || '--') + '</td>' +
+      '<td class="' + daysClass + '">' + daysStr + '</td>' +
+      '<td style="font-size:11px;color:#6b7280">' + resultStr + '</td>' +
+    '</tr>';
+  }).join('');
+}
+
+// ====== 主渲染入口 ======
+function renderDashboard() {
+  renderKPI();
+  renderProductCards();
+  renderTable();
+  renderBarChart();
+  renderLineChart();
+  renderStageChart();
+  renderHospTable();
+}
+
+// ====== ★★★ 统一数据加载函数 loadData(customData) ★★★ ======
+// 用法：
+//   loadData({
+//     latestDate: "2026-03-31",
+//     salesData: [...],
+//     hospitalData: [...],
+//     stageData: { "意向客户": 5, ... },
+//     successTotal: 35
+//   });
+function loadData(data) {
+  if (!data) { console.error('loadData: 数据对象不能为空'); return; }
+
+  // 1. 更新全局数据变量
+  if (data.salesData)    SALES_DATA    = data.salesData;
+  if (data.hospitalData) HOSP_DATA     = data.hospitalData;
+  if (data.stageData)    STAGE_DATA    = data.stageData;
+  if (data.successTotal !== undefined) SUCCESS_TOTAL = data.successTotal;
+
+  // 2. 更新页面上的日期显示
+  if (data.latestDate) {
+    LATEST_DATE = data.latestDate;
+    document.getElementById('latestDateDisplay').textContent = data.latestDate;
+    document.getElementById('timeProgressDisplay').textContent = getTimeProgress();
+    // 同时更新 header 末尾的日期
+    var metaEls = document.querySelectorAll('.header .meta');
+    if (metaEls[0]) {
+      metaEls[0].innerHTML =
+        '数据更新至：<span class="highlight" id="latestDateDisplay">' + data.latestDate + '</span><br>' +
+        '当期进度：<span class="highlight" id="timeProgressDisplay">' + getTimeProgress() + '%</span>% &nbsp;|&nbsp; 看板生成：' + data.latestDate;
+    }
+  }
+
+  // 3. 更新成功数卡片
+  if (data.successTotal !== undefined) {
+    document.getElementById('hospSuccess').textContent = data.successTotal;
+  }
+
+  // 4. 重置交互状态
+  var prods = getProducts();
+  currentProduct = prods.length > 0 ? prods[0] : '炎琥宁80mg';
+  currentDept    = '整体';
+  currentRegion  = '全部';
+  sortCol  = 'actual';
+  sortDir  = -1;
+  stageFilter = '全部';
+
+  // 5. 重置部门按钮
+  document.querySelectorAll('.dept-btn').forEach(function(b) { b.classList.remove('active'); });
+  var allDeptBtn = document.querySelector('.dept-btn[data-dept="整体"]');
+  if (allDeptBtn) allDeptBtn.classList.add('active');
+
+  // 7. 重置大区按钮
+  document.querySelectorAll('.region-btn').forEach(function(b) { b.classList.remove('active'); });
+  var allBtn = document.querySelector('.region-btn[data-region="全部"]');
+  if (allBtn) allBtn.classList.add('active');
+
+  // 7. 重置医院阶段筛选按钮
+  document.querySelectorAll('.stage-filter-btn').forEach(function(b) { b.classList.remove('active'); });
+  var allStageBtn = document.querySelector('.stage-filter-btn[data-stage="全部"]');
+  if (allStageBtn) allStageBtn.classList.add('active');
+
+  // 8. 销毁旧图表，重新初始化
+  if (barChart)     { barChart.dispose();     barChart     = null; }
+  if (lineChart)    { lineChart.dispose();     lineChart    = null; }
+  if (stageBarChart){ stageBarChart.dispose(); stageBarChart = null; }
+
+  // 8. 全量渲染
+  renderDashboard();
+  console.log('\u2705 loadData() 执行完毕，所有图表和指标已刷新');
+}
+
+// ====== 从 URL 加载 JSON ======
+async function loadDataFromURL(url) {
+  try {
+    var resp = await fetch(url);
+    if (!resp.ok) throw new Error('HTTP ' + resp.status);
+    var data = await resp.json();
+    loadData(data);
+    showLoadMsg('\u2705 数据加载成功：' + url);
+  } catch (e) {
+    console.error('loadDataFromURL 失败:', e);
+    showLoadMsg('\u274C 加载失败：' + e.message);
+  }
+}
+
+// ====== 文件上传处理 ======
+function showLoadMsg(msg) {
+  var el = document.getElementById('loadMsg');
+  if (el) {
+    el.textContent = msg;
+    setTimeout(function() { el.textContent = ''; }, 5000);
+  }
+}
+
+document.getElementById('fileInput').addEventListener('change', function(e) {
+  var file = e.target.files[0];
+  if (!file) return;
+  var name = file.name.toLowerCase();
+
+  var reader = new FileReader();
+  reader.onload = function(ev) {
+    try {
+      var data;
+      if (name.endsWith('.json')) {
+        data = JSON.parse(ev.target.result);
+        loadData(data);
+        showLoadMsg('\u2705 文件加载成功：' + file.name);
+      } else if (name.endsWith('.csv')) {
+        data = parseCSVToDashboardData(ev.target.result);
+        loadData(data);
+        showLoadMsg('\u2705 文件加载成功：' + file.name);
+      } else if (name.endsWith('.xlsx') || name.endsWith('.xls')) {
+        // 使用 SheetJS 解析 Excel
+        var workbook = XLSX.read(ev.target.result, {type: 'array'});
+        data = parseExcelToDashboardData(workbook);
+        loadData(data);
+        showLoadMsg('\u2705 Excel 加载成功：' + file.name);
+      } else {
+        showLoadMsg('\u274C 仅支持 .json、.csv、.xlsx、.xls 文件');
+        return;
+      }
+    } catch (err) {
+      showLoadMsg('\u274C 解析失败：' + err.message);
+    }
+  };
+  if (name.endsWith('.xlsx') || name.endsWith('.xls')) {
+    reader.readAsArrayBuffer(file);
+  } else {
+    reader.readAsText(file);
+  }
+  e.target.value = '';
+});
+
+// ====== CSV 解析 ======
+function parseCSVToDashboardData(csvText) {
+  var lines = csvText.trim().split('\n');
+  if (lines.length < 2) throw new Error('CSV 文件内容为空或格式错误');
+
+  var headers = lines[0].split(',').map(function(h) { return h.trim().replace(/^["']|["']$/g, ''); });
+  var rows = lines.slice(1).map(function(line) {
+    var vals = line.split(',').map(function(v) { return v.trim().replace(/^["']|["']$/g, ''); });
+    var obj = {};
+    headers.forEach(function(h, i) { obj[h] = vals[i] || ''; });
+    return obj;
+  });
+
+  // 判断是销售数据还是医院数据
+  var hasSales    = headers.some(function(h) { return ['product','area','target','actual','yoy','产品','地区'].indexOf(h) > -1; });
+  var hasHospital = headers.some(function(h) { return ['hospital','stage','planDate','医院','阶段'].indexOf(h) > -1; });
+
+  if (hasHospital && !hasSales) {
+    // 医院数据
+    var hospData = rows.map(function(r) {
+      return {
+        hospital: r.hospital || r['医院名称'] || r['医院'] || '',
+        city:     r.city     || r['网点']     || r['地区'] || r['城市'] || '',
+        region:   r.region   || r['大区']     || '',
+        stage:    r.stage    || r['当前阶段']  || r['阶段'] || '',
+        planDate: r.planDate || r['预计进药时间'] || r['计划完成时间'] || '',
+        owner:    r.owner    || r['负责人']    || '',
+        vp:       r.vp       || r['副总']     || '',
+        result:   r.result   || r['认定结果']  || ''
+      };
+    });
+    var stageData = {};
+    hospData.forEach(function(h) {
+      var s = h.stage || '其他';
+      stageData[s] = (stageData[s] || 0) + 1;
+    });
+    return {
+      latestDate:   LATEST_DATE,
+      salesData:    SALES_DATA,
+      hospitalData: hospData,
+      stageData:    stageData,
+      successTotal: SUCCESS_TOTAL
+    };
+  } else if (hasSales) {
+    // 销售数据
+    var salesData = rows.map(function(r) {
+      return {
+        product:    r.product    || r['产品']    || r['产品名称'] || '',
+        region:     r.region     || r['大区']    || '',
+        area:       r.area       || r['地区']    || '',
+        owner:      r.owner      || r['责任人']  || r['负责人'] || '',
+        target:     parseFloat(r.target)    || 0,
+        actual:     parseFloat(r.actual)    || 0,
+        actual2025: parseFloat(r.actual2025 || r['2025年'] || 0) || 0,
+        yoy:        r.yoy !== undefined ? (parseFloat(r.yoy) || null) : null,
+        rate:       r.rate !== undefined ? (parseFloat(r.rate) || null) : null
+      };
+    });
+    return {
+      latestDate:   new Date().toISOString().slice(0, 10),
+      salesData:    salesData,
+      hospitalData: HOSP_DATA,
+      stageData:    STAGE_DATA,
+      successTotal: SUCCESS_TOTAL
+    };
+  }
+
+  // 兜底：当作 dashboard_data.json 完整格式
+  return rows;
+}
+
+// ====== Excel 解析 ======
+function parseExcelToDashboardData(workbook) {
+  var sheets = {};
+  workbook.SheetNames.forEach(function(name) {
+    var sheet = workbook.Sheets[name];
+    var json = XLSX.utils.sheet_to_json(sheet, {defval: ''});
+    sheets[name] = json;
+  });
+
+  var snames = Object.keys(sheets);
+
+  // ---- 销售数据 ----
+  // 优先找含"销售"、"汇总"、"达成"关键字的 sheet
+  var salesSheet = null;
+  var salesKeys = ['销售', '汇总', '达成', '明细'];
+  salesKeys.forEach(function(k) {
+    snames.forEach(function(sn) {
+      if (!salesSheet && sn.indexOf(k) > -1) salesSheet = sn;
+    });
+  });
+  // 或找第一个含"产品"列的 sheet
+  if (!salesSheet && sheets[snames[0]] && sheets[snames[0]].length > 0) {
+    var cols0 = Object.keys(sheets[snames[0]][0]);
+    if (cols0.some(function(c) { return ['产品','产品名称','product','目标','actual'].indexOf(c) > -1; })) {
+      salesSheet = snames[0];
+    }
+  }
+
+  var salesData = [];
+  if (salesSheet) {
+    sheets[salesSheet].forEach(function(r) {
+      var row = {};
+      Object.keys(r).forEach(function(k) {
+        row[k] = r[k];
+      });
+      salesData.push({
+        product:    row['产品名称'] || row['产品'] || row['product'] || row['产品编码'] || '',
+        region:     row['大区'] || row['region'] || '',
+        area:       row['地区'] || row['area'] || row['省区'] || '',
+        owner:      row['责任人'] || row['负责人'] || row['owner'] || '',
+        target:     parseFloat(row['目标金额'] || row['目标'] || row['target'] || 0) || 0,
+        actual:     parseFloat(row['完成金额'] || row['实际'] || row['actual'] || 0) || 0,
+        actual2025: parseFloat(row['2025年实际'] || row['2025年'] || row['actual2025'] || 0) || 0,
+        yoy:        row['同比'] !== undefined ? (parseFloat(row['同比']) || null) : null,
+        rate:       row['完成率'] !== undefined ? (parseFloat(row['完成率']) || null) : null
+      });
+    });
+  }
+
+  // ---- 医院进度数据 ----
+  // 找含"医院"、"新开"、"意向"、"进度"的 sheet
+  var hospSheet = null;
+  var hospKeys = ['新开', '进度', '意向', '医院', '提单'];
+  hospKeys.forEach(function(k) {
+    snames.forEach(function(sn) {
+      if (!hospSheet && sn.indexOf(k) > -1) hospSheet = sn;
+    });
+  });
+
+  var hospData = [];
+  var stageData = {};
+  if (hospSheet) {
+    sheets[hospSheet].forEach(function(r) {
+      var row = {};
+      Object.keys(r).forEach(function(k) { row[k] = r[k]; });
+      var hospital = row['医院名称'] || row['医院'] || row['hospital'] || '';
+      if (!hospital) return;
+      var stage = row['当前阶段'] || row['阶段'] || row['stage'] || '其他';
+      hospData.push({
+        hospital: hospital,
+        city:     row['网点'] || row['城市'] || row['city'] || '',
+        region:   row['大区'] || row['region'] || '',
+        stage:    stage,
+        planDate: row['预计进药时间'] || row['计划完成时间'] || row['planDate'] || '',
+        owner:    row['负责人'] || row['owner'] || '',
+        vp:       row['副总'] || row['vp'] || '',
+        result:   row['认定结果'] || row['result'] || ''
+      });
+      stageData[stage] = (stageData[stage] || 0) + 1;
+    });
+  }
+
+  // ---- 最新日期 ----
+  var latestDate = new Date().toISOString().slice(0, 10);
+  // 尝试从销售数据中找日期列
+  if (salesSheet && sheets[salesSheet].length > 0) {
+    var firstRow = sheets[salesSheet][0];
+    ['截止日期', '统计日期', '数据日期', '日期', 'latestDate'].forEach(function(k) {
+      if (firstRow[k] && !latestDate.match(/\d{4}/)) {
+        var d = new Date(firstRow[k]);
+        if (!isNaN(d)) latestDate = d.toISOString().slice(0, 10);
+      }
+    });
+  }
+
+  // ---- 成功开发数 ----
+  var successTotal = 0;
+  if (hospSheet) {
+    sheets[hospSheet].forEach(function(r) {
+      if (r['认定结果'] === '成功' || r['认定结果'] === '已开发' || r['认定结果'] === '已完成') {
+        successTotal++;
+      }
+    });
+  }
+
+  // 如果以上都没找到数据，尝试把第一个 sheet 当完整 JSON 用
+  if (salesData.length === 0 && hospData.length === 0 && snames.length > 0) {
+    var firstSheet = sheets[snames[0]];
+    if (firstSheet && firstSheet.length > 0 && firstSheet[0]['latestDate']) {
+      return firstSheet;
+    }
+  }
+
+  return {
+    latestDate:   latestDate,
+    salesData:    salesData,
+    hospitalData: hospData,
+    stageData:    stageData,
+    successTotal: successTotal
+  };
+}
+
+// ====== 事件绑定 ======
+function selectProduct(p) {
+  currentProduct = p;
+  renderDashboard();
+}
+
+document.querySelectorAll('.region-btn').forEach(function(btn) {
+  btn.addEventListener('click', function() {
+    document.querySelectorAll('.region-btn').forEach(function(b) { b.classList.remove('active'); });
+    btn.classList.add('active');
+    currentRegion = btn.dataset.region;
+    renderDashboard();
+  });
+});
+
+document.querySelectorAll('.dept-btn').forEach(function(btn) {
+  btn.addEventListener('click', function() {
+    document.querySelectorAll('.dept-btn').forEach(function(b) { b.classList.remove('active'); });
+    btn.classList.add('active');
+    currentDept = btn.dataset.dept;
+    // 部门切换后重置产品（优先保持当前产品，否则选该部门第一个）
+    var prods = getProducts();
+    if (prods.indexOf(currentProduct) === -1) {
+      currentProduct = prods.length > 0 ? prods[0] : '炎琥宁80mg';
+    }
+    // 重置大区按钮
+    document.querySelectorAll('.region-btn').forEach(function(b) { b.classList.remove('active'); });
+    var allBtn = document.querySelector('.region-btn[data-region="全部"]');
+    if (allBtn) allBtn.classList.add('active');
+    currentRegion = '全部';
+    renderDashboard();
+  });
+});
+
+document.querySelectorAll('#detailTable th[data-col]').forEach(function(th) {
+  th.addEventListener('click', function() {
+    var col = th.dataset.col;
+    if (sortCol === col) sortDir *= -1;
+    else { sortCol = col; sortDir = -1; }
+    renderTable();
+  });
+});
+
+document.querySelectorAll('.stage-filter-btn').forEach(function(btn) {
+  btn.addEventListener('click', function() {
+    document.querySelectorAll('.stage-filter-btn').forEach(function(b) { b.classList.remove('active'); });
+    btn.classList.add('active');
+    stageFilter = btn.dataset.stage;
+    renderHospTable();
+  });
+});
+
+window.addEventListener('resize', function() {
+  if (barChart)     barChart.resize();
+  if (lineChart)    lineChart.resize();
+  if (stageBarChart) stageBarChart.resize();
+});
+
+// ====== 初始化 ======
+renderDashboard();
+
+// 暴露到全局，供外部调用
+window.loadData = loadData;
+window.loadDataFromURL = loadDataFromURL;
+
+console.log('\uD83D\uDCB0 提示：可调用 loadData(customData) 动态刷新数据，或 loadDataFromURL("./data.json") 从 URL 加载');
+</script>
+</body>
+</html>
