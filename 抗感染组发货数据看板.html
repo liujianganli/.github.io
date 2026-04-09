@@ -1,0 +1,921 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>2026年度抗感染组销售看板</title>
+<script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { 
+    width: 100%; 
+    min-height: 100vh;
+    background: #f0f4f8; 
+  }
+  body { 
+    color: #1a2a3a; 
+    font-family: 'Microsoft YaHei', 'PingFang SC', -apple-system, sans-serif;
+    font-size: 14px;
+    padding-bottom: 60px;
+  }
+
+  /* ===== 蓝色表头 ===== */
+  .header {
+    background: linear-gradient(135deg, #1565c0 0%, #1976d2 60%, #0d47a1 100%);
+    padding: 12px 16px;
+    position: sticky; top: 0; z-index: 100;
+    box-shadow: 0 4px 16px rgba(21,101,192,0.35);
+  }
+  .header-top {
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .header-title {
+    font-size: 18px; color: #ffffff; font-weight: 700;
+    letter-spacing: 1px;
+  }
+  .time-badge {
+    background: rgba(255,255,255,0.15); 
+    border: 1px solid rgba(255,255,255,0.4);
+    border-radius: 16px; padding: 5px 12px; font-size: 11px; color: #fff;
+    white-space: nowrap;
+  }
+  .header-products {
+    display: flex; gap: 6px; margin-top: 8px; flex-wrap: wrap;
+  }
+  .product-tag {
+    background: rgba(255,255,255,0.15); border: 1px solid rgba(255,255,255,0.35);
+    border-radius: 12px; padding: 2px 10px; font-size: 11px; color: #fff;
+  }
+
+  /* ===== 内容区 ===== */
+  .container { padding: 12px 12px; }
+
+  /* KPI Cards — 手机端2列布局 */
+  .kpi-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
+    margin-bottom: 14px;
+  }
+  .kpi-card {
+    background: #ffffff;
+    border-radius: 10px; padding: 12px;
+    position: relative; overflow: hidden;
+    box-shadow: 0 2px 8px rgba(21,101,192,0.10);
+    border: 1px solid #e3ecf7;
+  }
+  .kpi-card::before {
+    content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px;
+  }
+  .kpi-card.blue::before   { background: linear-gradient(90deg, #1976d2, #42a5f5); }
+  .kpi-card.green::before  { background: linear-gradient(90deg, #2e7d32, #66bb6a); }
+  .kpi-card.orange::before { background: linear-gradient(90deg, #e65100, #ffa726); }
+  .kpi-card.red::before    { background: linear-gradient(90deg, #c62828, #ef5350); }
+  .kpi-card.purple::before { background: linear-gradient(90deg, #6a1b9a, #ab47bc); }
+  .kpi-card.teal::before   { background: linear-gradient(90deg, #00796b, #26a69a); }
+  
+  .kpi-label { font-size: 11px; color: #7a93b0; margin-bottom: 6px; }
+  .kpi-value { 
+    font-size: 22px; font-weight: 700; line-height: 1.1;
+    display: flex; align-items: baseline; gap: 3px;
+  }
+  .kpi-unit { font-size: 12px; font-weight: normal; color: #7a93b0; }
+  .kpi-sub { font-size: 10px; color: #9ab0c8; margin-top: 5px; line-height: 1.3; }
+  .kpi-badge {
+    display: inline-block; padding: 1px 6px; border-radius: 8px;
+    font-size: 9px; font-weight: 600; margin-left: 3px;
+  }
+  .badge-up   { background: #e8f5e9; color: #2e7d32; }
+  .badge-down { background: #ffebee; color: #c62828; }
+  
+  /* 卡片内双数据并列 */
+  .kpi-row-flex {
+    display: flex; gap: 8px; margin-top: 6px;
+  }
+  .kpi-row-item {
+    flex: 1; text-align: center;
+    padding: 4px 6px;
+    background: #f7fafd;
+    border-radius: 6px;
+  }
+  .kpi-row-label { font-size: 10px; color: #7a93b0; }
+  .kpi-row-value { font-size: 13px; font-weight: 600; color: #1a2a3a; margin-top: 2px; }
+
+  /* Panel */
+  .panel {
+    background: #ffffff;
+    border-radius: 10px; padding: 12px;
+    margin-bottom: 12px;
+    box-shadow: 0 2px 8px rgba(21,101,192,0.08);
+    border: 1px solid #e3ecf7;
+  }
+  .panel-title {
+    font-size: 13px; font-weight: 600; color: #1565c0; margin-bottom: 10px;
+    padding-bottom: 8px; border-bottom: 1px solid #e3ecf7;
+    display: flex; align-items: center; gap: 6px;
+  }
+  .panel-title::before {
+    content: ''; width: 3px; height: 12px;
+    background: linear-gradient(180deg, #1976d2, #42a5f5);
+    border-radius: 2px;
+  }
+  .chart-box { width: 100%; }
+
+  /* Tabs */
+  .tab-row { display: flex; gap: 6px; margin-bottom: 10px; overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  .tab-row::-webkit-scrollbar { display: none; }
+  .tab-btn {
+    padding: 4px 12px; border-radius: 14px; font-size: 11px; cursor: pointer;
+    border: 1px solid #b0cce8; background: #f0f7ff; color: #5a82a8;
+    white-space: nowrap; flex-shrink: 0;
+  }
+  .tab-btn.active, .tab-btn:hover {
+    background: #1565c0; border-color: #1565c0; color: #ffffff;
+  }
+
+  /* 分地区表格 */
+  .region-table { width: 100%; border-collapse: collapse; font-size: 11px; min-width: 600px; }
+  .region-table th {
+    background: #1565c0; color: #ffffff; font-weight: 600;
+    padding: 7px 6px; text-align: center;
+    white-space: nowrap;
+  }
+  .region-table td {
+    padding: 6px; text-align: center;
+    border-bottom: 1px solid #e8f0f8; color: #2a3a4a;
+  }
+  .region-table td:nth-child(2) { text-align: left; font-weight: 500; }
+  .region-table tr:nth-child(even) td { background: #f7fafd; }
+  .progress-bar-wrap { display: flex; align-items: center; gap: 4px; }
+  .progress-bar { flex: 1; min-width: 50px; height: 6px; background: #e8f0f8; border-radius: 3px; overflow: hidden; }
+  .progress-fill { height: 100%; border-radius: 3px; }
+  .rate-text { min-width: 40px; text-align: right; font-weight: 700; font-size: 11px; }
+  .rate-high { color: #2e7d32; }
+  .rate-mid  { color: #e65100; }
+  .rate-low  { color: #c62828; }
+
+  /* 排名徽章 */
+  .rank-badge {
+    display: inline-block; width: 18px; height: 18px; border-radius: 50%;
+    text-align: center; line-height: 18px; font-size: 10px; font-weight: 700;
+  }
+  .rank-1 { background: #ffd700; color: #5a3e00; }
+  .rank-2 { background: #c0c0c0; color: #3a3a3a; }
+  .rank-3 { background: #cd7f32; color: #fff; }
+  .rank-n { background: #e8f0f8; color: #6a8aaa; }
+
+  /* footer */
+  .footer {
+    text-align: center; padding: 12px; color: #9ab0c8; font-size: 11px;
+    background: #fff; border-top: 1px solid #e3ecf7;
+  }
+
+  /* 水平滚动容器 */
+  .table-scroll {
+    overflow-x: auto; -webkit-overflow-scrolling: touch;
+  }
+
+  /* 渠道卡片 - 同行显示 */
+  .channel-card {
+    background: #e3f2fd; border-radius: 6px; padding: 6px 9px;
+    border-left: 3px solid #1565c0; margin-bottom: 5px;
+  }
+  .channel-card.purple { background: #f3e5f5; border-left-color: #6a1b9a; }
+  .channel-card .card-content {
+    font-size: 9px; color: #7a93b0; display: flex; align-items: center; gap: 3px;
+  }
+  .channel-card .card-value {
+    font-size: 12px; font-weight: 700; color: #1565c0; display: inline;
+  }
+  .channel-card.purple .card-value { color: #6a1b9a; }
+  .channel-card .card-unit {
+    font-size: 8px; font-weight: normal;
+  }
+
+  /* 月均目标标签 */
+  .monthly-target-label {
+    background: #fff3e0; border: 1px solid #ffcc80; border-radius: 4px;
+    padding: 2px 6px; font-size: 10px; color: #e65100; font-weight: 600;
+  }
+
+  /* 切片器卡片样式 */
+  .filter-card-row {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-bottom: 12px;
+  }
+  .filter-card-group {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .filter-card-label {
+    font-size: 11px;
+    color: #5a82a8;
+    font-weight: 600;
+    white-space: nowrap;
+    min-width: 32px;
+  }
+  .filter-card-btns {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+  .filter-card-btn {
+    padding: 4px 10px;
+    border-radius: 14px;
+    font-size: 10px;
+    cursor: pointer;
+    border: 1px solid #b0cce8;
+    background: #f0f7ff;
+    color: #5a82a8;
+    white-space: nowrap;
+    transition: all 0.2s;
+  }
+  .filter-card-btn.active,
+  .filter-card-btn:hover {
+    background: #1565c0;
+    border-color: #1565c0;
+    color: #ffffff;
+  }
+
+  /* 平板及以上设备 */
+  @media (min-width: 768px) {
+    body { font-size: 14px; }
+    .header { padding: 16px 24px; }
+    .header-title { font-size: 22px; }
+    .container { padding: 16px 20px; }
+    .kpi-grid { grid-template-columns: repeat(3, 1fr); gap: 14px; }
+    .kpi-value { font-size: 26px; }
+    .kpi-label { font-size: 12px; }
+    .kpi-sub { font-size: 11px; }
+    .panel { padding: 16px; margin-bottom: 16px; }
+    .panel-title { font-size: 14px; }
+    .region-table { font-size: 12px; min-width: auto; }
+    .region-table th, .region-table td { padding: 8px 10px; }
+  }
+
+  /* 大屏幕 */
+  @media (min-width: 1024px) {
+    .kpi-grid { grid-template-columns: repeat(6, 1fr); }
+    .section-row { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ===== 蓝色表头 ===== -->
+<div class="header">
+  <div class="header-top">
+    <div class="header-title">2026年度抗感染组销售看板</div>
+    <div class="time-badge">📅 截至 2026-04-07</div>
+  </div>
+  <div class="header-products">
+    <span class="product-tag">💊 可乐必妥</span>
+    <span class="product-tag">💉 依克沙</span>
+    <span class="product-tag">🔵 搏拿</span>
+    <span class="product-tag">🏥 立林</span>
+  </div>
+</div>
+
+<!-- ===== 白色内容区 ===== -->
+<div class="container">
+
+  <!-- KPI 区域 — 手机2列 -->
+  <div class="kpi-grid">
+    <!-- 年度目标金额 -->
+    <div class="kpi-card blue">
+      <div class="kpi-label">📌 2026年目标金额</div>
+      <div class="kpi-value">11.25<span class="kpi-unit">亿</span></div>
+      <div class="kpi-sub">全年销售目标总额</div>
+    </div>
+    <!-- 累计完成金额 -->
+    <div class="kpi-card green">
+      <div class="kpi-label">📊 累计完成金额</div>
+      <div class="kpi-value">2.95<span class="kpi-unit">亿</span></div>
+      <div class="kpi-sub">1-4月合计</div>
+    </div>
+    <!-- 累计完成率 -->
+    <div class="kpi-card orange">
+      <div class="kpi-label">📈 累计完成率</div>
+      <div class="kpi-value">26.22<span class="kpi-unit">%</span></div>
+      <div class="kpi-sub">理论进度≈33%，落后于时间</div>
+    </div>
+    <!-- 同比增幅 -->
+    <div class="kpi-card red">
+      <div class="kpi-label">📉 同比增幅（1-4月）</div>
+      <div class="kpi-value">-3.45<span class="kpi-unit">%</span></div>
+      <div class="kpi-sub">去年同期 3.06亿 <span class="kpi-badge badge-down">▼ 下降</span></div>
+    </div>
+    <!-- 4月单月完成 -->
+    <div class="kpi-card purple">
+      <div class="kpi-label">🗓️ 4月当月完成</div>
+      <div class="kpi-value">1,540<span class="kpi-unit">万</span></div>
+      <div class="kpi-sub">4月1-7日发货额</div>
+    </div>
+    <!-- 4月同比 -->
+    <div class="kpi-card teal">
+      <div class="kpi-label">📊 4月同比增幅</div>
+      <div class="kpi-value">+18.67<span class="kpi-unit">%</span></div>
+      <div class="kpi-sub">去年同期1,298万 <span class="kpi-badge badge-up">▲ 增长</span></div>
+    </div>
+  </div>
+
+  <!-- 分产品销量进度 -->
+  <div class="panel">
+    <div class="panel-title">分产品销量进度（年度目标 vs 累计完成 · 按数量统计）</div>
+    <div id="productProgress" style="height:320px;" class="chart-box"></div>
+  </div>
+
+  <!-- 分产品月度完成进度 -->
+  <div class="panel">
+    <div class="panel-title">分产品月度完成进度（按数量统计）</div>
+    <div class="tab-row" id="productTabs">
+      <button class="tab-btn active" onclick="switchProduct(this,'可乐必妥片')">可乐必妥片</button>
+      <button class="tab-btn" onclick="switchProduct(this,'可乐必妥针')">可乐必妥针</button>
+      <button class="tab-btn" onclick="switchProduct(this,'依克沙')">依克沙</button>
+      <button class="tab-btn" onclick="switchProduct(this,'搏拿干混悬')">搏拿干混悬</button>
+      <button class="tab-btn" onclick="switchProduct(this,'搏拿片')">搏拿片</button>
+      <button class="tab-btn" onclick="switchProduct(this,'立林')">立林</button>
+    </div>
+    <div id="productMonthly" style="height:280px;" class="chart-box"></div>
+  </div>
+
+  <!-- 可乐必妥片剂 -->
+  <div class="panel">
+    <div class="panel-title">可乐必妥片剂分渠道销售趋势</div>
+    <div style="display:flex;align-items:center;gap:8px;">
+      <!-- 左侧卡片 - 医院销售部 -->
+      <div style="flex:1;display:flex;flex-direction:column;gap:5px;">
+        <div class="channel-card">
+          <div class="card-content">目标量 <span class="card-value">1,000<span class="card-unit">万盒</span></span></div>
+        </div>
+        <div class="channel-card">
+          <div class="card-content">累计完成 <span class="card-value">201.09<span class="card-unit">万盒</span></span></div>
+        </div>
+        <div class="channel-card">
+          <div class="card-content">完成率 <span class="card-value" style="color:#e65100">20.11<span class="card-unit">%</span></span></div>
+        </div>
+        <div class="channel-card">
+          <div class="card-content">同比增幅 <span class="card-value" style="color:#c62828">-38.08<span class="card-unit">%</span></span></div>
+        </div>
+        <div class="channel-card">
+          <div class="card-content">4月当月发货 <span class="card-value">12.24<span class="card-unit">万盒</span></span></div>
+        </div>
+      </div>
+      <!-- 中间饼图 - 显示销量市场占比（实心饼图） -->
+      <div id="channelChart" style="flex:0 0 110px;height:160px;"></div>
+      <!-- 右侧卡片 - 新营销部 -->
+      <div style="flex:1;display:flex;flex-direction:column;gap:5px;">
+        <div class="channel-card purple">
+          <div class="card-content">目标量 <span class="card-value">1,700<span class="card-unit">万盒</span></span></div>
+        </div>
+        <div class="channel-card purple">
+          <div class="card-content">累计完成 <span class="card-value">419.58<span class="card-unit">万盒</span></span></div>
+        </div>
+        <div class="channel-card purple">
+          <div class="card-content">完成率 <span class="card-value" style="color:#2e7d32">24.68<span class="card-unit">%</span></span></div>
+        </div>
+        <div class="channel-card purple">
+          <div class="card-content">同比增幅 <span class="card-value" style="color:#2e7d32">+40.51<span class="card-unit">%</span></span></div>
+        </div>
+        <div class="channel-card purple">
+          <div class="card-content">4月当月发货 <span class="card-value">10.28<span class="card-unit">万盒</span></span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 分地区销量进度表格 -->
+  <div class="panel">
+    <div class="panel-title">分地区销量进度</div>
+    <div class="filter-card-row">
+      <div class="filter-card-group">
+        <span class="filter-card-label">部门：</span>
+        <div class="filter-card-btns" id="deptFilterBtns">
+          <button class="filter-card-btn active" data-value="hosp" onclick="setDeptFilter(this)">医院销售部</button>
+          <button class="filter-card-btn" data-value="new" onclick="setDeptFilter(this)">新营销部</button>
+        </div>
+      </div>
+      <div class="filter-card-group">
+        <span class="filter-card-label">产品：</span>
+        <div class="filter-card-btns" id="productFilterBtns">
+          <button class="filter-card-btn active" data-value="可乐必妥片" onclick="setProductFilter(this)">可乐必妥片</button>
+          <button class="filter-card-btn" data-value="可乐必妥针" onclick="setProductFilter(this)">可乐必妥针</button>
+          <button class="filter-card-btn" data-value="依克沙" onclick="setProductFilter(this)">依克沙</button>
+          <button class="filter-card-btn" data-value="搏拿" onclick="setProductFilter(this)">搏拿</button>
+          <button class="filter-card-btn" data-value="立林" onclick="setProductFilter(this)">立林</button>
+        </div>
+      </div>
+    </div>
+    <div class="table-scroll">
+      <div id="regionTableWrap"></div>
+    </div>
+  </div>
+
+
+
+</div>
+
+<div class="footer">
+  数据截至2026年4月7日 &nbsp;|&nbsp; 可乐必妥 · 依克沙 · 搏拿 · 立林
+</div>
+
+<script>
+// ===================== 数据（数据源更新于2026年4月8日）=====================
+const data = {
+  products: [
+    { name: '可乐必妥片',  target: 2700.00, actual: 620.67, rate: 22.99, yoy: -0.43, monthly: [327.45, 59.58, 211.12, 22.52], monthly2025: [287.32, 134.43, 180.85, 20.75], unit: '万盒' },
+    { name: '可乐必妥针',  target: 400.00,  actual: 102.76, rate: 25.69, yoy: -20.10, monthly: [47.51, 18.25, 27.50, 9.49], monthly2025: [58.24, 20.96, 43.73, 5.67], unit: '万袋' },
+    { name: '依克沙',      target: 80.00,   actual: 21.11,  rate: 26.38, yoy: 2.85, monthly: [11.02, 3.30, 6.42, 0.36], monthly2025: [6.42, 3.30, 4.26, 6.54], unit: '万支' },
+    { name: '搏拿干混悬',  target: 80.00,   actual: 5.28,   rate: 6.60, yoy: -64.18, monthly: [2.42, 1.30, 1.03, 0.53], monthly2025: [12.13, 1.18, 1.39, 0.05], unit: '万盒' },
+    { name: '搏拿片',      target: 5.00,    actual: 1.14,   rate: 22.80, yoy: 1.79, monthly: [0.78, 0, 0.18, 0.18], monthly2025: [0.48, 0.30, 0.24, 0.10], unit: '万盒' },
+    { name: '立林',        target: 120.00,  actual: 1.66,   rate: 1.38, yoy: 444.75, monthly: [0.52, 0.24, 0.90, 0], monthly2025: [0.18, 0, 0.06, 0.06], unit: '万盒' },
+  ],
+  channel: {
+    hosp: { target: 1000, actual: 201.09, rate: 20.11, currentMonth: 12.24, yoy: -38.08 },
+    new:  { target: 1700, actual: 419.58, rate: 24.68, currentMonth: 10.28, yoy: 40.51 }
+  },
+  regions: [
+    { name: '浙江',   dept: 'hosp', manager: '吴光建',  target: 526.60, actual: 114.99, lastYear: 206.16, yoyDiff: -91.17, monthly: [52.70, 43.77, 18.38, 0.00] },
+    { name: '上海',   dept: 'hosp', manager: '高文龙',  target: 215.60, actual: 61.59,  lastYear: 69.63,  yoyDiff: -8.04,  monthly: [36.83, 0.00, 13.64, 10.88] },
+    { name: '北京',   dept: 'hosp', manager: '卢俊',    target: 160.00, actual: 33.84,  lastYear: 53.83,  yoyDiff: -19.99, monthly: [17.19, 2.53, 12.95, 0.32] },
+    { name: '广东',   dept: 'hosp', manager: '许占海',  target: 138.90, actual: 25.82,  lastYear: 80.54,  yoyDiff: -54.73, monthly: [13.52, 1.58, 7.65, 2.77] },
+    { name: '江苏',   dept: 'hosp', manager: '杨海波',  target: 77.20,  actual: 17.89,  lastYear: 28.10,  yoyDiff: -10.21, monthly: [12.96, 1.91, 1.72, 1.28] },
+    { name: '山东',   dept: 'hosp', manager: '卿毅',    target: 76.50,  actual: 16.07,  lastYear: 24.32,  yoyDiff: -8.25,  monthly: [6.45, 2.74, 4.43, 2.44] },
+    { name: '福建',   dept: 'hosp', manager: '许占海',  target: 98.40,  actual: 16.21,  lastYear: 40.30,  yoyDiff: -24.09, monthly: [9.09, 1.69, 3.59, 1.68] },
+    { name: '河南',   dept: 'hosp', manager: '黄彩西',  target: 48.50,  actual: 11.86,  lastYear: 14.78,  yoyDiff: -2.93,  monthly: [7.10, 2.69, 1.32, 0.75] },
+    { name: '辽宁',   dept: 'hosp', manager: '卿毅',    target: 55.40,  actual: 9.74,   lastYear: 17.67,  yoyDiff: -7.93,  monthly: [4.42, 0.12, 5.04, 0.15] },
+    { name: '四川',   dept: 'hosp', manager: '薛文',    target: 25.00,  actual: 4.87,   lastYear: 10.80,  yoyDiff: -5.93,  monthly: [3.66, 0.04, 0.99, 0.18] },
+    { name: '湖北',   dept: 'hosp', manager: '陈辉',    target: 24.25,  actual: 3.91,   lastYear: 6.68,   yoyDiff: -2.77,  monthly: [1.04, 0.42, 2.06, 0.39] },
+    { name: '天津',   dept: 'hosp', manager: '卢俊',    target: 19.50,  actual: 3.71,   lastYear: 5.75,   yoyDiff: -2.03,  monthly: [1.68, 0.92, 0.62, 0.50] },
+    { name: '黑龙江', dept: 'hosp', manager: '卿毅',   target: 13.42,  actual: 3.71,   lastYear: 3.65,   yoyDiff: 0.06,   monthly: [2.44, 0.00, 1.18, 0.09] },
+    { name: '广西',   dept: 'hosp', manager: '罗险峰',  target: 8.00,   actual: 2.40,   lastYear: 4.20,   yoyDiff: -1.80,  monthly: [0.97, 0.57, 0.07, 0.79] },
+    { name: '新疆',   dept: 'hosp', manager: '耿福林',  target: 18.00,  actual: 2.28,   lastYear: 5.52,   yoyDiff: -3.24,  monthly: [1.26, 0.72, 0.30, 0.00] },
+    { name: '湖南',   dept: 'hosp', manager: '罗险峰',  target: 7.20,   actual: 2.06,   lastYear: 3.22,   yoyDiff: -1.15,  monthly: [0.85, 0.09, 0.97, 0.15] },
+    { name: '重庆',   dept: 'hosp', manager: '薛文',    target: 10.20,  actual: 1.71,   lastYear: 3.52,   yoyDiff: -1.81,  monthly: [0.94, 0.24, 0.44, 0.08] },
+    { name: '吉林',   dept: 'hosp', manager: '卿毅',   target: 7.55,   actual: 0.62,   lastYear: 0.94,   yoyDiff: -0.32,  monthly: [0.32, 0.02, 0.12, 0.15] },
+    { name: '河北',   dept: 'hosp', manager: '卢俊',    target: 3.00,   actual: 0.37,   lastYear: 2.17,   yoyDiff: -1.80,  monthly: [0.10, 0.03, 0.09, 0.15] },
+    { name: '陕西',   dept: 'hosp', manager: '耿福林',  target: 1.10,   actual: 0.29,   lastYear: 0.59,   yoyDiff: -0.31,  monthly: [0.17, 0.00, 0.06, 0.05] }
+  ],
+  // 各产品各地区的完成量和目标量（含同比增量）- 单位：万盒/万袋/万支
+  regionByProduct: {
+    '可乐必妥片': [
+      { name: '浙江',   actual: 84.75,  target: 420.00, yoyDiff: -65.91 },
+      { name: '上海',   actual: 37.71,  target: 140.00, yoyDiff: -7.29 },
+      { name: '北京',   actual: 23.35,  target: 120.00, yoyDiff: -20.24 },
+      { name: '江苏',   actual: 13.02,  target: 52.00,  yoyDiff: -3.06 },
+      { name: '广东',   actual: 12.69,  target: 85.00,  yoyDiff: -42.48 },
+      { name: '山东',   actual: 8.79,   target: 38.00,  yoyDiff: -4.29 },
+      { name: '辽宁',   actual: 5.10,   target: 26.00,  yoyDiff: -3.30 },
+      { name: '福建',   actual: 4.31,   target: 45.00,  yoyDiff: -16.80 },
+      { name: '四川',   actual: 2.37,   target: 15.00,  yoyDiff: -3.97 },
+      { name: '新疆',   actual: 2.22,   target: 12.00,  yoyDiff: -1.38 },
+      { name: '河南',   actual: 2.16,   target: 10.00,  yoyDiff: -1.26 },
+      { name: '天津',   actual: 1.62,   target: 8.00,   yoyDiff: -1.11 },
+      { name: '广西',   actual: 1.44,   target: 5.00,   yoyDiff: -0.96 },
+      { name: '湖北',   actual: 1.23,   target: 9.65,   yoyDiff: -2.70 },
+      { name: '重庆',   actual: 0.90,   target: 6.00,   yoyDiff: -1.59 },
+      { name: '湖南',   actual: 0.30,   target: 4.00,   yoyDiff: -1.23 },
+      { name: '河北',   actual: 0.24,   target: 2.40,   yoyDiff: -0.36 },
+      { name: '安徽',   actual: 0.18,   target: 0.40,   yoyDiff: 0.03 },
+      { name: '黑龙江', actual: 0.18,   target: 0.40,   yoyDiff: 0.04 },
+      { name: '陕西',   actual: 0.12,   target: 0.30,   yoyDiff: 0.03 },
+      { name: '江西',   actual: 0.09,   target: 0.20,   yoyDiff: 0.01 },
+      { name: '云南',   actual: 0.03,   target: 0.40,   yoyDiff: -0.18 },
+      { name: '吉林',   actual: 0.03,   target: 0.05,   yoyDiff: 0.00 }
+    ],
+    '可乐必妥针': [
+      { name: '浙江',   actual: 25.56,  target: 96.60,  yoyDiff: -8.40 },
+      { name: '上海',   actual: 21.00,  target: 65.60,  yoyDiff: -1.89 },
+      { name: '广东',   actual: 11.75,  target: 52.00,  yoyDiff: -10.93 },
+      { name: '北京',   actual: 8.81,   target: 29.00,  yoyDiff: -1.24 },
+      { name: '福建',   actual: 8.42,   target: 39.30,  yoyDiff: -6.76 },
+      { name: '河南',   actual: 7.16,   target: 25.50,  yoyDiff: -0.94 },
+      { name: '山东',   actual: 5.16,   target: 19.50,  yoyDiff: -1.05 },
+      { name: '辽宁',   actual: 4.20,   target: 27.40,  yoyDiff: -4.77 },
+      { name: '江苏',   actual: 3.28,   target: 16.00,  yoyDiff: -6.51 },
+      { name: '四川',   actual: 2.50,   target: 10.00,  yoyDiff: -1.96 },
+      { name: '湖南',   actual: 1.76,   target: 3.10,   yoyDiff: 0.14 },
+      { name: '广西',   actual: 0.96,   target: 3.00,   yoyDiff: -0.84 },
+      { name: '天津',   actual: 0.82,   target: 3.00,   yoyDiff: 0.38 },
+      { name: '湖北',   actual: 0.56,   target: 0.80,   yoyDiff: 0.01 },
+      { name: '黑龙江', actual: 0.36,   target: 1.00,  yoyDiff: 0.00 },
+      { name: '重庆',   actual: 0.22,   target: 0.90,   yoyDiff: -0.14 },
+      { name: '陕西',   actual: 0.11,   target: 0.80,   yoyDiff: -0.39 },
+      { name: '新疆',   actual: 0.06,   target: 5.00,   yoyDiff: -1.86 },
+      { name: '河北',   actual: 0.05,   target: 0.10,   yoyDiff: -1.41 },
+      { name: '江西',   actual: 0.01,   target: 0.30,   yoyDiff: -0.15 }
+    ],
+    '依克沙': [
+      { name: '浙江',   actual: 4.68,   target: 10.00,  yoyDiff: -16.86 },
+      { name: '福建',   actual: 3.48,   target: 14.10,  yoyDiff: -0.54 },
+      { name: '上海',   actual: 2.88,   target: 10.00,  yoyDiff: 1.14 },
+      { name: '河南',   actual: 2.34,   target: 7.00,   yoyDiff: 0.30 },
+      { name: '黑龙江', actual: 2.16,   target: 7.00,   yoyDiff: 1.98 },
+      { name: '湖北',   actual: 1.26,   target: 10.50,  yoyDiff: 0.36 },
+      { name: '天津',   actual: 1.14,   target: 6.20,   yoyDiff: -0.90 },
+      { name: '山东',   actual: 0.78,   target: 3.00,   yoyDiff: -0.30 },
+      { name: '重庆',   actual: 0.59,   target: 2.30,   yoyDiff: -0.08 },
+      { name: '吉林',   actual: 0.54,   target: 6.00,   yoyDiff: -0.30 },
+      { name: '辽宁',   actual: 0.36,   target: 0.50,   yoyDiff: 0.24 },
+      { name: '江苏',   actual: 0.30,   target: 1.20,   yoyDiff: 0.18 },
+      { name: '北京',   actual: 0.24,   target: 2.00,   yoyDiff: 0.06 },
+      { name: '广东',   actual: 0.24,   target: 0.20,   yoyDiff: -0.24 },
+      { name: '山西',   actual: 0.12,   target: 0.00,   yoyDiff: 0.00 }
+    ],
+    '搏拿': [
+      { name: '山东',   actual: 1.34,   target: 15.00,  yoyDiff: -2.43 },
+      { name: '江苏',   actual: 1.30,   target: 8.00,   yoyDiff: -0.82 },
+      { name: '广东',   actual: 1.02,   target: 1.70,   yoyDiff: -1.14 },
+      { name: '黑龙江', actual: 1.01,   target: 5.02,   yoyDiff: -2.32 },
+      { name: '湖北',   actual: 0.86,   target: 3.30,   yoyDiff: -0.44 },
+      { name: '河南',   actual: 0.19,   target: 6.00,   yoyDiff: -1.03 },
+      { name: '天津',   actual: 0.10,   target: 2.30,   yoyDiff: -0.44 },
+      { name: '河北',   actual: 0.08,   target: 0.50,   yoyDiff: -0.03 },
+      { name: '辽宁',   actual: 0.07,   target: 0.50,   yoyDiff: -0.11 },
+      { name: '吉林',   actual: 0.05,   target: 0.50,   yoyDiff: -0.05 },
+      { name: '江西',   actual: -0.05,  target: 0.50,   yoyDiff: -0.62 }
+    ],
+    '立林': [
+      { name: '北京',   actual: 1.44,   target: 9.00,   yoyDiff: 0.00 },
+      { name: '广东',   actual: 0.12,   target: 0.00,   yoyDiff: 0.06 },
+      { name: '陕西',   actual: 0.06,   target: 0.00,   yoyDiff: 0.06 },
+      { name: '天津',   actual: 0.04,   target: 0.00,   yoyDiff: 0.00 },
+      { name: '辽宁',   actual: 0.01,   target: 1.00,   yoyDiff: 0.00 }
+    ]
+  },
+
+  // 各产品各地区目标量
+  regionTargetByProduct: {
+    '可乐必妥片': {
+      '浙江': 420.00, '上海': 140.00, '北京': 120.00, '广东': 85.00, '江苏': 52.00,
+      '福建': 45.00, '山东': 38.00, '辽宁': 26.00, '四川': 15.00, '新疆': 12.00,
+      '河南': 10.00, '湖北': 9.65, '天津': 8.00, '重庆': 6.00, '广西': 5.00,
+      '湖南': 4.00, '河北': 2.40, '云南': 0.40, '安徽': 0.40, '黑龙江': 0.40,
+      '陕西': 0.30, '江西': 0.20, '内蒙古': 0.05, '吉林': 0.05, '山西': 0.05,
+      '海南': 0.05, '贵州': 0.05
+    },
+    '可乐必妥针': {
+      '浙江': 96.60, '上海': 65.60, '广东': 52.00, '福建': 39.30, '北京': 29.00,
+      '辽宁': 27.40, '河南': 25.50, '山东': 19.50, '江苏': 16.00, '四川': 10.00,
+      '新疆': 5.00, '湖南': 3.10, '天津': 3.00, '广西': 3.00, '吉林': 1.00,
+      '黑龙江': 1.00, '重庆': 0.90, '湖北': 0.80, '陕西': 0.80, '江西': 0.30,
+      '山西': 0.10, '河北': 0.10
+    },
+    '依克沙': {
+      '福建': 14.10, '湖北': 10.50, '上海': 10.00, '浙江': 10.00, '河南': 7.00,
+      '黑龙江': 7.00, '天津': 6.20, '吉林': 6.00, '山东': 3.00, '重庆': 2.30,
+      '北京': 2.00, '江苏': 1.20, '辽宁': 0.50, '广东': 0.20
+    },
+    '搏拿': {
+      '山东': 15.00, '江苏': 8.00, '河南': 6.00, '黑龙江': 5.02, '湖北': 3.30,
+      '天津': 2.30, '广东': 1.70, '重庆': 1.00, '吉林': 0.50, '江西': 0.50,
+      '辽宁': 0.50, '河北': 0.50, '云南': 0.12, '安徽': 0.12, '甘肃': 0.12,
+      '贵州': 0.12
+    },
+    '立林': {
+      '北京': 9.00, '山东': 1.00, '新疆': 1.00, '辽宁': 1.00
+    }
+  },
+
+  // 新营销部：各产品各渠道的完成量、目标量、同比增量（单位：万）
+  newDeptByProduct: {
+    '可乐必妥片': [
+      { name: 'KA',        actual: 256.77, target: 945.00, yoyDiff: 10.77 },
+      { name: 'B端-壹药网', actual: 83.01,  target: 300.00, yoyDiff: 52.13 },
+      { name: 'B端-药师帮', actual: 70.50,  target: 300.00, yoyDiff: 30.60 },
+      { name: 'C端-京东',   actual: 15.00,  target: 95.00,  yoyDiff: -11.67 },
+      { name: 'C端-其他',   actual: 6.57,   target: 30.00,  yoyDiff: -2.58 },
+      { name: 'C端-阿里',   actual: 0.00,    target: 30.00,  yoyDiff: -8.37 }
+    ],
+    '可乐必妥针': [
+      { name: 'B端-药师帮', actual: 0.01, target: 0.00, yoyDiff: 0.01 }
+    ],
+    '依克沙': [],
+    '搏拿': [
+      { name: 'B端-壹药网', actual: 0.00, target: 20.00, yoyDiff: 0.00 },
+      { name: 'B端-药师帮', actual: 0.46, target: 20.00, yoyDiff: 0.46 }
+    ],
+    '立林': []
+  }
+};
+
+const productColors = ['#1565c0','#2e7d32','#e65100','#6a1b9a','#00838f','#c62828'];
+
+function getRateClass(r) {
+  return r >= 30 ? 'rate-high' : r >= 20 ? 'rate-mid' : 'rate-low';
+}
+function getRateColor(r) {
+  return r >= 30 ? '#2e7d32' : r >= 20 ? '#e65100' : '#c62828';
+}
+
+const axisColor   = '#7a93b0';
+const splitColor  = '#e8f0f8';
+const bgTransparent = 'transparent';
+
+// 月均目标
+data.products.forEach(p => { p.monthlyTarget = p.target / 12; });
+
+// ===== 1. 分产品销量进度 =====
+const productChart = echarts.init(document.getElementById('productProgress'));
+const barTargetColor = '#c8ddf0';
+const barActualColor = '#1565c0';
+
+productChart.setOption({
+  backgroundColor: bgTransparent,
+  tooltip: {
+    trigger: 'axis',
+    axisPointer: { type: 'shadow' },
+    formatter: params => {
+      const idx = params[0].dataIndex;
+      const p = data.products[idx];
+      if (!p) return '';
+      const rateColor = getRateColor(p.rate);
+      const yoyColor = p.yoy >= 0 ? '#2e7d32' : '#c62828';
+      const yoySign = p.yoy >= 0 ? '+' : '';
+      return `<b>${p.name}</b><br/>年度目标：<b>${p.target.toLocaleString()} ${p.unit}</b><br/>累计完成：<b>${p.actual.toLocaleString()} ${p.unit}</b><br/>完成率：<b style="color:${rateColor}">${p.rate.toFixed(1)}%</b><br/>同比：<b style="color:${yoyColor}">${yoySign}${p.yoy.toFixed(1)}%</b>`;
+    }
+  },
+  legend: {
+    data: ['年度目标销量', '累计完成销量'],
+    bottom: 0,
+    textStyle: { color: '#3a5a7a', fontSize: 11 }
+  },
+  grid: { top: 15, bottom: 40, left: 75, right: 65, containLabel: false },
+  xAxis: {
+    type: 'value',
+    axisLabel: { formatter: v => v >= 1000 ? (v/1000).toFixed(0) + 'k' : v.toLocaleString(), color: axisColor, fontSize: 10 },
+    splitLine: { lineStyle: { color: splitColor } },
+    axisLine: { show: false },
+    axisTick: { show: false }
+  },
+  yAxis: {
+    type: 'category',
+    data: data.products.map(p => p.name),
+    axisLabel: { color: '#1a2a3a', fontSize: 11 },
+    axisLine: { lineStyle: { color: '#d0dcea' } },
+    axisTick: { show: false }
+  },
+  series: [
+    {
+      name: '年度目标销量',
+      type: 'bar',
+      barWidth: 16,
+      barGap: '-100%',
+      z: 1,
+      data: data.products.map(p => ({ value: p.target, itemStyle: { color: barTargetColor, borderRadius: [0, 3, 3, 0] } })),
+      label: {
+        show: true, position: 'insideLeft',
+        formatter: pt => {
+          const prod = data.products[pt.dataIndex];
+          return '目标 ' + prod.target.toLocaleString() + prod.unit;
+        },
+        color: '#4a7aa8', fontSize: 10, fontWeight: 500, distance: 4
+      }
+    },
+    {
+      name: '累计完成销量',
+      type: 'bar',
+      barWidth: 16,
+      z: 2,
+      data: data.products.map(p => ({ value: p.actual, itemStyle: { color: { type: 'linear', x: 0, y: 0, x2: 1, y2: 0, colorStops: [{ offset: 0, color: '#1565c0' }, { offset: 1, color: '#1976d2' }] }, borderRadius: [0, 3, 3, 0] } })),
+      label: {
+        show: true, position: 'right',
+        formatter: pt => {
+          const prod = data.products[pt.dataIndex];
+          return `{val|${prod.actual.toLocaleString()}}\n{rate|${prod.rate.toFixed(1)}%}`;
+        },
+        rich: { val: { color: '#1a2a3a', fontSize: 10, fontWeight: 600, lineHeight: 15 }, rate: { color: '#e53935', fontSize: 11, fontWeight: 700, lineHeight: 15 } }
+      }
+    }
+  ]
+});
+
+// ===== 2. 分产品月度完成进度（增加月均目标标识在末端）=====
+const monthlyChart = echarts.init(document.getElementById('productMonthly'));
+const monthLabels = ['1月', '2月', '3月', '4月'];
+
+function getProductMonthly(name) {
+  const p = data.products.find(x => x.name === name);
+  const color = productColors[data.products.indexOf(p)];
+  const monthlyTarget = p.monthlyTarget;
+
+  return {
+    backgroundColor: bgTransparent,
+    tooltip: { 
+      trigger: 'axis', 
+      formatter: params => { 
+        const unit = p.unit; 
+        const lines = params.map(s => { 
+          if (s.seriesName.includes('目标')) return ''; 
+          const val = s.value !== null && s.value !== '' ? Number(s.value).toLocaleString() : '暂无数据'; 
+          return `${s.marker}${s.seriesName}：<b>${val} ${unit}</b>`; 
+        }).filter(l => l).join('<br/>'); 
+        return `${name}（${unit}）<br/>${lines}`; 
+      } 
+    },
+    legend: { data: ['2026年', '2025年', '月均目标'], bottom: 0, textStyle: { color: '#3a5a7a', fontSize: 11 } },
+    grid: { top: 15, bottom: 45, left: 50, right: 50 },
+    xAxis: { type: 'category', data: monthLabels, axisLabel: { color: axisColor, fontSize: 11 }, axisLine: { lineStyle: { color: '#d0dcea' } }, axisTick: { show: false } },
+    yAxis: { type: 'value', axisLabel: { formatter: v => v.toLocaleString(), color: axisColor, fontSize: 10 }, splitLine: { lineStyle: { color: splitColor } }, axisLine: { show: false }, axisTick: { show: false } },
+    series: [
+      { name: '2026年', type: 'bar', barWidth: 22, data: p.monthly, itemStyle: { color: { type: 'linear', x: 0, y: 0, x2: 0, y2: 1, colorStops: [{ offset: 0, color: color }, { offset: 1, color: color + '30' }] }, borderRadius: [4, 4, 0, 0] }, label: { show: true, position: 'insideTop', formatter: v => (!v.value || v.value <= 0) ? '' : v.value.toLocaleString(), color: '#fff', fontSize: 10, fontWeight: 600 } },
+      { name: '2025年', type: 'bar', barWidth: 22, data: p.monthly2025, itemStyle: { color: '#90a8b8', borderRadius: [4, 4, 0, 0] }, label: { show: true, position: 'top', formatter: v => (!v.value || v.value <= 0) ? '' : v.value.toLocaleString(), color: '#607080', fontSize: 9, fontWeight: 500 } },
+      { 
+        name: '月均目标', 
+        type: 'line', 
+        data: [monthlyTarget, monthlyTarget, monthlyTarget, monthlyTarget], 
+        symbol: 'none', 
+        lineStyle: { color: '#e65100', width: 2, type: [6, 4] },
+        markPoint: {
+          symbol: 'none'
+        },
+        markLine: {
+          silent: true,
+          symbol: 'none',
+          lineStyle: { color: '#e65100', width: 2, type: [6, 4] },
+          label: { 
+            show: true,
+            position: 'end',
+            formatter: () => monthlyTarget.toLocaleString(),
+            color: '#e65100',
+            fontSize: 11,
+            fontWeight: 600,
+            backgroundColor: '#fff3e0',
+            padding: [2, 6],
+            borderRadius: 4
+          },
+          data: [{ xAxis: 3 }]
+        },
+        tooltip: { show: false }
+      }
+    ]
+  };
+}
+
+monthlyChart.setOption(getProductMonthly('可乐必妥片'));
+
+function switchProduct(btn, name) {
+  document.querySelectorAll('#productTabs .tab-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  monthlyChart.setOption(getProductMonthly(name));
+}
+
+// ===== 3. 可乐必妥分渠道（环形销量饼图 + 图例下方）=====
+const channelChart = echarts.init(document.getElementById('channelChart'));
+const totalChannel = data.channel.hosp.actual + data.channel.new.actual;
+const hospPct = ((data.channel.hosp.actual / totalChannel) * 100).toFixed(1);
+const newPct = ((data.channel.new.actual / totalChannel) * 100).toFixed(1);
+channelChart.setOption({
+  backgroundColor: bgTransparent,
+  tooltip: { 
+    trigger: 'item', 
+    formatter: p => { 
+      const d = p.data; 
+      const pct = d.name === '医院销售部' ? hospPct : newPct; 
+      return `${p.name}<br/>累计完成：<b>${d.actual.toFixed(2)}万盒</b><br/>销量市占：<b>${pct}%</b>`; 
+    } 
+  },
+  legend: { 
+    show: true,
+    orient: 'horizontal',
+    bottom: 0,
+    left: 'center',
+    itemWidth: 12,
+    itemHeight: 12,
+    textStyle: { color: '#5a82a8', fontSize: 10 }
+  },
+  series: [{
+    type: 'pie', 
+    radius: ['45%', '70%'], 
+    center: ['50%','42%'],
+    label: { show: false },
+    labelLine: { show: false },
+    data: [
+      { name: '医院销售部', actual: data.channel.hosp.actual, itemStyle: { color: '#1565c0' } },
+      { name: '新营销部', actual: data.channel.new.actual, itemStyle: { color: '#6a1b9a' } }
+    ]
+  }]
+});
+
+// ===== 4. 分地区表格（支持卡片筛选）=====
+let currentDeptFilter = 'all';
+let currentProductFilter = 'all';
+
+function setDeptFilter(btn) {
+  document.querySelectorAll('#deptFilterBtns .filter-card-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  currentDeptFilter = btn.dataset.value;
+  renderRegionTable();
+}
+
+function setProductFilter(btn) {
+  document.querySelectorAll('#productFilterBtns .filter-card-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  currentProductFilter = btn.dataset.value;
+  renderRegionTable();
+}
+
+function renderRegionTable() {
+  let filtered = [...data.regions];
+
+  // 按部门筛选
+  if (currentDeptFilter !== 'all') {
+    filtered = filtered.filter(r => r.dept === currentDeptFilter);
+  }
+
+  // 按产品筛选 - 使用各产品各地区的实际量、目标量和同比增量
+  if (currentProductFilter !== 'all' && data.regionByProduct[currentProductFilter]) {
+    const productData = data.regionByProduct[currentProductFilter];
+    filtered = productData.map(p => {
+      const region = data.regions.find(r => r.name === p.name);
+      // 使用各产品各地区的目标量和同比增量
+      const target = p.target || 0;
+      const actual = p.actual || 0;
+      const yoyDiff = p.yoyDiff || 0;
+      return region ? { 
+        ...region, 
+        target: target, 
+        actual: actual, 
+        yoyDiff: yoyDiff,
+        rate: target > 0 ? (actual / target * 100) : 0 
+      } : null;
+    }).filter(r => r !== null);
+    // 按销量降序
+    filtered.sort((a, b) => b.actual - a.actual);
+  }
+
+  const isNewDept = currentDeptFilter === 'new';
+
+  let tableHtml = `<table class="region-table">
+<thead><tr>
+<th style="width:40px;">排名</th><th>${isNewDept ? '渠道' : '地区'}</th><th>${isNewDept ? '渠道标签' : '责任人'}</th><th>年度目标</th><th>当年完成</th><th style="min-width:100px;">完成率</th><th>同比增量</th>
+</tr></thead><tbody>`;
+
+  // 新营销部：使用newDeptByProduct数据
+  if (isNewDept && currentProductFilter !== 'all' && data.newDeptByProduct[currentProductFilter]) {
+    const newData = data.newDeptByProduct[currentProductFilter];
+    newData.forEach((r, i) => {
+      const rankClass = i < 3 ? `rank-${i+1}` : 'rank-n';
+      const rate = r.target > 0 ? (r.actual / r.target * 100) : 0;
+      const rateClass = getRateClass(rate);
+      const fillColor = getRateColor(rate);
+      const yoyDiffColor = r.yoyDiff >= 0 ? '#2e7d32' : '#c62828';
+      const yoyDiffSign = r.yoyDiff >= 0 ? '+' : '';
+      const displayTarget = r.target > 0 ? r.target.toLocaleString() : '-';
+      tableHtml += `<tr>
+<td><span class="rank-badge ${rankClass}">${i+1}</span></td>
+<td>${r.name}</td>
+<td style="font-size:10px;color:#7a93b0;">${r.name}</td>
+<td style="text-align:right;font-size:10px;color:#7a93b0;">${displayTarget}</td>
+<td style="text-align:right;font-weight:600;color:#1565c0;">${r.actual.toLocaleString()}</td>
+<td>
+  <div class="progress-bar-wrap">
+    <div class="progress-bar"><div class="progress-fill" style="width:${Math.min(rate * 3, 100)}%;background:${fillColor};"></div></div>
+    <span class="rate-text ${rateClass}">${rate > 0 ? rate.toFixed(1) + '%' : '-'}</span>
+  </div>
+</td>
+<td style="text-align:right;font-weight:600;color:${yoyDiffColor};">${yoyDiffSign}${r.yoyDiff.toFixed(2)}</td>
+</tr>`;
+    });
+  } else {
+    // 医院销售部
+    filtered.forEach((r, i) => {
+      const rankClass = i < 3 ? `rank-${i+1}` : 'rank-n';
+      const rateClass = getRateClass(r.rate);
+      const fillColor = getRateColor(r.rate);
+      const rate = r.target > 0 ? (r.actual / r.target * 100) : 0;
+      const yoyDiffColor = r.yoyDiff >= 0 ? '#2e7d32' : '#c62828';
+      const yoyDiffSign = r.yoyDiff >= 0 ? '+' : '';
+      tableHtml += `<tr>
+<td><span class="rank-badge ${rankClass}">${i+1}</span></td>
+<td>${r.name}</td>
+<td style="font-size:10px;color:#7a93b0;">${r.manager || '-'}</td>
+<td style="text-align:right;font-size:10px;color:#7a93b0;">${r.target.toLocaleString()}</td>
+<td style="text-align:right;font-weight:600;color:#1565c0;">${r.actual.toLocaleString()}</td>
+<td>
+  <div class="progress-bar-wrap">
+    <div class="progress-bar"><div class="progress-fill" style="width:${Math.min(rate * 3, 100)}%;background:${fillColor};"></div></div>
+    <span class="rate-text ${rateClass}">${rate.toFixed(1)}%</span>
+  </div>
+</td>
+<td style="text-align:right;font-weight:600;color:${yoyDiffColor};">${yoyDiffSign}${r.yoyDiff.toFixed(2)}</td>
+</tr>`;
+    });
+  }
+  tableHtml += '</tbody></table>';
+  document.getElementById('regionTableWrap').innerHTML = tableHtml;
+}
+
+// 初始渲染
+renderRegionTable();
+
+// ===== 响应式 =====
+window.addEventListener('resize', () => {
+  [productChart, monthlyChart, channelChart].forEach(c => c.resize());
+});
+</script>
+</body>
+</html>
