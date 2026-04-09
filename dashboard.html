@@ -1,0 +1,667 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>抗感染组发货数据看板</title>
+<script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;}
+body{background:#f5f6fa;color:#2d3142;font-family:'Microsoft YaHei','PingFang SC',sans-serif;min-height:100vh;}
+
+/* HEADER */
+.header{background:linear-gradient(135deg,#1a73e8 0%,#0d5cc7 100%);border-bottom:none;padding:14px 20px;display:flex;align-items:center;justify-content:space-between;box-shadow:0 2px 8px rgba(26,115,232,0.25);}
+.header-title{font-size:20px;font-weight:700;color:#fff;letter-spacing:1px;}
+.header-title span{color:#ffe082;}
+.header-sub{font-size:12px;color:rgba(255,255,255,0.75);margin-top:3px;}
+.header-right{text-align:right;}
+.header-date{font-size:12px;color:rgba(255,255,255,0.8);}
+.data-badge{display:inline-block;margin-top:4px;padding:2px 10px;background:rgba(255,255,255,0.2);border:1px solid rgba(255,255,255,0.4);border-radius:10px;font-size:11px;color:#fff;}
+
+/* TABS */
+.tab-bar{background:#fff;border-bottom:1px solid #e8eaf0;padding:0 16px;display:flex;align-items:center;gap:2px;overflow-x:auto;-webkit-overflow-scrolling:touch;box-shadow:0 1px 3px rgba(0,0,0,0.05);}
+.tab-bar::-webkit-scrollbar{height:3px;}
+.tab-bar::-webkit-scrollbar-thumb{background:#d0d3e0;border-radius:2px;}
+.tab-item{padding:12px 16px;cursor:pointer;font-size:13px;color:#6b7280;border-bottom:2px solid transparent;white-space:nowrap;transition:all 0.2s;font-weight:500;}
+.tab-item:hover{color:#1a73e8;}
+.tab-item.active{color:#1a73e8;border-bottom-color:#1a73e8;}
+.tab-item.all-tab{color:#f57c00;}
+.tab-item.all-tab.active{color:#f57c00;border-bottom-color:#f57c00;}
+
+/* PAGE */
+.page{display:none;padding:14px 16px;}
+.page.active{display:block;}
+
+/* KPI CARDS */
+.kpi-row{display:flex;gap:10px;margin-bottom:14px;flex-wrap:wrap;}
+.kpi-card{flex:1;min-width:140px;background:#fff;border:1px solid #e8eaf0;border-radius:12px;padding:12px 14px;box-shadow:0 1px 4px rgba(0,0,0,0.06);}
+.kpi-label{font-size:11px;color:#9ca3af;margin-bottom:5px;}
+.kpi-value{font-size:20px;font-weight:700;color:#2d3142;}
+.kpi-value.blue{color:#1a73e8;}
+.kpi-value.green{color:#1e8449;}
+.kpi-value.orange{color:#e65100;}
+.kpi-value.yellow{color:#b45309;}
+.kpi-sub{font-size:11px;color:#6b7280;margin-top:3px;}
+.kpi-rate{font-size:12px;margin-top:3px;font-weight:600;}
+
+/* DEPT FILTER */
+.dept-filter{display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap;align-items:center;}
+.dept-filter-label{font-size:12px;color:#6b7280;}
+.dept-btn{padding:5px 14px;border-radius:20px;cursor:pointer;font-size:12px;border:1px solid #d1d5db;background:#fff;color:#6b7280;transition:all 0.2s;}
+.dept-btn:hover{border-color:#1a73e8;color:#1a73e8;}
+.dept-btn.active{background:#1a73e8;border-color:#1a73e8;color:#fff;box-shadow:0 2px 4px rgba(26,115,232,0.25);}
+
+/* GRID */
+.grid-2{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px;}
+.grid-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:12px;}
+.grid-full{margin-bottom:12px;}
+@media(max-width:1200px){.grid-3{grid-template-columns:1fr 1fr;}}
+@media(max-width:768px){
+  .grid-2,.grid-3{grid-template-columns:1fr;}
+  .page{padding:10px 12px;}
+  .header{padding:12px 14px;}
+  .header-title{font-size:16px;}
+  .kpi-card{min-width:calc(50% - 5px);}
+  .kpi-value{font-size:17px;}
+  .tab-item{padding:10px 12px;font-size:12px;}
+}
+@media(max-width:480px){
+  .kpi-card{min-width:calc(50% - 5px);}
+  .chart-h300{height:220px;}
+  .chart-h320{height:240px;}
+  .chart-h360{height:260px;}
+}
+
+/* CHART CARD */
+.chart-card{background:#fff;border:1px solid #e8eaf0;border-radius:12px;padding:14px;box-shadow:0 1px 4px rgba(0,0,0,0.06);}
+.chart-title{font-size:13px;font-weight:600;color:#2d3142;margin-bottom:10px;display:flex;align-items:center;gap:6px;}
+.chart-title .dot{width:3px;height:14px;border-radius:2px;background:#1a73e8;}
+.chart-title .dot.green{background:#1e8449;}
+.chart-title .dot.orange{background:#e65100;}
+.chart-title .dot.purple{background:#7c3aed;}
+.chart-h250{height:250px;}
+.chart-h300{height:300px;}
+.chart-h320{height:320px;}
+.chart-h360{height:360px;}
+.chart-h400{height:400px;}
+.chart-h450{height:450px;}
+.chart-h500{height:500px;}
+
+/* SECTION TITLE */
+.section-title{font-size:13px;color:#6b7280;padding:6px 0 10px;border-bottom:1px solid #e8eaf0;margin-bottom:12px;display:flex;align-items:center;gap:8px;}
+.section-title strong{color:#2d3142;font-size:14px;}
+
+/* TARGET TABLE */
+.target-table{width:100%;border-collapse:collapse;font-size:12px;}
+.target-table th{background:#f8f9fc;color:#6b7280;padding:8px 10px;text-align:left;font-weight:600;border-bottom:2px solid #e8eaf0;}
+.target-table td{padding:8px 10px;border-bottom:1px solid #f0f1f5;color:#374151;vertical-align:middle;}
+.target-table tr:hover td{background:#f5f7ff;}
+.progress-bar-bg{background:#e8eaf0;border-radius:4px;height:6px;overflow:hidden;min-width:60px;}
+.progress-bar-fill{height:100%;border-radius:4px;transition:width 0.3s;}
+.rate-green{color:#1e8449;}
+.rate-yellow{color:#b45309;}
+.rate-orange{color:#c2410c;}
+.rate-red{color:#dc2626;}
+.badge-dept{display:inline-block;padding:1px 8px;border-radius:10px;font-size:10px;font-weight:600;}
+.badge-dept.hospital{background:#e8f0fe;color:#1a73e8;border:1px solid #93b4f0;}
+.badge-dept.new-mkt{background:#fff3e0;color:#e65100;border:1px solid #ffcc80;}
+.badge-dept.total{background:#f1f3f4;color:#5f6368;border:1px solid #dadce0;}
+
+/* ALL PAGE product cards */
+.product-card{background:#fff;border:1px solid #e8eaf0;border-radius:12px;padding:14px;margin-bottom:12px;box-shadow:0 1px 4px rgba(0,0,0,0.06);}
+.product-card-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;}
+.product-card-name{font-size:15px;font-weight:700;color:#2d3142;}
+.product-card-total{font-size:12px;color:#6b7280;}
+.product-card-total span{color:#1a73e8;font-weight:600;}
+
+/* 地区进度 tabs */
+.sub-tab-bar{display:flex;gap:6px;margin-bottom:10px;flex-wrap:wrap;}
+.sub-tab{padding:4px 12px;border-radius:20px;cursor:pointer;font-size:11px;border:1px solid #d1d5db;background:#fff;color:#6b7280;transition:all 0.2s;}
+.sub-tab:hover{border-color:#1a73e8;color:#1a73e8;}
+.sub-tab.active{background:#e8f0fe;border-color:#1a73e8;color:#1a73e8;}
+.sub-tab.orange.active{background:#fff3e0;border-color:#e65100;color:#e65100;}
+
+/* 表格横向滚动适配手机 */
+.table-scroll{overflow-x:auto;-webkit-overflow-scrolling:touch;}
+.table-scroll .target-table{min-width:520px;}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div>
+    <div class="header-title">抗感染组 · <span>发货数据看板</span></div>
+    <div class="header-sub">来源：发货明细 | 数据截止 2026年4月</div>
+  </div>
+  <div class="header-right">
+    <div class="header-date" id="currentDate"></div>
+    <div class="data-badge">实时数据</div>
+  </div>
+</div>
+
+<div class="tab-bar" id="tabBar"></div>
+<div id="pages"></div>
+
+<script>
+const DATA = {"products": ["左氧氟沙星注射液", "左氧氟沙星片", "硫酸异帕米星注射液", "头孢泊肟酯干混悬剂", "头孢泊肟酯片", "立林"], "depts": ["医院销售部", "新营销部"], "dept_total": {"头孢泊肟酯干混悬剂": {"医院销售部": {"qty": 48240.0, "amt": 2547192.96}, "新营销部": {"qty": 4560.0, "amt": 318288.0}, "总计": {"qty": 52800.0, "amt": 2865480.96}}, "左氧氟沙星注射液": {"医院销售部": {"qty": 1027500.0, "amt": 80255756.88}, "新营销部": {"qty": 60.0, "amt": 4035.0}, "总计": {"qty": 1027560.0, "amt": 80259791.88}}, "硫酸异帕米星注射液": {"医院销售部": {"qty": 211050.0, "amt": 12120784.5}, "新营销部": {"qty": 0.0, "amt": 0.0}, "总计": {"qty": 211050.0, "amt": 12120784.5}}, "左氧氟沙星片": {"医院销售部": {"qty": 2010856.0, "amt": 63624895.2}, "新营销部": {"qty": 4195797.0, "amt": 135746177.12}, "总计": {"qty": 6206653.0, "amt": 199371072.32}}, "头孢泊肟酯片": {"医院销售部": {"qty": 11400.0, "amt": 607320.0}, "新营销部": {"qty": 0.0, "amt": 0.0}, "总计": {"qty": 11400.0, "amt": 607320.0}}, "立林": {"医院销售部": {"qty": 16615.0, "amt": 163252.8}, "新营销部": {"qty": 0.0, "amt": 0.0}, "总计": {"qty": 16615.0, "amt": 163252.8}}}, "month_data": {"头孢泊肟酯干混悬剂": {"医院销售部": {"1": {"qty": 24240.0, "amt": 1334687.28}, "2": {"qty": 10800.0, "amt": 553048.0800000001}, "3": {"qty": 7920.0, "amt": 413304.0}, "4": {"qty": 5280.0, "amt": 246153.6}, "5": {"qty": 0.0, "amt": 0.0}, "6": {"qty": 0.0, "amt": 0.0}, "7": {"qty": 0.0, "amt": 0.0}, "8": {"qty": 0.0, "amt": 0.0}, "9": {"qty": 0.0, "amt": 0.0}, "10": {"qty": 0.0, "amt": 0.0}, "11": {"qty": 0.0, "amt": 0.0}, "12": {"qty": 0.0, "amt": 0.0}}, "新营销部": {"1": {"qty": 0.0, "amt": 0.0}, "2": {"qty": 2160.0, "amt": 150768.0}, "3": {"qty": 2400.0, "amt": 167520.0}, "4": {"qty": 0.0, "amt": 0.0}, "5": {"qty": 0.0, "amt": 0.0}, "6": {"qty": 0.0, "amt": 0.0}, "7": {"qty": 0.0, "amt": 0.0}, "8": {"qty": 0.0, "amt": 0.0}, "9": {"qty": 0.0, "amt": 0.0}, "10": {"qty": 0.0, "amt": 0.0}, "11": {"qty": 0.0, "amt": 0.0}, "12": {"qty": 0.0, "amt": 0.0}}, "总计": {"1": {"qty": 24240.0, "amt": 1334687.28}, "2": {"qty": 12960.0, "amt": 703816.0800000001}, "3": {"qty": 10320.0, "amt": 580824.0}, "4": {"qty": 5280.0, "amt": 246153.6}, "5": {"qty": 0.0, "amt": 0.0}, "6": {"qty": 0.0, "amt": 0.0}, "7": {"qty": 0.0, "amt": 0.0}, "8": {"qty": 0.0, "amt": 0.0}, "9": {"qty": 0.0, "amt": 0.0}, "10": {"qty": 0.0, "amt": 0.0}, "11": {"qty": 0.0, "amt": 0.0}, "12": {"qty": 0.0, "amt": 0.0}}}, "左氧氟沙星注射液": {"医院销售部": {"1": {"qty": 475140.0, "amt": 36988603.2}, "2": {"qty": 182520.0, "amt": 14532861.0}, "3": {"qty": 274920.0, "amt": 21310862.88}, "4": {"qty": 94920.0, "amt": 7423429.8}, "5": {"qty": 0.0, "amt": 0.0}, "6": {"qty": 0.0, "amt": 0.0}, "7": {"qty": 0.0, "amt": 0.0}, "8": {"qty": 0.0, "amt": 0.0}, "9": {"qty": 0.0, "amt": 0.0}, "10": {"qty": 0.0, "amt": 0.0}, "11": {"qty": 0.0, "amt": 0.0}, "12": {"qty": 0.0, "amt": 0.0}}, "新营销部": {"1": {"qty": 0.0, "amt": 0.0}, "2": {"qty": 0.0, "amt": 0.0}, "3": {"qty": 60.0, "amt": 4035.0}, "4": {"qty": 0.0, "amt": 0.0}, "5": {"qty": 0.0, "amt": 0.0}, "6": {"qty": 0.0, "amt": 0.0}, "7": {"qty": 0.0, "amt": 0.0}, "8": {"qty": 0.0, "amt": 0.0}, "9": {"qty": 0.0, "amt": 0.0}, "10": {"qty": 0.0, "amt": 0.0}, "11": {"qty": 0.0, "amt": 0.0}, "12": {"qty": 0.0, "amt": 0.0}}, "总计": {"1": {"qty": 475140.0, "amt": 36988603.2}, "2": {"qty": 182520.0, "amt": 14532861.0}, "3": {"qty": 274980.0, "amt": 21314897.88}, "4": {"qty": 94920.0, "amt": 7423429.8}, "5": {"qty": 0.0, "amt": 0.0}, "6": {"qty": 0.0, "amt": 0.0}, "7": {"qty": 0.0, "amt": 0.0}, "8": {"qty": 0.0, "amt": 0.0}, "9": {"qty": 0.0, "amt": 0.0}, "10": {"qty": 0.0, "amt": 0.0}, "11": {"qty": 0.0, "amt": 0.0}, "12": {"qty": 0.0, "amt": 0.0}}}, "硫酸异帕米星注射液": {"医院销售部": {"1": {"qty": 110250.0, "amt": 6349924.5}, "2": {"qty": 33000.0, "amt": 1886370.0}, "3": {"qty": 64200.0, "amt": 3677208.0}, "4": {"qty": 3600.0, "amt": 207282.0}, "5": {"qty": 0.0, "amt": 0.0}, "6": {"qty": 0.0, "amt": 0.0}, "7": {"qty": 0.0, "amt": 0.0}, "8": {"qty": 0.0, "amt": 0.0}, "9": {"qty": 0.0, "amt": 0.0}, "10": {"qty": 0.0, "amt": 0.0}, "11": {"qty": 0.0, "amt": 0.0}, "12": {"qty": 0.0, "amt": 0.0}}, "新营销部": {"1": {"qty": 0.0, "amt": 0.0}, "2": {"qty": 0.0, "amt": 0.0}, "3": {"qty": 0.0, "amt": 0.0}, "4": {"qty": 0.0, "amt": 0.0}, "5": {"qty": 0.0, "amt": 0.0}, "6": {"qty": 0.0, "amt": 0.0}, "7": {"qty": 0.0, "amt": 0.0}, "8": {"qty": 0.0, "amt": 0.0}, "9": {"qty": 0.0, "amt": 0.0}, "10": {"qty": 0.0, "amt": 0.0}, "11": {"qty": 0.0, "amt": 0.0}, "12": {"qty": 0.0, "amt": 0.0}}, "总计": {"1": {"qty": 110250.0, "amt": 6349924.5}, "2": {"qty": 33000.0, "amt": 1886370.0}, "3": {"qty": 64200.0, "amt": 3677208.0}, "4": {"qty": 3600.0, "amt": 207282.0}, "5": {"qty": 0.0, "amt": 0.0}, "6": {"qty": 0.0, "amt": 0.0}, "7": {"qty": 0.0, "amt": 0.0}, "8": {"qty": 0.0, "amt": 0.0}, "9": {"qty": 0.0, "amt": 0.0}, "10": {"qty": 0.0, "amt": 0.0}, "11": {"qty": 0.0, "amt": 0.0}, "12": {"qty": 0.0, "amt": 0.0}}}, "左氧氟沙星片": {"医院销售部": {"1": {"qty": 1115375.0, "amt": 35259777.5}, "2": {"qty": 372600.0, "amt": 11822196.0}, "3": {"qty": 400461.0, "amt": 12670955.8}, "4": {"qty": 122420.0, "amt": 3871965.9}, "5": {"qty": 0.0, "amt": 0.0}, "6": {"qty": 0.0, "amt": 0.0}, "7": {"qty": 0.0, "amt": 0.0}, "8": {"qty": 0.0, "amt": 0.0}, "9": {"qty": 0.0, "amt": 0.0}, "10": {"qty": 0.0, "amt": 0.0}, "11": {"qty": 0.0, "amt": 0.0}, "12": {"qty": 0.0, "amt": 0.0}}, "新营销部": {"1": {"qty": 2159097.0, "amt": 69765002.12}, "2": {"qty": 223200.0, "amt": 7493739.0}, "3": {"qty": 1710750.0, "amt": 54929955.0}, "4": {"qty": 102750.0, "amt": 3557481.0}, "5": {"qty": 0.0, "amt": 0.0}, "6": {"qty": 0.0, "amt": 0.0}, "7": {"qty": 0.0, "amt": 0.0}, "8": {"qty": 0.0, "amt": 0.0}, "9": {"qty": 0.0, "amt": 0.0}, "10": {"qty": 0.0, "amt": 0.0}, "11": {"qty": 0.0, "amt": 0.0}, "12": {"qty": 0.0, "amt": 0.0}}, "总计": {"1": {"qty": 3274472.0, "amt": 105024779.62}, "2": {"qty": 595800.0, "amt": 19315935.0}, "3": {"qty": 2111211.0, "amt": 67600910.8}, "4": {"qty": 225170.0, "amt": 7429446.9}, "5": {"qty": 0.0, "amt": 0.0}, "6": {"qty": 0.0, "amt": 0.0}, "7": {"qty": 0.0, "amt": 0.0}, "8": {"qty": 0.0, "amt": 0.0}, "9": {"qty": 0.0, "amt": 0.0}, "10": {"qty": 0.0, "amt": 0.0}, "11": {"qty": 0.0, "amt": 0.0}, "12": {"qty": 0.0, "amt": 0.0}}}, "头孢泊肟酯片": {"医院销售部": {"1": {"qty": 7800.0, "amt": 424360.0}, "2": {"qty": 0.0, "amt": 0.0}, "3": {"qty": 1800.0, "amt": 91480.0}, "4": {"qty": 1800.0, "amt": 91480.0}, "5": {"qty": 0.0, "amt": 0.0}, "6": {"qty": 0.0, "amt": 0.0}, "7": {"qty": 0.0, "amt": 0.0}, "8": {"qty": 0.0, "amt": 0.0}, "9": {"qty": 0.0, "amt": 0.0}, "10": {"qty": 0.0, "amt": 0.0}, "11": {"qty": 0.0, "amt": 0.0}, "12": {"qty": 0.0, "amt": 0.0}}, "新营销部": {"1": {"qty": 0.0, "amt": 0.0}, "2": {"qty": 0.0, "amt": 0.0}, "3": {"qty": 0.0, "amt": 0.0}, "4": {"qty": 0.0, "amt": 0.0}, "5": {"qty": 0.0, "amt": 0.0}, "6": {"qty": 0.0, "amt": 0.0}, "7": {"qty": 0.0, "amt": 0.0}, "8": {"qty": 0.0, "amt": 0.0}, "9": {"qty": 0.0, "amt": 0.0}, "10": {"qty": 0.0, "amt": 0.0}, "11": {"qty": 0.0, "amt": 0.0}, "12": {"qty": 0.0, "amt": 0.0}}, "总计": {"1": {"qty": 7800.0, "amt": 424360.0}, "2": {"qty": 0.0, "amt": 0.0}, "3": {"qty": 1800.0, "amt": 91480.0}, "4": {"qty": 1800.0, "amt": 91480.0}, "5": {"qty": 0.0, "amt": 0.0}, "6": {"qty": 0.0, "amt": 0.0}, "7": {"qty": 0.0, "amt": 0.0}, "8": {"qty": 0.0, "amt": 0.0}, "9": {"qty": 0.0, "amt": 0.0}, "10": {"qty": 0.0, "amt": 0.0}, "11": {"qty": 0.0, "amt": 0.0}, "12": {"qty": 0.0, "amt": 0.0}}}, "立林": {"医院销售部": {"1": {"qty": 5165.0, "amt": 92692.8}, "2": {"qty": 2400.0, "amt": 14400.0}, "3": {"qty": 9050.0, "amt": 56160.0}, "4": {"qty": 0.0, "amt": 0.0}, "5": {"qty": 0.0, "amt": 0.0}, "6": {"qty": 0.0, "amt": 0.0}, "7": {"qty": 0.0, "amt": 0.0}, "8": {"qty": 0.0, "amt": 0.0}, "9": {"qty": 0.0, "amt": 0.0}, "10": {"qty": 0.0, "amt": 0.0}, "11": {"qty": 0.0, "amt": 0.0}, "12": {"qty": 0.0, "amt": 0.0}}, "新营销部": {"1": {"qty": 0.0, "amt": 0.0}, "2": {"qty": 0.0, "amt": 0.0}, "3": {"qty": 0.0, "amt": 0.0}, "4": {"qty": 0.0, "amt": 0.0}, "5": {"qty": 0.0, "amt": 0.0}, "6": {"qty": 0.0, "amt": 0.0}, "7": {"qty": 0.0, "amt": 0.0}, "8": {"qty": 0.0, "amt": 0.0}, "9": {"qty": 0.0, "amt": 0.0}, "10": {"qty": 0.0, "amt": 0.0}, "11": {"qty": 0.0, "amt": 0.0}, "12": {"qty": 0.0, "amt": 0.0}}, "总计": {"1": {"qty": 5165.0, "amt": 92692.8}, "2": {"qty": 2400.0, "amt": 14400.0}, "3": {"qty": 9050.0, "amt": 56160.0}, "4": {"qty": 0.0, "amt": 0.0}, "5": {"qty": 0.0, "amt": 0.0}, "6": {"qty": 0.0, "amt": 0.0}, "7": {"qty": 0.0, "amt": 0.0}, "8": {"qty": 0.0, "amt": 0.0}, "9": {"qty": 0.0, "amt": 0.0}, "10": {"qty": 0.0, "amt": 0.0}, "11": {"qty": 0.0, "amt": 0.0}, "12": {"qty": 0.0, "amt": 0.0}}}}, "trend_data": {"头孢泊肟酯干混悬剂": {"医院销售部": {"2023": 471981.0, "2024": 552720.0, "2025": 348240.0, "2026": 48240.0}, "新营销部": {"2023": 1680.0, "2024": 32400.0, "2025": 32220.0, "2026": 4560.0}, "总计": {"2023": 473661.0, "2024": 585120.0, "2025": 380460.0, "2026": 52800.0}}, "左氧氟沙星注射液": {"医院销售部": {"2023": 2709260.0, "2024": 3140730.0, "2025": 3783660.0, "2026": 1027500.0}, "新营销部": {"2023": 0.0, "2024": 0.0, "2025": 0.0, "2026": 60.0}, "总计": {"2023": 2709260.0, "2024": 3140730.0, "2025": 3783660.0, "2026": 1027560.0}}, "硫酸异帕米星注射液": {"医院销售部": {"2023": 923520.0, "2024": 459000.0, "2025": 837290.0, "2026": 211050.0}, "新营销部": {"2023": 0.0, "2024": 0.0, "2025": 0.0, "2026": 0.0}, "总计": {"2023": 923520.0, "2024": 459000.0, "2025": 837290.0, "2026": 211050.0}}, "左氧氟沙星片": {"医院销售部": {"2023": 11980584.0, "2024": 11284954.5, "2025": 8770284.0, "2026": 2010856.0}, "新营销部": {"2023": 1693768.0, "2024": 7296385.0, "2025": 10979838.0, "2026": 4195797.0}, "总计": {"2023": 13674352.0, "2024": 18581339.5, "2025": 19750122.0, "2026": 6206653.0}}, "头孢泊肟酯片": {"医院销售部": {"2023": 41276.0, "2024": 32000.0, "2025": 46800.0, "2026": 11400.0}, "新营销部": {"2023": 2400.0, "2024": 0.0, "2025": 1500.0, "2026": 0.0}, "总计": {"2023": 43676.0, "2024": 32000.0, "2025": 48300.0, "2026": 11400.0}}, "立林": {"医院销售部": {"2023": 1800.0, "2024": 2100.0, "2025": 32550.0, "2026": 16615.0}, "新营销部": {"2023": 300.0, "2024": 0.0, "2025": 0.0, "2026": 0.0}, "总计": {"2023": 2100.0, "2024": 2100.0, "2025": 32550.0, "2026": 16615.0}}}, "target_data": {"头孢泊肟酯干混悬剂": {"医院销售部": {"target_qty": 400000.0000000001, "actual_qty": 48240.0, "target_amt": 19927999.999999996, "actual_amt": 2547192.96, "qty_rate": 12.1, "amt_rate": 12.8}, "新营销部": {"target_qty": 400000.0000000008, "actual_qty": 4560.0, "target_amt": 23719999.999999993, "actual_amt": 318288.0, "qty_rate": 1.1, "amt_rate": 1.3}, "总计": {"target_qty": 800000.0000000009, "actual_qty": 52800.0, "target_amt": 43647999.99999999, "actual_amt": 2865480.96, "qty_rate": 6.6, "amt_rate": 6.6}}, "左氧氟沙星注射液": {"医院销售部": {"target_qty": 3999999.999999999, "actual_qty": 1027500.0, "target_amt": 280000000.0, "actual_amt": 80255756.88, "qty_rate": 25.7, "amt_rate": 28.7}, "新营销部": {"target_qty": 0.0, "actual_qty": 60.0, "target_amt": 0.0, "actual_amt": 4035.0, "qty_rate": 0, "amt_rate": 0}, "总计": {"target_qty": 3999999.999999999, "actual_qty": 1027560.0, "target_amt": 280000000.0, "actual_amt": 80259791.88, "qty_rate": 25.7, "amt_rate": 28.7}}, "硫酸异帕米星注射液": {"医院销售部": {"target_qty": 800000.0, "actual_qty": 211050.0, "target_amt": 40800000.0, "actual_amt": 12120784.5, "qty_rate": 26.4, "amt_rate": 29.7}, "新营销部": {"target_qty": 0.0, "actual_qty": 0.0, "target_amt": 0.0, "actual_amt": 0.0, "qty_rate": 0, "amt_rate": 0}, "总计": {"target_qty": 800000.0, "actual_qty": 211050.0, "target_amt": 40800000.0, "actual_amt": 12120784.5, "qty_rate": 26.4, "amt_rate": 29.7}}, "左氧氟沙星片": {"医院销售部": {"target_qty": 10000000.000000004, "actual_qty": 2010856.0, "target_amt": 284300000.0, "actual_amt": 63624895.2, "qty_rate": 20.1, "amt_rate": 22.4}, "新营销部": {"target_qty": 17000000.0, "actual_qty": 4195797.0, "target_amt": 473280000.0, "actual_amt": 135746177.12, "qty_rate": 24.7, "amt_rate": 28.7}, "总计": {"target_qty": 27000000.000000007, "actual_qty": 6206653.0, "target_amt": 757580000.0, "actual_amt": 199371072.32, "qty_rate": 23.0, "amt_rate": 26.3}}, "头孢泊肟酯片": {"医院销售部": {"target_qty": 50000.0, "actual_qty": 11400.0, "target_amt": 2477000.0000000005, "actual_amt": 607320.0, "qty_rate": 22.8, "amt_rate": 24.5}, "新营销部": {"target_qty": 0.0, "actual_qty": 0.0, "target_amt": 0.0, "actual_amt": 0.0, "qty_rate": 0, "amt_rate": 0}, "总计": {"target_qty": 50000.0, "actual_qty": 11400.0, "target_amt": 2477000.0000000005, "actual_amt": 607320.0, "qty_rate": 22.8, "amt_rate": 24.5}}, "立林": {"医院销售部": {"target_qty": 120000.0, "actual_qty": 16615.0, "target_amt": 637200.0, "actual_amt": 163252.8, "qty_rate": 13.8, "amt_rate": 25.6}, "新营销部": {"target_qty": 0.0, "actual_qty": 0.0, "target_amt": 0.0, "actual_amt": 0.0, "qty_rate": 0, "amt_rate": 0}, "总计": {"target_qty": 120000.0, "actual_qty": 16615.0, "target_amt": 637200.0, "actual_amt": 163252.8, "qty_rate": 13.8, "amt_rate": 25.6}}}, "region_target_data": {"头孢泊肟酯干混悬剂": [{"region": "B端-壹药网", "target_qty": 200000.00000000035, "actual_qty": 0.0, "target_amt": 11859999.999999993, "actual_amt": 0.0, "qty_rate": 0.0, "amt_rate": 0.0}, {"region": "B端-药师帮", "target_qty": 200000.00000000035, "actual_qty": 4560.0, "target_amt": 11859999.999999993, "actual_amt": 318288.0, "qty_rate": 2.3, "amt_rate": 2.7}, {"region": "山东", "target_qty": 120000.0, "actual_qty": 6960.0, "target_amt": 5978400.0, "actual_amt": 448723.20000000007, "qty_rate": 5.8, "amt_rate": 7.5}, {"region": "江苏", "target_qty": 80000.00000000004, "actual_qty": 12960.0, "target_amt": 3985599.9999999963, "actual_amt": 593931.3600000001, "qty_rate": 16.2, "amt_rate": 14.9}, {"region": "河南", "target_qty": 60000.0, "actual_qty": 1920.0, "target_amt": 2989200.0, "actual_amt": 89335.2, "qty_rate": 3.2, "amt_rate": 3.0}, {"region": "黑龙江", "target_qty": 41199.999999999956, "actual_qty": 6480.0, "target_amt": 2052584.000000004, "actual_amt": 408067.2, "qty_rate": 15.7, "amt_rate": 19.9}, {"region": "湖北", "target_qty": 30000.0, "actual_qty": 8640.0, "target_amt": 1494600.0, "actual_amt": 434928.0, "qty_rate": 28.8, "amt_rate": 29.1}, {"region": "天津", "target_qty": 20000.000000000044, "actual_qty": 960.0, "target_amt": 996399.9999999994, "actual_amt": 61651.2, "qty_rate": 4.8, "amt_rate": 6.2}, {"region": "广东", "target_qty": 17000.00000000004, "actual_qty": 9600.0, "target_amt": 846939.9999999994, "actual_amt": 475891.2, "qty_rate": 56.5, "amt_rate": 56.2}, {"region": "重庆", "target_qty": 9999.999999999996, "actual_qty": 0.0, "target_amt": 498200.00000000035, "actual_amt": 0.0, "qty_rate": 0.0, "amt_rate": 0.0}, {"region": "辽宁", "target_qty": 5000.000000000005, "actual_qty": 720.0, "target_amt": 249099.99999999965, "actual_amt": 44558.399999999994, "qty_rate": 14.4, "amt_rate": 17.9}, {"region": "江西", "target_qty": 5000.000000000005, "actual_qty": -480.0, "target_amt": 249099.99999999965, "actual_amt": -31492.8, "qty_rate": -9.6, "amt_rate": -12.6}, {"region": "吉林", "target_qty": 5000.000000000005, "actual_qty": 480.0, "target_amt": 249099.99999999965, "actual_amt": 21600.0, "qty_rate": 9.6, "amt_rate": 8.7}, {"region": "河北", "target_qty": 2000.0000000000039, "actual_qty": 0.0, "target_amt": 99639.99999999996, "actual_amt": 0.0, "qty_rate": 0.0, "amt_rate": 0.0}, {"region": "云南", "target_qty": 1200.0, "actual_qty": 0.0, "target_amt": 59784.0, "actual_amt": 0.0, "qty_rate": 0.0, "amt_rate": 0.0}, {"region": "安徽", "target_qty": 1200.0, "actual_qty": 0.0, "target_amt": 59784.0, "actual_amt": 0.0, "qty_rate": 0.0, "amt_rate": 0.0}, {"region": "甘肃", "target_qty": 1200.0, "actual_qty": 0.0, "target_amt": 59784.0, "actual_amt": 0.0, "qty_rate": 0.0, "amt_rate": 0.0}, {"region": "贵州", "target_qty": 1200.0, "actual_qty": 0.0, "target_amt": 59784.0, "actual_amt": 0.0, "qty_rate": 0.0, "amt_rate": 0.0}], "左氧氟沙星注射液": [{"region": "浙江", "target_qty": 966000.0, "actual_qty": 255600.0, "target_amt": 67620000.0, "actual_amt": 20130120.0, "qty_rate": 26.5, "amt_rate": 29.8}, {"region": "上海", "target_qty": 656000.0000000005, "actual_qty": 210000.0, "target_amt": 45920000.000000045, "actual_amt": 16770600.0, "qty_rate": 32.0, "amt_rate": 36.5}, {"region": "广东", "target_qty": 519999.99999999965, "actual_qty": 117480.0, "target_amt": 36399999.999999955, "actual_amt": 8986150.080000002, "qty_rate": 22.6, "amt_rate": 24.7}, {"region": "福建", "target_qty": 393000.0, "actual_qty": 84240.0, "target_amt": 27510000.0, "actual_amt": 6647702.4, "qty_rate": 21.4, "amt_rate": 24.2}, {"region": "北京", "target_qty": 290000.00000000035, "actual_qty": 88140.0, "target_amt": 20300000.000000045, "actual_amt": 6987585.6, "qty_rate": 30.4, "amt_rate": 34.4}, {"region": "辽宁", "target_qty": 273999.99999999965, "actual_qty": 42000.0, "target_amt": 19179999.99999996, "actual_amt": 3159477.0, "qty_rate": 15.3, "amt_rate": 16.5}, {"region": "河南", "target_qty": 255000.0, "actual_qty": 71640.0, "target_amt": 17850000.0, "actual_amt": 5600815.199999999, "qty_rate": 28.1, "amt_rate": 31.4}, {"region": "山东", "target_qty": 195000.0, "actual_qty": 51600.0, "target_amt": 13650000.0, "actual_amt": 4022089.2, "qty_rate": 26.5, "amt_rate": 29.5}, {"region": "江苏", "target_qty": 159999.9999999996, "actual_qty": 32760.0, "target_amt": 11199999.999999993, "actual_amt": 2347206.0, "qty_rate": 20.5, "amt_rate": 21.0}, {"region": "四川", "target_qty": 99999.99999999996, "actual_qty": 24960.0, "target_amt": 6999999.999999996, "actual_amt": 1931256.0, "qty_rate": 25.0, "amt_rate": 27.6}, {"region": "新疆", "target_qty": 50000.000000000044, "actual_qty": 600.0, "target_amt": 3500000.0000000037, "actual_amt": 46908.0, "qty_rate": 1.2, "amt_rate": 1.3}, {"region": "湖南", "target_qty": 30999.999999999953, "actual_qty": 17640.0, "target_amt": 2169999.999999996, "actual_amt": 1265652.0, "qty_rate": 56.9, "amt_rate": 58.3}, {"region": "广西", "target_qty": 30000.0, "actual_qty": 9600.0, "target_amt": 2100000.0, "actual_amt": 720615.0, "qty_rate": 32.0, "amt_rate": 34.3}, {"region": "天津", "target_qty": 30000.0, "actual_qty": 8220.0, "target_amt": 2100000.0, "actual_amt": 648834.6000000001, "qty_rate": 27.4, "amt_rate": 30.9}, {"region": "吉林", "target_qty": 9999.999999999996, "actual_qty": 0.0, "target_amt": 699999.9999999994, "actual_amt": 0.0, "qty_rate": 0.0, "amt_rate": 0.0}, {"region": "黑龙江", "target_qty": 9999.999999999996, "actual_qty": 3600.0, "target_amt": 699999.9999999994, "actual_amt": 278388.0, "qty_rate": 36.0, "amt_rate": 39.8}, {"region": "重庆", "target_qty": 9000.0, "actual_qty": 2220.0, "target_amt": 630000.0, "actual_amt": 158011.2, "qty_rate": 24.7, "amt_rate": 25.1}, {"region": "湖北", "target_qty": 8000.000000000004, "actual_qty": 5580.0, "target_amt": 560000.0000000003, "actual_amt": 437508.0, "qty_rate": 69.7, "amt_rate": 78.1}, {"region": "陕西", "target_qty": 8000.000000000004, "actual_qty": 1080.0, "target_amt": 560000.0000000003, "actual_amt": 83516.4, "qty_rate": 13.5, "amt_rate": 14.9}, {"region": "江西", "target_qty": 3000.0, "actual_qty": 60.0, "target_amt": 210000.0, "actual_amt": 4522.2, "qty_rate": 2.0, "amt_rate": 2.2}, {"region": "河北", "target_qty": 999.9999999999994, "actual_qty": 480.0, "target_amt": 69999.99999999996, "actual_amt": 28800.0, "qty_rate": 48.0, "amt_rate": 41.1}, {"region": "山西", "target_qty": 999.9999999999994, "actual_qty": 0.0, "target_amt": 69999.99999999996, "actual_amt": 0.0, "qty_rate": 0.0, "amt_rate": 0.0}, {"region": "B端-药师帮", "target_qty": 0.0, "actual_qty": 60.0, "target_amt": 0.0, "actual_amt": 4035.0, "qty_rate": 0, "amt_rate": 0}], "硫酸异帕米星注射液": [{"region": "福建", "target_qty": 141000.0, "actual_qty": 34800.0, "target_amt": 7191000.0, "actual_amt": 2064336.0, "qty_rate": 24.7, "amt_rate": 28.7}, {"region": "湖北", "target_qty": 105000.0, "actual_qty": 12600.0, "target_amt": 5355000.0, "actual_amt": 715692.0, "qty_rate": 12.0, "amt_rate": 13.4}, {"region": "浙江", "target_qty": 99999.99999999996, "actual_qty": 46800.0, "target_amt": 5100000.0, "actual_amt": 2631660.0, "qty_rate": 46.8, "amt_rate": 51.6}, {"region": "上海", "target_qty": 99999.99999999996, "actual_qty": 28800.0, "target_amt": 5100000.0, "actual_amt": 1690848.0, "qty_rate": 28.8, "amt_rate": 33.2}, {"region": "河南", "target_qty": 69999.99999999996, "actual_qty": 23400.0, "target_amt": 3570000.0, "actual_amt": 1330518.0, "qty_rate": 33.4, "amt_rate": 37.3}, {"region": "黑龙江", "target_qty": 69999.99999999996, "actual_qty": 21600.0, "target_amt": 3570000.0, "actual_amt": 1208157.0, "qty_rate": 30.9, "amt_rate": 33.8}, {"region": "天津", "target_qty": 62000.000000000044, "actual_qty": 11400.0, "target_amt": 3162000.0, "actual_amt": 655158.0, "qty_rate": 18.4, "amt_rate": 20.7}, {"region": "吉林", "target_qty": 60000.0, "actual_qty": 5400.0, "target_amt": 3060000.0, "actual_amt": 307044.0, "qty_rate": 9.0, "amt_rate": 10.0}, {"region": "山东", "target_qty": 30000.0, "actual_qty": 7800.0, "target_amt": 1530000.0, "actual_amt": 452358.0, "qty_rate": 26.0, "amt_rate": 29.6}, {"region": "重庆", "target_qty": 23000.000000000044, "actual_qty": 5850.0, "target_amt": 1173000.0, "actual_amt": 343453.5, "qty_rate": 25.4, "amt_rate": 29.3}, {"region": "北京", "target_qty": 20000.000000000044, "actual_qty": 2400.0, "target_amt": 1020000.0, "actual_amt": 140904.0, "qty_rate": 12.0, "amt_rate": 13.8}, {"region": "江苏", "target_qty": 12000.0, "actual_qty": 3000.0, "target_amt": 612000.0, "actual_amt": 166860.0, "qty_rate": 25.0, "amt_rate": 27.3}, {"region": "辽宁", "target_qty": 5000.000000000005, "actual_qty": 3600.0, "target_amt": 255000.0, "actual_amt": 204660.0, "qty_rate": 72.0, "amt_rate": 80.3}, {"region": "广东", "target_qty": 2000.0000000000039, "actual_qty": 2400.0, "target_amt": 102000.0, "actual_amt": 140904.0, "qty_rate": 120.0, "amt_rate": 138.1}, {"region": "山西", "target_qty": 0.0, "actual_qty": 1200.0, "target_amt": 0.0, "actual_amt": 68232.0, "qty_rate": 0, "amt_rate": 0}], "左氧氟沙星片": [{"region": "KA", "target_qty": 9450000.0, "actual_qty": 2525697.0, "target_amt": 263088000.0, "actual_amt": 80856830.12, "qty_rate": 26.7, "amt_rate": 30.7}, {"region": "浙江", "target_qty": 4200000.0, "actual_qty": 846000.0, "target_amt": 119406000.0, "actual_amt": 26938230.0, "qty_rate": 20.1, "amt_rate": 22.6}, {"region": "B端-壹药网", "target_qty": 3000000.0, "actual_qty": 774150.0, "target_amt": 83520000.0, "actual_amt": 25077633.0, "qty_rate": 25.8, "amt_rate": 30.0}, {"region": "B端-药师帮", "target_qty": 3000000.0, "actual_qty": 688050.0, "target_amt": 83520000.0, "actual_amt": 23018736.0, "qty_rate": 22.9, "amt_rate": 27.6}, {"region": "上海", "target_qty": 1400000.000000004, "actual_qty": 374550.0, "target_amt": 39801999.999999955, "actual_amt": 11816289.0, "qty_rate": 26.8, "amt_rate": 29.7}, {"region": "北京", "target_qty": 1200000.0, "actual_qty": 224911.0, "target_amt": 34116000.0, "actual_amt": 7151885.8, "qty_rate": 18.7, "amt_rate": 21.0}, {"region": "C端-京东", "target_qty": 950000.0000000006, "actual_qty": 150000.0, "target_amt": 26448000.0, "actual_amt": 4769250.0, "qty_rate": 15.8, "amt_rate": 18.0}, {"region": "广东", "target_qty": 849999.9999999994, "actual_qty": 123900.0, "target_amt": 24165500.000000045, "actual_amt": 3895377.0, "qty_rate": 14.6, "amt_rate": 16.1}, {"region": "江苏", "target_qty": 519999.99999999965, "actual_qty": 130050.0, "target_amt": 14783600.00000004, "actual_amt": 4093311.0, "qty_rate": 25.0, "amt_rate": 27.7}, {"region": "福建", "target_qty": 450000.0, "actual_qty": 41425.0, "target_amt": 12793500.0, "actual_amt": 1317500.0, "qty_rate": 9.2, "amt_rate": 10.3}, {"region": "山东", "target_qty": 380000.00000000035, "actual_qty": 87900.0, "target_amt": 10803399.999999996, "actual_amt": 2753268.0, "qty_rate": 23.1, "amt_rate": 25.5}, {"region": "C端-其他", "target_qty": 300000.0, "actual_qty": 57900.0, "target_amt": 8352000.0, "actual_amt": 2023728.0, "qty_rate": 19.3, "amt_rate": 24.2}, {"region": "C端-阿里", "target_qty": 300000.0, "actual_qty": 0.0, "target_amt": 8352000.0, "actual_amt": 0.0, "qty_rate": 0.0, "amt_rate": 0.0}, {"region": "辽宁", "target_qty": 260000.00000000035, "actual_qty": 51000.0, "target_amt": 7391799.999999996, "actual_amt": 1553970.0, "qty_rate": 19.6, "amt_rate": 21.0}, {"region": "四川", "target_qty": 150000.0, "actual_qty": 23720.0, "target_amt": 4264500.0, "actual_amt": 738659.4, "qty_rate": 15.8, "amt_rate": 17.3}, {"region": "新疆", "target_qty": 120000.0, "actual_qty": 22200.0, "target_amt": 3411600.0, "actual_amt": 683892.0, "qty_rate": 18.5, "amt_rate": 20.0}, {"region": "河南", "target_qty": 99999.99999999996, "actual_qty": 21600.0, "target_amt": 2843000.000000004, "actual_amt": 665280.0, "qty_rate": 21.6, "amt_rate": 23.4}, {"region": "湖北", "target_qty": 96500.00000000004, "actual_qty": 12300.0, "target_amt": 2743494.999999996, "actual_amt": 407376.0, "qty_rate": 12.7, "amt_rate": 14.8}, {"region": "天津", "target_qty": 80000.00000000004, "actual_qty": 16200.0, "target_amt": 2274399.999999996, "actual_amt": 516843.0, "qty_rate": 20.2, "amt_rate": 22.7}, {"region": "重庆", "target_qty": 60000.0, "actual_qty": 9000.0, "target_amt": 1705800.0, "actual_amt": 281700.0, "qty_rate": 15.0, "amt_rate": 16.5}, {"region": "广西", "target_qty": 50000.000000000044, "actual_qty": 14400.0, "target_amt": 1421499.999999996, "actual_amt": 445032.0, "qty_rate": 28.8, "amt_rate": 31.3}, {"region": "湖南", "target_qty": 39999.999999999956, "actual_qty": 3000.0, "target_amt": 1137200.0000000005, "actual_amt": 93390.0, "qty_rate": 7.5, "amt_rate": 8.2}, {"region": "河北", "target_qty": 24000.0, "actual_qty": 2400.0, "target_amt": 682320.0, "actual_amt": 73920.0, "qty_rate": 10.0, "amt_rate": 10.8}, {"region": "云南", "target_qty": 3999.999999999996, "actual_qty": 300.0, "target_amt": 113720.00000000004, "actual_amt": 9936.0, "qty_rate": 7.5, "amt_rate": 8.7}, {"region": "安徽", "target_qty": 3999.999999999996, "actual_qty": 1800.0, "target_amt": 113720.00000000004, "actual_amt": 59616.0, "qty_rate": 45.0, "amt_rate": 52.4}, {"region": "黑龙江", "target_qty": 3999.999999999996, "actual_qty": 1800.0, "target_amt": 113720.00000000004, "actual_amt": 54846.0, "qty_rate": 45.0, "amt_rate": 48.2}, {"region": "陕西", "target_qty": 3000.0, "actual_qty": 1200.0, "target_amt": 85290.0, "actual_amt": 37164.0, "qty_rate": 40.0, "amt_rate": 43.6}, {"region": "江西", "target_qty": 2000.0000000000039, "actual_qty": 900.0, "target_amt": 56859.999999999956, "actual_amt": 28170.0, "qty_rate": 45.0, "amt_rate": 49.5}, {"region": "海南", "target_qty": 500.00000000000034, "actual_qty": 0.0, "target_amt": 14214.999999999962, "actual_amt": 0.0, "qty_rate": 0.0, "amt_rate": 0.0}, {"region": "贵州", "target_qty": 500.00000000000034, "actual_qty": 0.0, "target_amt": 14214.999999999962, "actual_amt": 0.0, "qty_rate": 0.0, "amt_rate": 0.0}, {"region": "吉林", "target_qty": 500.00000000000034, "actual_qty": 300.0, "target_amt": 14214.999999999962, "actual_amt": 9240.0, "qty_rate": 60.0, "amt_rate": 65.0}, {"region": "内蒙古", "target_qty": 500.00000000000034, "actual_qty": 0.0, "target_amt": 14214.999999999962, "actual_amt": 0.0, "qty_rate": 0.0, "amt_rate": 0.0}, {"region": "山西", "target_qty": 500.00000000000034, "actual_qty": 0.0, "target_amt": 14214.999999999962, "actual_amt": 0.0, "qty_rate": 0.0, "amt_rate": 0.0}], "头孢泊肟酯片": [{"region": "山东", "target_qty": 30000.0, "actual_qty": 6400.0, "target_amt": 1486200.0, "actual_amt": 288000.0, "qty_rate": 21.3, "amt_rate": 19.4}, {"region": "黑龙江", "target_qty": 9000.0, "actual_qty": 3600.0, "target_amt": 445860.0, "actual_amt": 256320.0, "qty_rate": 40.0, "amt_rate": 57.5}, {"region": "湖北", "target_qty": 3000.0, "actual_qty": 0.0, "target_amt": 148620.0, "actual_amt": 0.0, "qty_rate": 0.0, "amt_rate": 0.0}, {"region": "天津", "target_qty": 3000.0, "actual_qty": 0.0, "target_amt": 148620.0, "actual_amt": 0.0, "qty_rate": 0.0, "amt_rate": 0.0}, {"region": "河北", "target_qty": 3000.0, "actual_qty": 800.0, "target_amt": 148620.0, "actual_amt": 36000.0, "qty_rate": 26.7, "amt_rate": 24.2}, {"region": "湖南", "target_qty": 999.9999999999994, "actual_qty": 0.0, "target_amt": 49539.999999999956, "actual_amt": 0.0, "qty_rate": 0.0, "amt_rate": 0.0}, {"region": "内蒙古", "target_qty": 999.9999999999994, "actual_qty": 0.0, "target_amt": 49539.999999999956, "actual_amt": 0.0, "qty_rate": 0.0, "amt_rate": 0.0}, {"region": "广东", "target_qty": 0.0, "actual_qty": 600.0, "target_amt": 0.0, "actual_amt": 27000.0, "qty_rate": 0, "amt_rate": 0}], "立林": [{"region": "北京", "target_qty": 90000.0, "actual_qty": 14400.0, "target_amt": 477900.0, "actual_amt": 86400.0, "qty_rate": 16.0, "amt_rate": 18.1}, {"region": "新疆", "target_qty": 9999.999999999996, "actual_qty": 0.0, "target_amt": 53100.0, "actual_amt": 0.0, "qty_rate": 0.0, "amt_rate": 0.0}, {"region": "山东", "target_qty": 9999.999999999996, "actual_qty": 0.0, "target_amt": 53100.0, "actual_amt": 0.0, "qty_rate": 0.0, "amt_rate": 0.0}, {"region": "辽宁", "target_qty": 9999.999999999996, "actual_qty": 50.0, "target_amt": 53100.0, "actual_amt": 2160.0, "qty_rate": 0.5, "amt_rate": 4.1}, {"region": "陕西", "target_qty": 0.0, "actual_qty": 600.0, "target_amt": 0.0, "actual_amt": 3600.0, "qty_rate": 0, "amt_rate": 0}, {"region": "天津", "target_qty": 0.0, "actual_qty": 365.0, "target_amt": 0.0, "actual_amt": 16372.8, "qty_rate": 0, "amt_rate": 0}, {"region": "广东", "target_qty": 0.0, "actual_qty": 1200.0, "target_amt": 0.0, "actual_amt": 54720.0, "qty_rate": 0, "amt_rate": 0}]}, "dept_region_target": {"头孢泊肟酯干混悬剂": {"医院销售部": [{"region": "山东", "target_qty": 120000.0, "actual_qty": 6960.0, "target_amt": 5978400.0, "actual_amt": 448723.20000000007, "qty_rate": 5.8, "amt_rate": 7.5}, {"region": "江苏", "target_qty": 80000.00000000004, "actual_qty": 12960.0, "target_amt": 3985599.9999999963, "actual_amt": 593931.3600000001, "qty_rate": 16.2, "amt_rate": 14.9}, {"region": "河南", "target_qty": 60000.0, "actual_qty": 1920.0, "target_amt": 2989200.0, "actual_amt": 89335.2, "qty_rate": 3.2, "amt_rate": 3.0}, {"region": "黑龙江", "target_qty": 41199.999999999956, "actual_qty": 6480.0, "target_amt": 2052584.000000004, "actual_amt": 408067.2, "qty_rate": 15.7, "amt_rate": 19.9}, {"region": "湖北", "target_qty": 30000.0, "actual_qty": 8640.0, "target_amt": 1494600.0, "actual_amt": 434928.0, "qty_rate": 28.8, "amt_rate": 29.1}, {"region": "天津", "target_qty": 20000.000000000044, "actual_qty": 960.0, "target_amt": 996399.9999999994, "actual_amt": 61651.2, "qty_rate": 4.8, "amt_rate": 6.2}, {"region": "广东", "target_qty": 17000.00000000004, "actual_qty": 9600.0, "target_amt": 846939.9999999994, "actual_amt": 475891.2, "qty_rate": 56.5, "amt_rate": 56.2}, {"region": "重庆", "target_qty": 9999.999999999996, "actual_qty": 0.0, "target_amt": 498200.00000000035, "actual_amt": 0.0, "qty_rate": 0.0, "amt_rate": 0.0}, {"region": "辽宁", "target_qty": 5000.000000000005, "actual_qty": 720.0, "target_amt": 249099.99999999965, "actual_amt": 44558.399999999994, "qty_rate": 14.4, "amt_rate": 17.9}, {"region": "江西", "target_qty": 5000.000000000005, "actual_qty": -480.0, "target_amt": 249099.99999999965, "actual_amt": -31492.8, "qty_rate": -9.6, "amt_rate": -12.6}, {"region": "吉林", "target_qty": 5000.000000000005, "actual_qty": 480.0, "target_amt": 249099.99999999965, "actual_amt": 21600.0, "qty_rate": 9.6, "amt_rate": 8.7}, {"region": "河北", "target_qty": 2000.0000000000039, "actual_qty": 0.0, "target_amt": 99639.99999999996, "actual_amt": 0.0, "qty_rate": 0.0, "amt_rate": 0.0}, {"region": "云南", "target_qty": 1200.0, "actual_qty": 0.0, "target_amt": 59784.0, "actual_amt": 0.0, "qty_rate": 0.0, "amt_rate": 0.0}, {"region": "安徽", "target_qty": 1200.0, "actual_qty": 0.0, "target_amt": 59784.0, "actual_amt": 0.0, "qty_rate": 0.0, "amt_rate": 0.0}, {"region": "甘肃", "target_qty": 1200.0, "actual_qty": 0.0, "target_amt": 59784.0, "actual_amt": 0.0, "qty_rate": 0.0, "amt_rate": 0.0}, {"region": "贵州", "target_qty": 1200.0, "actual_qty": 0.0, "target_amt": 59784.0, "actual_amt": 0.0, "qty_rate": 0.0, "amt_rate": 0.0}], "新营销部": [{"region": "B端-药师帮", "target_qty": 200000.00000000035, "actual_qty": 4560.0, "target_amt": 11859999.999999993, "actual_amt": 318288.0, "qty_rate": 2.3, "amt_rate": 2.7}, {"region": "B端-壹药网", "target_qty": 200000.00000000035, "actual_qty": 0.0, "target_amt": 11859999.999999993, "actual_amt": 0.0, "qty_rate": 0.0, "amt_rate": 0.0}], "总计": [{"region": "B端-壹药网", "target_qty": 200000.00000000035, "actual_qty": 0.0, "target_amt": 11859999.999999993, "actual_amt": 0.0, "qty_rate": 0.0, "amt_rate": 0.0}, {"region": "B端-药师帮", "target_qty": 200000.00000000035, "actual_qty": 4560.0, "target_amt": 11859999.999999993, "actual_amt": 318288.0, "qty_rate": 2.3, "amt_rate": 2.7}, {"region": "山东", "target_qty": 120000.0, "actual_qty": 6960.0, "target_amt": 5978400.0, "actual_amt": 448723.20000000007, "qty_rate": 5.8, "amt_rate": 7.5}, {"region": "江苏", "target_qty": 80000.00000000004, "actual_qty": 12960.0, "target_amt": 3985599.9999999963, "actual_amt": 593931.3600000001, "qty_rate": 16.2, "amt_rate": 14.9}, {"region": "河南", "target_qty": 60000.0, "actual_qty": 1920.0, "target_amt": 2989200.0, "actual_amt": 89335.2, "qty_rate": 3.2, "amt_rate": 3.0}, {"region": "黑龙江", "target_qty": 41199.999999999956, "actual_qty": 6480.0, "target_amt": 2052584.000000004, "actual_amt": 408067.2, "qty_rate": 15.7, "amt_rate": 19.9}, {"region": "湖北", "target_qty": 30000.0, "actual_qty": 8640.0, "target_amt": 1494600.0, "actual_amt": 434928.0, "qty_rate": 28.8, "amt_rate": 29.1}, {"region": "天津", "target_qty": 20000.000000000044, "actual_qty": 960.0, "target_amt": 996399.9999999994, "actual_amt": 61651.2, "qty_rate": 4.8, "amt_rate": 6.2}, {"region": "广东", "target_qty": 17000.00000000004, "actual_qty": 9600.0, "target_amt": 846939.9999999994, "actual_amt": 475891.2, "qty_rate": 56.5, "amt_rate": 56.2}, {"region": "重庆", "target_qty": 9999.999999999996, "actual_qty": 0.0, "target_amt": 498200.00000000035, "actual_amt": 0.0, "qty_rate": 0.0, "amt_rate": 0.0}, {"region": "辽宁", "target_qty": 5000.000000000005, "actual_qty": 720.0, "target_amt": 249099.99999999965, "actual_amt": 44558.399999999994, "qty_rate": 14.4, "amt_rate": 17.9}, {"region": "江西", "target_qty": 5000.000000000005, "actual_qty": -480.0, "target_amt": 249099.99999999965, "actual_amt": -31492.8, "qty_rate": -9.6, "amt_rate": -12.6}, {"region": "吉林", "target_qty": 5000.000000000005, "actual_qty": 480.0, "target_amt": 249099.99999999965, "actual_amt": 21600.0, "qty_rate": 9.6, "amt_rate": 8.7}, {"region": "河北", "target_qty": 2000.0000000000039, "actual_qty": 0.0, "target_amt": 99639.99999999996, "actual_amt": 0.0, "qty_rate": 0.0, "amt_rate": 0.0}, {"region": "云南", "target_qty": 1200.0, "actual_qty": 0.0, "target_amt": 59784.0, "actual_amt": 0.0, "qty_rate": 0.0, "amt_rate": 0.0}, {"region": "安徽", "target_qty": 1200.0, "actual_qty": 0.0, "target_amt": 59784.0, "actual_amt": 0.0, "qty_rate": 0.0, "amt_rate": 0.0}, {"region": "甘肃", "target_qty": 1200.0, "actual_qty": 0.0, "target_amt": 59784.0, "actual_amt": 0.0, "qty_rate": 0.0, "amt_rate": 0.0}, {"region": "贵州", "target_qty": 1200.0, "actual_qty": 0.0, "target_amt": 59784.0, "actual_amt": 0.0, "qty_rate": 0.0, "amt_rate": 0.0}]}, "左氧氟沙星注射液": {"医院销售部": [{"region": "浙江", "target_qty": 966000.0, "actual_qty": 255600.0, "target_amt": 67620000.0, "actual_amt": 20130120.0, "qty_rate": 26.5, "amt_rate": 29.8}, {"region": "上海", "target_qty": 656000.0000000005, "actual_qty": 210000.0, "target_amt": 45920000.000000045, "actual_amt": 16770600.0, "qty_rate": 32.0, "amt_rate": 36.5}, {"region": "广东", "target_qty": 519999.99999999965, "actual_qty": 117480.0, "target_amt": 36399999.999999955, "actual_amt": 8986150.080000002, "qty_rate": 22.6, "amt_rate": 24.7}, {"region": "福建", "target_qty": 393000.0, "actual_qty": 84240.0, "target_amt": 27510000.0, "actual_amt": 6647702.4, "qty_rate": 21.4, "amt_rate": 24.2}, {"region": "北京", "target_qty": 290000.00000000035, "actual_qty": 88140.0, "target_amt": 20300000.000000045, "actual_amt": 6987585.6, "qty_rate": 30.4, "amt_rate": 34.4}, {"region": "辽宁", "target_qty": 273999.99999999965, "actual_qty": 42000.0, "target_amt": 19179999.99999996, "actual_amt": 3159477.0, "qty_rate": 15.3, "amt_rate": 16.5}, {"region": "河南", "target_qty": 255000.0, "actual_qty": 71640.0, "target_amt": 17850000.0, "actual_amt": 5600815.199999999, "qty_rate": 28.1, "amt_rate": 31.4}, {"region": "山东", "target_qty": 195000.0, "actual_qty": 51600.0, "target_amt": 13650000.0, "actual_amt": 4022089.2, "qty_rate": 26.5, "amt_rate": 29.5}, {"region": "江苏", "target_qty": 159999.9999999996, "actual_qty": 32760.0, "target_amt": 11199999.999999993, "actual_amt": 2347206.0, "qty_rate": 20.5, "amt_rate": 21.0}, {"region": "四川", "target_qty": 99999.99999999996, "actual_qty": 24960.0, "target_amt": 6999999.999999996, "actual_amt": 1931256.0, "qty_rate": 25.0, "amt_rate": 27.6}, {"region": "新疆", "target_qty": 50000.000000000044, "actual_qty": 600.0, "target_amt": 3500000.0000000037, "actual_amt": 46908.0, "qty_rate": 1.2, "amt_rate": 1.3}, {"region": "湖南", "target_qty": 30999.999999999953, "actual_qty": 17640.0, "target_amt": 2169999.999999996, "actual_amt": 1265652.0, "qty_rate": 56.9, "amt_rate": 58.3}, {"region": "广西", "target_qty": 30000.0, "actual_qty": 9600.0, "target_amt": 2100000.0, "actual_amt": 720615.0, "qty_rate": 32.0, "amt_rate": 34.3}, {"region": "天津", "target_qty": 30000.0, "actual_qty": 8220.0, "target_amt": 2100000.0, "actual_amt": 648834.6000000001, "qty_rate": 27.4, "amt_rate": 30.9}, {"region": "吉林", "target_qty": 9999.999999999996, "actual_qty": 0.0, "target_amt": 699999.9999999994, "actual_amt": 0.0, "qty_rate": 0.0, "amt_rate": 0.0}, {"region": "黑龙江", "target_qty": 9999.999999999996, "actual_qty": 3600.0, "target_amt": 699999.9999999994, "actual_amt": 278388.0, "qty_rate": 36.0, "amt_rate": 39.8}, {"region": "重庆", "target_qty": 9000.0, "actual_qty": 2220.0, "target_amt": 630000.0, "actual_amt": 158011.2, "qty_rate": 24.7, "amt_rate": 25.1}, {"region": "湖北", "target_qty": 8000.000000000004, "actual_qty": 5580.0, "target_amt": 560000.0000000003, "actual_amt": 437508.0, "qty_rate": 69.7, "amt_rate": 78.1}, {"region": "陕西", "target_qty": 8000.000000000004, "actual_qty": 1080.0, "target_amt": 560000.0000000003, "actual_amt": 83516.4, "qty_rate": 13.5, "amt_rate": 14.9}, {"region": "江西", "target_qty": 3000.0, "actual_qty": 60.0, "target_amt": 210000.0, "actual_amt": 4522.2, "qty_rate": 2.0, "amt_rate": 2.2}, {"region": "河北", "target_qty": 999.9999999999994, "actual_qty": 480.0, "target_amt": 69999.99999999996, "actual_amt": 28800.0, "qty_rate": 48.0, "amt_rate": 41.1}, {"region": "山西", "target_qty": 999.9999999999994, "actual_qty": 0.0, "target_amt": 69999.99999999996, "actual_amt": 0.0, "qty_rate": 0.0, "amt_rate": 0.0}], "新营销部": [{"region": "B端-药师帮", "target_qty": 0.0, "actual_qty": 60.0, "target_amt": 0.0, "actual_amt": 4035.0, "qty_rate": 0, "amt_rate": 0}], "总计": [{"region": "浙江", "target_qty": 966000.0, "actual_qty": 255600.0, "target_amt": 67620000.0, "actual_amt": 20130120.0, "qty_rate": 26.5, "amt_rate": 29.8}, {"region": "上海", "target_qty": 656000.0000000005, "actual_qty": 210000.0, "target_amt": 45920000.000000045, "actual_amt": 16770600.0, "qty_rate": 32.0, "amt_rate": 36.5}, {"region": "广东", "target_qty": 519999.99999999965, "actual_qty": 117480.0, "target_amt": 36399999.999999955, "actual_amt": 8986150.080000002, "qty_rate": 22.6, "amt_rate": 24.7}, {"region": "福建", "target_qty": 393000.0, "actual_qty": 84240.0, "target_amt": 27510000.0, "actual_amt": 6647702.4, "qty_rate": 21.4, "amt_rate": 24.2}, {"region": "北京", "target_qty": 290000.00000000035, "actual_qty": 88140.0, "target_amt": 20300000.000000045, "actual_amt": 6987585.6, "qty_rate": 30.4, "amt_rate": 34.4}, {"region": "辽宁", "target_qty": 273999.99999999965, "actual_qty": 42000.0, "target_amt": 19179999.99999996, "actual_amt": 3159477.0, "qty_rate": 15.3, "amt_rate": 16.5}, {"region": "河南", "target_qty": 255000.0, "actual_qty": 71640.0, "target_amt": 17850000.0, "actual_amt": 5600815.199999999, "qty_rate": 28.1, "amt_rate": 31.4}, {"region": "山东", "target_qty": 195000.0, "actual_qty": 51600.0, "target_amt": 13650000.0, "actual_amt": 4022089.2, "qty_rate": 26.5, "amt_rate": 29.5}, {"region": "江苏", "target_qty": 159999.9999999996, "actual_qty": 32760.0, "target_amt": 11199999.999999993, "actual_amt": 2347206.0, "qty_rate": 20.5, "amt_rate": 21.0}, {"region": "四川", "target_qty": 99999.99999999996, "actual_qty": 24960.0, "target_amt": 6999999.999999996, "actual_amt": 1931256.0, "qty_rate": 25.0, "amt_rate": 27.6}, {"region": "新疆", "target_qty": 50000.000000000044, "actual_qty": 600.0, "target_amt": 3500000.0000000037, "actual_amt": 46908.0, "qty_rate": 1.2, "amt_rate": 1.3}, {"region": "湖南", "target_qty": 30999.999999999953, "actual_qty": 17640.0, "target_amt": 2169999.999999996, "actual_amt": 1265652.0, "qty_rate": 56.9, "amt_rate": 58.3}, {"region": "广西", "target_qty": 30000.0, "actual_qty": 9600.0, "target_amt": 2100000.0, "actual_amt": 720615.0, "qty_rate": 32.0, "amt_rate": 34.3}, {"region": "天津", "target_qty": 30000.0, "actual_qty": 8220.0, "target_amt": 2100000.0, "actual_amt": 648834.6000000001, "qty_rate": 27.4, "amt_rate": 30.9}, {"region": "吉林", "target_qty": 9999.999999999996, "actual_qty": 0.0, "target_amt": 699999.9999999994, "actual_amt": 0.0, "qty_rate": 0.0, "amt_rate": 0.0}, {"region": "黑龙江", "target_qty": 9999.999999999996, "actual_qty": 3600.0, "target_amt": 699999.9999999994, "actual_amt": 278388.0, "qty_rate": 36.0, "amt_rate": 39.8}, {"region": "重庆", "target_qty": 9000.0, "actual_qty": 2220.0, "target_amt": 630000.0, "actual_amt": 158011.2, "qty_rate": 24.7, "amt_rate": 25.1}, {"region": "湖北", "target_qty": 8000.000000000004, "actual_qty": 5580.0, "target_amt": 560000.0000000003, "actual_amt": 437508.0, "qty_rate": 69.7, "amt_rate": 78.1}, {"region": "陕西", "target_qty": 8000.000000000004, "actual_qty": 1080.0, "target_amt": 560000.0000000003, "actual_amt": 83516.4, "qty_rate": 13.5, "amt_rate": 14.9}, {"region": "江西", "target_qty": 3000.0, "actual_qty": 60.0, "target_amt": 210000.0, "actual_amt": 4522.2, "qty_rate": 2.0, "amt_rate": 2.2}, {"region": "河北", "target_qty": 999.9999999999994, "actual_qty": 480.0, "target_amt": 69999.99999999996, "actual_amt": 28800.0, "qty_rate": 48.0, "amt_rate": 41.1}, {"region": "山西", "target_qty": 999.9999999999994, "actual_qty": 0.0, "target_amt": 69999.99999999996, "actual_amt": 0.0, "qty_rate": 0.0, "amt_rate": 0.0}, {"region": "B端-药师帮", "target_qty": 0.0, "actual_qty": 60.0, "target_amt": 0.0, "actual_amt": 4035.0, "qty_rate": 0, "amt_rate": 0}]}, "硫酸异帕米星注射液": {"医院销售部": [{"region": "福建", "target_qty": 141000.0, "actual_qty": 34800.0, "target_amt": 7191000.0, "actual_amt": 2064336.0, "qty_rate": 24.7, "amt_rate": 28.7}, {"region": "湖北", "target_qty": 105000.0, "actual_qty": 12600.0, "target_amt": 5355000.0, "actual_amt": 715692.0, "qty_rate": 12.0, "amt_rate": 13.4}, {"region": "浙江", "target_qty": 99999.99999999996, "actual_qty": 46800.0, "target_amt": 5100000.0, "actual_amt": 2631660.0, "qty_rate": 46.8, "amt_rate": 51.6}, {"region": "上海", "target_qty": 99999.99999999996, "actual_qty": 28800.0, "target_amt": 5100000.0, "actual_amt": 1690848.0, "qty_rate": 28.8, "amt_rate": 33.2}, {"region": "河南", "target_qty": 69999.99999999996, "actual_qty": 23400.0, "target_amt": 3570000.0, "actual_amt": 1330518.0, "qty_rate": 33.4, "amt_rate": 37.3}, {"region": "黑龙江", "target_qty": 69999.99999999996, "actual_qty": 21600.0, "target_amt": 3570000.0, "actual_amt": 1208157.0, "qty_rate": 30.9, "amt_rate": 33.8}, {"region": "天津", "target_qty": 62000.000000000044, "actual_qty": 11400.0, "target_amt": 3162000.0, "actual_amt": 655158.0, "qty_rate": 18.4, "amt_rate": 20.7}, {"region": "吉林", "target_qty": 60000.0, "actual_qty": 5400.0, "target_amt": 3060000.0, "actual_amt": 307044.0, "qty_rate": 9.0, "amt_rate": 10.0}, {"region": "山东", "target_qty": 30000.0, "actual_qty": 7800.0, "target_amt": 1530000.0, "actual_amt": 452358.0, "qty_rate": 26.0, "amt_rate": 29.6}, {"region": "重庆", "target_qty": 23000.000000000044, "actual_qty": 5850.0, "target_amt": 1173000.0, "actual_amt": 343453.5, "qty_rate": 25.4, "amt_rate": 29.3}, {"region": "北京", "target_qty": 20000.000000000044, "actual_qty": 2400.0, "target_amt": 1020000.0, "actual_amt": 140904.0, "qty_rate": 12.0, "amt_rate": 13.8}, {"region": "江苏", "target_qty": 12000.0, "actual_qty": 3000.0, "target_amt": 612000.0, "actual_amt": 166860.0, "qty_rate": 25.0, "amt_rate": 27.3}, {"region": "辽宁", "target_qty": 5000.000000000005, "actual_qty": 3600.0, "target_amt": 255000.0, "actual_amt": 204660.0, "qty_rate": 72.0, "amt_rate": 80.3}, {"region": "广东", "target_qty": 2000.0000000000039, "actual_qty": 2400.0, "target_amt": 102000.0, "actual_amt": 140904.0, "qty_rate": 120.0, "amt_rate": 138.1}, {"region": "山西", "target_qty": 0.0, "actual_qty": 1200.0, "target_amt": 0.0, "actual_amt": 68232.0, "qty_rate": 0, "amt_rate": 0}], "新营销部": [], "总计": [{"region": "福建", "target_qty": 141000.0, "actual_qty": 34800.0, "target_amt": 7191000.0, "actual_amt": 2064336.0, "qty_rate": 24.7, "amt_rate": 28.7}, {"region": "湖北", "target_qty": 105000.0, "actual_qty": 12600.0, "target_amt": 5355000.0, "actual_amt": 715692.0, "qty_rate": 12.0, "amt_rate": 13.4}, {"region": "浙江", "target_qty": 99999.99999999996, "actual_qty": 46800.0, "target_amt": 5100000.0, "actual_amt": 2631660.0, "qty_rate": 46.8, "amt_rate": 51.6}, {"region": "上海", "target_qty": 99999.99999999996, "actual_qty": 28800.0, "target_amt": 5100000.0, "actual_amt": 1690848.0, "qty_rate": 28.8, "amt_rate": 33.2}, {"region": "河南", "target_qty": 69999.99999999996, "actual_qty": 23400.0, "target_amt": 3570000.0, "actual_amt": 1330518.0, "qty_rate": 33.4, "amt_rate": 37.3}, {"region": "黑龙江", "target_qty": 69999.99999999996, "actual_qty": 21600.0, "target_amt": 3570000.0, "actual_amt": 1208157.0, "qty_rate": 30.9, "amt_rate": 33.8}, {"region": "天津", "target_qty": 62000.000000000044, "actual_qty": 11400.0, "target_amt": 3162000.0, "actual_amt": 655158.0, "qty_rate": 18.4, "amt_rate": 20.7}, {"region": "吉林", "target_qty": 60000.0, "actual_qty": 5400.0, "target_amt": 3060000.0, "actual_amt": 307044.0, "qty_rate": 9.0, "amt_rate": 10.0}, {"region": "山东", "target_qty": 30000.0, "actual_qty": 7800.0, "target_amt": 1530000.0, "actual_amt": 452358.0, "qty_rate": 26.0, "amt_rate": 29.6}, {"region": "重庆", "target_qty": 23000.000000000044, "actual_qty": 5850.0, "target_amt": 1173000.0, "actual_amt": 343453.5, "qty_rate": 25.4, "amt_rate": 29.3}, {"region": "北京", "target_qty": 20000.000000000044, "actual_qty": 2400.0, "target_amt": 1020000.0, "actual_amt": 140904.0, "qty_rate": 12.0, "amt_rate": 13.8}, {"region": "江苏", "target_qty": 12000.0, "actual_qty": 3000.0, "target_amt": 612000.0, "actual_amt": 166860.0, "qty_rate": 25.0, "amt_rate": 27.3}, {"region": "辽宁", "target_qty": 5000.000000000005, "actual_qty": 3600.0, "target_amt": 255000.0, "actual_amt": 204660.0, "qty_rate": 72.0, "amt_rate": 80.3}, {"region": "广东", "target_qty": 2000.0000000000039, "actual_qty": 2400.0, "target_amt": 102000.0, "actual_amt": 140904.0, "qty_rate": 120.0, "amt_rate": 138.1}, {"region": "山西", "target_qty": 0.0, "actual_qty": 1200.0, "target_amt": 0.0, "actual_amt": 68232.0, "qty_rate": 0, "amt_rate": 0}]}, "左氧氟沙星片": {"医院销售部": [{"region": "浙江", "target_qty": 4200000.0, "actual_qty": 846000.0, "target_amt": 119406000.0, "actual_amt": 26938230.0, "qty_rate": 20.1, "amt_rate": 22.6}, {"region": "上海", "target_qty": 1400000.000000004, "actual_qty": 374550.0, "target_amt": 39801999.999999955, "actual_amt": 11816289.0, "qty_rate": 26.8, "amt_rate": 29.7}, {"region": "北京", "target_qty": 1200000.0, "actual_qty": 224911.0, "target_amt": 34116000.0, "actual_amt": 7151885.8, "qty_rate": 18.7, "amt_rate": 21.0}, {"region": "广东", "target_qty": 849999.9999999994, "actual_qty": 123900.0, "target_amt": 24165500.000000045, "actual_amt": 3895377.0, "qty_rate": 14.6, "amt_rate": 16.1}, {"region": "江苏", "target_qty": 519999.99999999965, "actual_qty": 130050.0, "target_amt": 14783600.00000004, "actual_amt": 4093311.0, "qty_rate": 25.0, "amt_rate": 27.7}, {"region": "福建", "target_qty": 450000.0, "actual_qty": 41425.0, "target_amt": 12793500.0, "actual_amt": 1317500.0, "qty_rate": 9.2, "amt_rate": 10.3}, {"region": "山东", "target_qty": 380000.00000000035, "actual_qty": 87900.0, "target_amt": 10803399.999999996, "actual_amt": 2753268.0, "qty_rate": 23.1, "amt_rate": 25.5}, {"region": "辽宁", "target_qty": 260000.00000000035, "actual_qty": 51000.0, "target_amt": 7391799.999999996, "actual_amt": 1553970.0, "qty_rate": 19.6, "amt_rate": 21.0}, {"region": "四川", "target_qty": 150000.0, "actual_qty": 23720.0, "target_amt": 4264500.0, "actual_amt": 738659.4, "qty_rate": 15.8, "amt_rate": 17.3}, {"region": "新疆", "target_qty": 120000.0, "actual_qty": 22200.0, "target_amt": 3411600.0, "actual_amt": 683892.0, "qty_rate": 18.5, "amt_rate": 20.0}, {"region": "河南", "target_qty": 99999.99999999996, "actual_qty": 21600.0, "target_amt": 2843000.000000004, "actual_amt": 665280.0, "qty_rate": 21.6, "amt_rate": 23.4}, {"region": "湖北", "target_qty": 96500.00000000004, "actual_qty": 12300.0, "target_amt": 2743494.999999996, "actual_amt": 407376.0, "qty_rate": 12.7, "amt_rate": 14.8}, {"region": "天津", "target_qty": 80000.00000000004, "actual_qty": 16200.0, "target_amt": 2274399.999999996, "actual_amt": 516843.0, "qty_rate": 20.2, "amt_rate": 22.7}, {"region": "重庆", "target_qty": 60000.0, "actual_qty": 9000.0, "target_amt": 1705800.0, "actual_amt": 281700.0, "qty_rate": 15.0, "amt_rate": 16.5}, {"region": "广西", "target_qty": 50000.000000000044, "actual_qty": 14400.0, "target_amt": 1421499.999999996, "actual_amt": 445032.0, "qty_rate": 28.8, "amt_rate": 31.3}, {"region": "湖南", "target_qty": 39999.999999999956, "actual_qty": 3000.0, "target_amt": 1137200.0000000005, "actual_amt": 93390.0, "qty_rate": 7.5, "amt_rate": 8.2}, {"region": "河北", "target_qty": 24000.0, "actual_qty": 2400.0, "target_amt": 682320.0, "actual_amt": 73920.0, "qty_rate": 10.0, "amt_rate": 10.8}, {"region": "云南", "target_qty": 3999.999999999996, "actual_qty": 300.0, "target_amt": 113720.00000000004, "actual_amt": 9936.0, "qty_rate": 7.5, "amt_rate": 8.7}, {"region": "安徽", "target_qty": 3999.999999999996, "actual_qty": 1800.0, "target_amt": 113720.00000000004, "actual_amt": 59616.0, "qty_rate": 45.0, "amt_rate": 52.4}, {"region": "黑龙江", "target_qty": 3999.999999999996, "actual_qty": 1800.0, "target_amt": 113720.00000000004, "actual_amt": 54846.0, "qty_rate": 45.0, "amt_rate": 48.2}, {"region": "陕西", "target_qty": 3000.0, "actual_qty": 1200.0, "target_amt": 85290.0, "actual_amt": 37164.0, "qty_rate": 40.0, "amt_rate": 43.6}, {"region": "江西", "target_qty": 2000.0000000000039, "actual_qty": 900.0, "target_amt": 56859.999999999956, "actual_amt": 28170.0, "qty_rate": 45.0, "amt_rate": 49.5}, {"region": "海南", "target_qty": 500.00000000000034, "actual_qty": 0.0, "target_amt": 14214.999999999962, "actual_amt": 0.0, "qty_rate": 0.0, "amt_rate": 0.0}, {"region": "贵州", "target_qty": 500.00000000000034, "actual_qty": 0.0, "target_amt": 14214.999999999962, "actual_amt": 0.0, "qty_rate": 0.0, "amt_rate": 0.0}, {"region": "吉林", "target_qty": 500.00000000000034, "actual_qty": 300.0, "target_amt": 14214.999999999962, "actual_amt": 9240.0, "qty_rate": 60.0, "amt_rate": 65.0}, {"region": "内蒙古", "target_qty": 500.00000000000034, "actual_qty": 0.0, "target_amt": 14214.999999999962, "actual_amt": 0.0, "qty_rate": 0.0, "amt_rate": 0.0}, {"region": "山西", "target_qty": 500.00000000000034, "actual_qty": 0.0, "target_amt": 14214.999999999962, "actual_amt": 0.0, "qty_rate": 0.0, "amt_rate": 0.0}], "新营销部": [{"region": "KA", "target_qty": 9450000.0, "actual_qty": 2525697.0, "target_amt": 263088000.0, "actual_amt": 80856830.12, "qty_rate": 26.7, "amt_rate": 30.7}, {"region": "B端-壹药网", "target_qty": 3000000.0, "actual_qty": 774150.0, "target_amt": 83520000.0, "actual_amt": 25077633.0, "qty_rate": 25.8, "amt_rate": 30.0}, {"region": "B端-药师帮", "target_qty": 3000000.0, "actual_qty": 688050.0, "target_amt": 83520000.0, "actual_amt": 23018736.0, "qty_rate": 22.9, "amt_rate": 27.6}, {"region": "C端-京东", "target_qty": 950000.0000000006, "actual_qty": 150000.0, "target_amt": 26448000.0, "actual_amt": 4769250.0, "qty_rate": 15.8, "amt_rate": 18.0}, {"region": "C端-其他", "target_qty": 300000.0, "actual_qty": 57900.0, "target_amt": 8352000.0, "actual_amt": 2023728.0, "qty_rate": 19.3, "amt_rate": 24.2}, {"region": "C端-阿里", "target_qty": 300000.0, "actual_qty": 0.0, "target_amt": 8352000.0, "actual_amt": 0.0, "qty_rate": 0.0, "amt_rate": 0.0}], "总计": [{"region": "KA", "target_qty": 9450000.0, "actual_qty": 2525697.0, "target_amt": 263088000.0, "actual_amt": 80856830.12, "qty_rate": 26.7, "amt_rate": 30.7}, {"region": "浙江", "target_qty": 4200000.0, "actual_qty": 846000.0, "target_amt": 119406000.0, "actual_amt": 26938230.0, "qty_rate": 20.1, "amt_rate": 22.6}, {"region": "B端-壹药网", "target_qty": 3000000.0, "actual_qty": 774150.0, "target_amt": 83520000.0, "actual_amt": 25077633.0, "qty_rate": 25.8, "amt_rate": 30.0}, {"region": "B端-药师帮", "target_qty": 3000000.0, "actual_qty": 688050.0, "target_amt": 83520000.0, "actual_amt": 23018736.0, "qty_rate": 22.9, "amt_rate": 27.6}, {"region": "上海", "target_qty": 1400000.000000004, "actual_qty": 374550.0, "target_amt": 39801999.999999955, "actual_amt": 11816289.0, "qty_rate": 26.8, "amt_rate": 29.7}, {"region": "北京", "target_qty": 1200000.0, "actual_qty": 224911.0, "target_amt": 34116000.0, "actual_amt": 7151885.8, "qty_rate": 18.7, "amt_rate": 21.0}, {"region": "C端-京东", "target_qty": 950000.0000000006, "actual_qty": 150000.0, "target_amt": 26448000.0, "actual_amt": 4769250.0, "qty_rate": 15.8, "amt_rate": 18.0}, {"region": "广东", "target_qty": 849999.9999999994, "actual_qty": 123900.0, "target_amt": 24165500.000000045, "actual_amt": 3895377.0, "qty_rate": 14.6, "amt_rate": 16.1}, {"region": "江苏", "target_qty": 519999.99999999965, "actual_qty": 130050.0, "target_amt": 14783600.00000004, "actual_amt": 4093311.0, "qty_rate": 25.0, "amt_rate": 27.7}, {"region": "福建", "target_qty": 450000.0, "actual_qty": 41425.0, "target_amt": 12793500.0, "actual_amt": 1317500.0, "qty_rate": 9.2, "amt_rate": 10.3}, {"region": "山东", "target_qty": 380000.00000000035, "actual_qty": 87900.0, "target_amt": 10803399.999999996, "actual_amt": 2753268.0, "qty_rate": 23.1, "amt_rate": 25.5}, {"region": "C端-其他", "target_qty": 300000.0, "actual_qty": 57900.0, "target_amt": 8352000.0, "actual_amt": 2023728.0, "qty_rate": 19.3, "amt_rate": 24.2}, {"region": "C端-阿里", "target_qty": 300000.0, "actual_qty": 0.0, "target_amt": 8352000.0, "actual_amt": 0.0, "qty_rate": 0.0, "amt_rate": 0.0}, {"region": "辽宁", "target_qty": 260000.00000000035, "actual_qty": 51000.0, "target_amt": 7391799.999999996, "actual_amt": 1553970.0, "qty_rate": 19.6, "amt_rate": 21.0}, {"region": "四川", "target_qty": 150000.0, "actual_qty": 23720.0, "target_amt": 4264500.0, "actual_amt": 738659.4, "qty_rate": 15.8, "amt_rate": 17.3}, {"region": "新疆", "target_qty": 120000.0, "actual_qty": 22200.0, "target_amt": 3411600.0, "actual_amt": 683892.0, "qty_rate": 18.5, "amt_rate": 20.0}, {"region": "河南", "target_qty": 99999.99999999996, "actual_qty": 21600.0, "target_amt": 2843000.000000004, "actual_amt": 665280.0, "qty_rate": 21.6, "amt_rate": 23.4}, {"region": "湖北", "target_qty": 96500.00000000004, "actual_qty": 12300.0, "target_amt": 2743494.999999996, "actual_amt": 407376.0, "qty_rate": 12.7, "amt_rate": 14.8}, {"region": "天津", "target_qty": 80000.00000000004, "actual_qty": 16200.0, "target_amt": 2274399.999999996, "actual_amt": 516843.0, "qty_rate": 20.2, "amt_rate": 22.7}, {"region": "重庆", "target_qty": 60000.0, "actual_qty": 9000.0, "target_amt": 1705800.0, "actual_amt": 281700.0, "qty_rate": 15.0, "amt_rate": 16.5}, {"region": "广西", "target_qty": 50000.000000000044, "actual_qty": 14400.0, "target_amt": 1421499.999999996, "actual_amt": 445032.0, "qty_rate": 28.8, "amt_rate": 31.3}, {"region": "湖南", "target_qty": 39999.999999999956, "actual_qty": 3000.0, "target_amt": 1137200.0000000005, "actual_amt": 93390.0, "qty_rate": 7.5, "amt_rate": 8.2}, {"region": "河北", "target_qty": 24000.0, "actual_qty": 2400.0, "target_amt": 682320.0, "actual_amt": 73920.0, "qty_rate": 10.0, "amt_rate": 10.8}, {"region": "云南", "target_qty": 3999.999999999996, "actual_qty": 300.0, "target_amt": 113720.00000000004, "actual_amt": 9936.0, "qty_rate": 7.5, "amt_rate": 8.7}, {"region": "安徽", "target_qty": 3999.999999999996, "actual_qty": 1800.0, "target_amt": 113720.00000000004, "actual_amt": 59616.0, "qty_rate": 45.0, "amt_rate": 52.4}, {"region": "黑龙江", "target_qty": 3999.999999999996, "actual_qty": 1800.0, "target_amt": 113720.00000000004, "actual_amt": 54846.0, "qty_rate": 45.0, "amt_rate": 48.2}, {"region": "陕西", "target_qty": 3000.0, "actual_qty": 1200.0, "target_amt": 85290.0, "actual_amt": 37164.0, "qty_rate": 40.0, "amt_rate": 43.6}, {"region": "江西", "target_qty": 2000.0000000000039, "actual_qty": 900.0, "target_amt": 56859.999999999956, "actual_amt": 28170.0, "qty_rate": 45.0, "amt_rate": 49.5}, {"region": "海南", "target_qty": 500.00000000000034, "actual_qty": 0.0, "target_amt": 14214.999999999962, "actual_amt": 0.0, "qty_rate": 0.0, "amt_rate": 0.0}, {"region": "贵州", "target_qty": 500.00000000000034, "actual_qty": 0.0, "target_amt": 14214.999999999962, "actual_amt": 0.0, "qty_rate": 0.0, "amt_rate": 0.0}, {"region": "吉林", "target_qty": 500.00000000000034, "actual_qty": 300.0, "target_amt": 14214.999999999962, "actual_amt": 9240.0, "qty_rate": 60.0, "amt_rate": 65.0}, {"region": "内蒙古", "target_qty": 500.00000000000034, "actual_qty": 0.0, "target_amt": 14214.999999999962, "actual_amt": 0.0, "qty_rate": 0.0, "amt_rate": 0.0}, {"region": "山西", "target_qty": 500.00000000000034, "actual_qty": 0.0, "target_amt": 14214.999999999962, "actual_amt": 0.0, "qty_rate": 0.0, "amt_rate": 0.0}]}, "头孢泊肟酯片": {"医院销售部": [{"region": "山东", "target_qty": 30000.0, "actual_qty": 6400.0, "target_amt": 1486200.0, "actual_amt": 288000.0, "qty_rate": 21.3, "amt_rate": 19.4}, {"region": "黑龙江", "target_qty": 9000.0, "actual_qty": 3600.0, "target_amt": 445860.0, "actual_amt": 256320.0, "qty_rate": 40.0, "amt_rate": 57.5}, {"region": "湖北", "target_qty": 3000.0, "actual_qty": 0.0, "target_amt": 148620.0, "actual_amt": 0.0, "qty_rate": 0.0, "amt_rate": 0.0}, {"region": "天津", "target_qty": 3000.0, "actual_qty": 0.0, "target_amt": 148620.0, "actual_amt": 0.0, "qty_rate": 0.0, "amt_rate": 0.0}, {"region": "河北", "target_qty": 3000.0, "actual_qty": 800.0, "target_amt": 148620.0, "actual_amt": 36000.0, "qty_rate": 26.7, "amt_rate": 24.2}, {"region": "湖南", "target_qty": 999.9999999999994, "actual_qty": 0.0, "target_amt": 49539.999999999956, "actual_amt": 0.0, "qty_rate": 0.0, "amt_rate": 0.0}, {"region": "内蒙古", "target_qty": 999.9999999999994, "actual_qty": 0.0, "target_amt": 49539.999999999956, "actual_amt": 0.0, "qty_rate": 0.0, "amt_rate": 0.0}, {"region": "广东", "target_qty": 0.0, "actual_qty": 600.0, "target_amt": 0.0, "actual_amt": 27000.0, "qty_rate": 0, "amt_rate": 0}], "新营销部": [], "总计": [{"region": "山东", "target_qty": 30000.0, "actual_qty": 6400.0, "target_amt": 1486200.0, "actual_amt": 288000.0, "qty_rate": 21.3, "amt_rate": 19.4}, {"region": "黑龙江", "target_qty": 9000.0, "actual_qty": 3600.0, "target_amt": 445860.0, "actual_amt": 256320.0, "qty_rate": 40.0, "amt_rate": 57.5}, {"region": "湖北", "target_qty": 3000.0, "actual_qty": 0.0, "target_amt": 148620.0, "actual_amt": 0.0, "qty_rate": 0.0, "amt_rate": 0.0}, {"region": "天津", "target_qty": 3000.0, "actual_qty": 0.0, "target_amt": 148620.0, "actual_amt": 0.0, "qty_rate": 0.0, "amt_rate": 0.0}, {"region": "河北", "target_qty": 3000.0, "actual_qty": 800.0, "target_amt": 148620.0, "actual_amt": 36000.0, "qty_rate": 26.7, "amt_rate": 24.2}, {"region": "湖南", "target_qty": 999.9999999999994, "actual_qty": 0.0, "target_amt": 49539.999999999956, "actual_amt": 0.0, "qty_rate": 0.0, "amt_rate": 0.0}, {"region": "内蒙古", "target_qty": 999.9999999999994, "actual_qty": 0.0, "target_amt": 49539.999999999956, "actual_amt": 0.0, "qty_rate": 0.0, "amt_rate": 0.0}, {"region": "广东", "target_qty": 0.0, "actual_qty": 600.0, "target_amt": 0.0, "actual_amt": 27000.0, "qty_rate": 0, "amt_rate": 0}]}, "立林": {"医院销售部": [{"region": "北京", "target_qty": 90000.0, "actual_qty": 14400.0, "target_amt": 477900.0, "actual_amt": 86400.0, "qty_rate": 16.0, "amt_rate": 18.1}, {"region": "新疆", "target_qty": 9999.999999999996, "actual_qty": 0.0, "target_amt": 53100.0, "actual_amt": 0.0, "qty_rate": 0.0, "amt_rate": 0.0}, {"region": "山东", "target_qty": 9999.999999999996, "actual_qty": 0.0, "target_amt": 53100.0, "actual_amt": 0.0, "qty_rate": 0.0, "amt_rate": 0.0}, {"region": "辽宁", "target_qty": 9999.999999999996, "actual_qty": 50.0, "target_amt": 53100.0, "actual_amt": 2160.0, "qty_rate": 0.5, "amt_rate": 4.1}, {"region": "陕西", "target_qty": 0.0, "actual_qty": 600.0, "target_amt": 0.0, "actual_amt": 3600.0, "qty_rate": 0, "amt_rate": 0}, {"region": "天津", "target_qty": 0.0, "actual_qty": 365.0, "target_amt": 0.0, "actual_amt": 16372.8, "qty_rate": 0, "amt_rate": 0}, {"region": "广东", "target_qty": 0.0, "actual_qty": 1200.0, "target_amt": 0.0, "actual_amt": 54720.0, "qty_rate": 0, "amt_rate": 0}], "新营销部": [], "总计": [{"region": "北京", "target_qty": 90000.0, "actual_qty": 14400.0, "target_amt": 477900.0, "actual_amt": 86400.0, "qty_rate": 16.0, "amt_rate": 18.1}, {"region": "新疆", "target_qty": 9999.999999999996, "actual_qty": 0.0, "target_amt": 53100.0, "actual_amt": 0.0, "qty_rate": 0.0, "amt_rate": 0.0}, {"region": "山东", "target_qty": 9999.999999999996, "actual_qty": 0.0, "target_amt": 53100.0, "actual_amt": 0.0, "qty_rate": 0.0, "amt_rate": 0.0}, {"region": "辽宁", "target_qty": 9999.999999999996, "actual_qty": 50.0, "target_amt": 53100.0, "actual_amt": 2160.0, "qty_rate": 0.5, "amt_rate": 4.1}, {"region": "陕西", "target_qty": 0.0, "actual_qty": 600.0, "target_amt": 0.0, "actual_amt": 3600.0, "qty_rate": 0, "amt_rate": 0}, {"region": "天津", "target_qty": 0.0, "actual_qty": 365.0, "target_amt": 0.0, "actual_amt": 16372.8, "qty_rate": 0, "amt_rate": 0}, {"region": "广东", "target_qty": 0.0, "actual_qty": 1200.0, "target_amt": 0.0, "actual_amt": 54720.0, "qty_rate": 0, "amt_rate": 0}]}}, "region_data": {"头孢泊肟酯干混悬剂": [{"地区": "江苏", "qty": 12960.0, "amt": 593931.36}, {"地区": "广东", "qty": 9600.0, "amt": 475891.2}, {"地区": "湖北", "qty": 8640.0, "amt": 434928.0}, {"地区": "山东", "qty": 6960.0, "amt": 448723.2}, {"地区": "黑龙江", "qty": 6480.0, "amt": 408067.2}, {"地区": "B端-药师帮", "qty": 4560.0, "amt": 318288.0}, {"地区": "河南", "qty": 1920.0, "amt": 89335.2}, {"地区": "天津", "qty": 960.0, "amt": 61651.2}, {"地区": "辽宁", "qty": 720.0, "amt": 44558.4}, {"地区": "吉林", "qty": 480.0, "amt": 21600.0}, {"地区": "江西", "qty": -480.0, "amt": -31492.8}], "左氧氟沙星注射液": [{"地区": "浙江", "qty": 255600.0, "amt": 20130120.0}, {"地区": "上海", "qty": 210000.0, "amt": 16770600.0}, {"地区": "广东", "qty": 117480.0, "amt": 8986150.08}, {"地区": "北京", "qty": 88140.0, "amt": 6987585.6}, {"地区": "福建", "qty": 84240.0, "amt": 6647702.4}, {"地区": "河南", "qty": 71640.0, "amt": 5600815.2}, {"地区": "山东", "qty": 51600.0, "amt": 4022089.2}, {"地区": "辽宁", "qty": 42000.0, "amt": 3159477.0}, {"地区": "江苏", "qty": 32760.0, "amt": 2347206.0}, {"地区": "四川", "qty": 24960.0, "amt": 1931256.0}, {"地区": "湖南", "qty": 17640.0, "amt": 1265652.0}, {"地区": "广西", "qty": 9600.0, "amt": 720615.0}, {"地区": "天津", "qty": 8220.0, "amt": 648834.6}, {"地区": "湖北", "qty": 5580.0, "amt": 437508.0}, {"地区": "黑龙江", "qty": 3600.0, "amt": 278388.0}, {"地区": "重庆", "qty": 2220.0, "amt": 158011.2}, {"地区": "陕西", "qty": 1080.0, "amt": 83516.4}, {"地区": "新疆", "qty": 600.0, "amt": 46908.0}, {"地区": "河北", "qty": 480.0, "amt": 28800.0}, {"地区": "B端-药师帮", "qty": 60.0, "amt": 4035.0}, {"地区": "江西", "qty": 60.0, "amt": 4522.2}], "硫酸异帕米星注射液": [{"地区": "浙江", "qty": 46800.0, "amt": 2631660.0}, {"地区": "福建", "qty": 34800.0, "amt": 2064336.0}, {"地区": "上海", "qty": 28800.0, "amt": 1690848.0}, {"地区": "河南", "qty": 23400.0, "amt": 1330518.0}, {"地区": "黑龙江", "qty": 21600.0, "amt": 1208157.0}, {"地区": "湖北", "qty": 12600.0, "amt": 715692.0}, {"地区": "天津", "qty": 11400.0, "amt": 655158.0}, {"地区": "山东", "qty": 7800.0, "amt": 452358.0}, {"地区": "重庆", "qty": 5850.0, "amt": 343453.5}, {"地区": "吉林", "qty": 5400.0, "amt": 307044.0}, {"地区": "辽宁", "qty": 3600.0, "amt": 204660.0}, {"地区": "江苏", "qty": 3000.0, "amt": 166860.0}, {"地区": "北京", "qty": 2400.0, "amt": 140904.0}, {"地区": "广东", "qty": 2400.0, "amt": 140904.0}, {"地区": "山西", "qty": 1200.0, "amt": 68232.0}], "左氧氟沙星片": [{"地区": "KA", "qty": 2525697.0, "amt": 80856830.12}, {"地区": "浙江", "qty": 846000.0, "amt": 26938230.0}, {"地区": "B端-壹药网", "qty": 774150.0, "amt": 25077633.0}, {"地区": "B端-药师帮", "qty": 688050.0, "amt": 23018736.0}, {"地区": "上海", "qty": 374550.0, "amt": 11816289.0}, {"地区": "北京", "qty": 224911.0, "amt": 7151885.8}, {"地区": "C端-京东", "qty": 150000.0, "amt": 4769250.0}, {"地区": "江苏", "qty": 130050.0, "amt": 4093311.0}, {"地区": "广东", "qty": 123900.0, "amt": 3895377.0}, {"地区": "山东", "qty": 87900.0, "amt": 2753268.0}, {"地区": "C端-其他", "qty": 57900.0, "amt": 2023728.0}, {"地区": "辽宁", "qty": 51000.0, "amt": 1553970.0}, {"地区": "福建", "qty": 41425.0, "amt": 1317500.0}, {"地区": "四川", "qty": 23720.0, "amt": 738659.4}, {"地区": "新疆", "qty": 22200.0, "amt": 683892.0}, {"地区": "河南", "qty": 21600.0, "amt": 665280.0}, {"地区": "天津", "qty": 16200.0, "amt": 516843.0}, {"地区": "广西", "qty": 14400.0, "amt": 445032.0}, {"地区": "湖北", "qty": 12300.0, "amt": 407376.0}, {"地区": "重庆", "qty": 9000.0, "amt": 281700.0}, {"地区": "湖南", "qty": 3000.0, "amt": 93390.0}, {"地区": "河北", "qty": 2400.0, "amt": 73920.0}, {"地区": "安徽", "qty": 1800.0, "amt": 59616.0}, {"地区": "黑龙江", "qty": 1800.0, "amt": 54846.0}, {"地区": "陕西", "qty": 1200.0, "amt": 37164.0}, {"地区": "江西", "qty": 900.0, "amt": 28170.0}, {"地区": "吉林", "qty": 300.0, "amt": 9240.0}, {"地区": "云南", "qty": 300.0, "amt": 9936.0}], "头孢泊肟酯片": [{"地区": "山东", "qty": 6400.0, "amt": 288000.0}, {"地区": "黑龙江", "qty": 3600.0, "amt": 256320.0}, {"地区": "河北", "qty": 800.0, "amt": 36000.0}, {"地区": "广东", "qty": 600.0, "amt": 27000.0}], "立林": [{"地区": "北京", "qty": 14400.0, "amt": 86400.0}, {"地区": "广东", "qty": 1200.0, "amt": 54720.0}, {"地区": "陕西", "qty": 600.0, "amt": 3600.0}, {"地区": "天津", "qty": 365.0, "amt": 16372.8}, {"地区": "辽宁", "qty": 50.0, "amt": 2160.0}]}, "region_trend": {"头孢泊肟酯干混悬剂": [{"年份": 2020, "地区": "toBtoC", "qty": 5.0}, {"年份": 2020, "地区": "上海", "qty": 0.0}, {"年份": 2020, "地区": "云南", "qty": 480.0}, {"年份": 2020, "地区": "天津", "qty": 240.0}, {"年份": 2020, "地区": "安徽", "qty": 20.0}, {"年份": 2020, "地区": "山东", "qty": 76780.0}, {"年份": 2020, "地区": "广东", "qty": 168960.0}, {"年份": 2020, "地区": "河北", "qty": 1437.0}, {"年份": 2020, "地区": "河南", "qty": 4479.0}, {"年份": 2020, "地区": "湖北", "qty": 21120.0}, {"年份": 2020, "地区": "湖南", "qty": 360.0}, {"年份": 2020, "地区": "重庆", "qty": 20.0}, {"年份": 2020, "地区": "陕西", "qty": 60.0}, {"年份": 2020, "地区": "黑龙江", "qty": 25960.0}, {"年份": 2021, "地区": "toBtoC", "qty": 280.0}, {"年份": 2021, "地区": "上海", "qty": 1200.0}, {"年份": 2021, "地区": "云南", "qty": 1160.0}, {"年份": 2021, "地区": "吉林", "qty": 920.0}, {"年份": 2021, "地区": "四川", "qty": 444.0}, {"年份": 2021, "地区": "天津", "qty": 1680.0}, {"年份": 2021, "地区": "安徽", "qty": 2540.0}, {"年份": 2021, "地区": "山东", "qty": 114220.0}, {"年份": 2021, "地区": "广东", "qty": 283020.0}, {"年份": 2021, "地区": "广西", "qty": 100.0}, {"年份": 2021, "地区": "江苏", "qty": 6660.0}, {"年份": 2021, "地区": "江西", "qty": 11520.0}, {"年份": 2021, "地区": "河北", "qty": 1380.0}, {"年份": 2021, "地区": "河南", "qty": 9560.0}, {"年份": 2021, "地区": "浙江", "qty": 80.0}, {"年份": 2021, "地区": "湖北", "qty": 42500.0}, {"年份": 2021, "地区": "湖南", "qty": 320.0}, {"年份": 2021, "地区": "福建", "qty": 270.0}, {"年份": 2021, "地区": "贵州", "qty": 40.0}, {"年份": 2021, "地区": "辽宁", "qty": 6520.0}, {"年份": 2021, "地区": "重庆", "qty": 320.0}, {"年份": 2021, "地区": "陕西", "qty": 140.0}, {"年份": 2021, "地区": "黑龙江", "qty": 48480.0}, {"年份": 2022, "地区": "内蒙古", "qty": 3120.0}, {"年份": 2022, "地区": "吉林", "qty": 2980.0}, {"年份": 2022, "地区": "四川", "qty": 3780.0}, {"年份": 2022, "地区": "天津", "qty": 1081.0}, {"年份": 2022, "地区": "安徽", "qty": 1800.0}, {"年份": 2022, "地区": "山东", "qty": 106120.0}, {"年份": 2022, "地区": "山西", "qty": 40.0}, {"年份": 2022, "地区": "广东", "qty": 176620.0}, {"年份": 2022, "地区": "江苏", "qty": 31440.0}, {"年份": 2022, "地区": "江西", "qty": 13620.0}, {"年份": 2022, "地区": "河北", "qty": 4438.0}, {"年份": 2022, "地区": "河南", "qty": 20500.0}, {"年份": 2022, "地区": "湖北", "qty": 54800.0}, {"年份": 2022, "地区": "湖南", "qty": 5580.0}, {"年份": 2022, "地区": "福建", "qty": 360.0}, {"年份": 2022, "地区": "辽宁", "qty": 14880.0}, {"年份": 2022, "地区": "重庆", "qty": 580.0}, {"年份": 2022, "地区": "黑龙江", "qty": 61200.0}, {"年份": 2023, "地区": "B端-壹药网", "qty": 1479.0}, {"年份": 2023, "地区": "C端-其他", "qty": 201.0}, {"年份": 2023, "地区": "云南", "qty": 480.0}, {"年份": 2023, "地区": "内蒙古", "qty": 720.0}, {"年份": 2023, "地区": "吉林", "qty": 4800.0}, {"年份": 2023, "地区": "四川", "qty": 992.0}, {"年份": 2023, "地区": "天津", "qty": 8160.0}, {"年份": 2023, "地区": "山东", "qty": 109440.0}, {"年份": 2023, "地区": "广东", "qty": 40403.0}, {"年份": 2023, "地区": "江苏", "qty": 35280.0}, {"年份": 2023, "地区": "江西", "qty": 18240.0}, {"年份": 2023, "地区": "河北", "qty": 3840.0}, {"年份": 2023, "地区": "河南", "qty": 49329.0}, {"年份": 2023, "地区": "湖北", "qty": 52800.0}, {"年份": 2023, "地区": "湖南", "qty": 8537.0}, {"年份": 2023, "地区": "辽宁", "qty": 9120.0}, {"年份": 2023, "地区": "黑龙江", "qty": 129840.0}, {"年份": 2024, "地区": "KA", "qty": 32400.0}, {"年份": 2024, "地区": "吉林", "qty": 720.0}, {"年份": 2024, "地区": "四川", "qty": 720.0}, {"年份": 2024, "地区": "天津", "qty": 11760.0}, {"年份": 2024, "地区": "山东", "qty": 95760.0}, {"年份": 2024, "地区": "广东", "qty": 147360.0}, {"年份": 2024, "地区": "江苏", "qty": 70080.0}, {"年份": 2024, "地区": "江西", "qty": 18960.0}, {"年份": 2024, "地区": "河北", "qty": 9600.0}, {"年份": 2024, "地区": "河南", "qty": 59760.0}, {"年份": 2024, "地区": "湖北", "qty": 42000.0}, {"年份": 2024, "地区": "湖南", "qty": -2160.0}, {"年份": 2024, "地区": "辽宁", "qty": 2400.0}, {"年份": 2024, "地区": "黑龙江", "qty": 95760.0}, {"年份": 2025, "地区": "C端-其他", "qty": 3900.0}, {"年份": 2025, "地区": "KA", "qty": 28320.0}, {"年份": 2025, "地区": "内蒙古", "qty": 240.0}, {"年份": 2025, "地区": "吉林", "qty": 2880.0}, {"年份": 2025, "地区": "四川", "qty": 0.0}, {"年份": 2025, "地区": "天津", "qty": 13680.0}, {"年份": 2025, "地区": "山东", "qty": 71760.0}, {"年份": 2025, "地区": "广东", "qty": 25680.0}, {"年份": 2025, "地区": "江苏", "qty": 58560.0}, {"年份": 2025, "地区": "江西", "qty": 22320.0}, {"年份": 2025, "地区": "河北", "qty": 1920.0}, {"年份": 2025, "地区": "河南", "qty": 40320.0}, {"年份": 2025, "地区": "湖北", "qty": 21600.0}, {"年份": 2025, "地区": "辽宁", "qty": 2880.0}, {"年份": 2025, "地区": "黑龙江", "qty": 86400.0}, {"年份": 2026, "地区": "B端-药师帮", "qty": 4560.0}, {"年份": 2026, "地区": "吉林", "qty": 480.0}, {"年份": 2026, "地区": "天津", "qty": 960.0}, {"年份": 2026, "地区": "山东", "qty": 6960.0}, {"年份": 2026, "地区": "广东", "qty": 9600.0}, {"年份": 2026, "地区": "江苏", "qty": 12960.0}, {"年份": 2026, "地区": "江西", "qty": -480.0}, {"年份": 2026, "地区": "河南", "qty": 1920.0}, {"年份": 2026, "地区": "湖北", "qty": 8640.0}, {"年份": 2026, "地区": "辽宁", "qty": 720.0}, {"年份": 2026, "地区": "黑龙江", "qty": 6480.0}], "左氧氟沙星注射液": [{"年份": 2022, "地区": "上海", "qty": 138000.0}, {"年份": 2022, "地区": "北京", "qty": 69000.0}, {"年份": 2022, "地区": "四川", "qty": 12900.0}, {"年份": 2022, "地区": "天津", "qty": 3360.0}, {"年份": 2022, "地区": "山东", "qty": 32640.0}, {"年份": 2022, "地区": "广东", "qty": 74980.0}, {"年份": 2022, "地区": "新疆", "qty": -4380.0}, {"年份": 2022, "地区": "江苏", "qty": 9660.0}, {"年份": 2022, "地区": "河北", "qty": 1800.0}, {"年份": 2022, "地区": "河南", "qty": -1260.0}, {"年份": 2022, "地区": "浙江", "qty": 130440.0}, {"年份": 2022, "地区": "湖南", "qty": 3360.0}, {"年份": 2022, "地区": "福建", "qty": 49560.0}, {"年份": 2022, "地区": "辽宁", "qty": 16500.0}, {"年份": 2022, "地区": "重庆", "qty": 0.0}, {"年份": 2023, "地区": "上海", "qty": 305040.0}, {"年份": 2023, "地区": "内蒙古", "qty": 60.0}, {"年份": 2023, "地区": "北京", "qty": 232140.0}, {"年份": 2023, "地区": "四川", "qty": 84060.0}, {"年份": 2023, "地区": "天津", "qty": 34380.0}, {"年份": 2023, "地区": "安徽", "qty": 0.0}, {"年份": 2023, "地区": "山东", "qty": 212270.0}, {"年份": 2023, "地区": "广东", "qty": 371340.0}, {"年份": 2023, "地区": "广西", "qty": 25140.0}, {"年份": 2023, "地区": "新疆", "qty": 27780.0}, {"年份": 2023, "地区": "江苏", "qty": 103360.0}, {"年份": 2023, "地区": "江西", "qty": 30.0}, {"年份": 2023, "地区": "河北", "qty": 17820.0}, {"年份": 2023, "地区": "河南", "qty": 121800.0}, {"年份": 2023, "地区": "浙江", "qty": 753460.0}, {"年份": 2023, "地区": "湖南", "qty": 17040.0}, {"年份": 2023, "地区": "甘肃", "qty": 300.0}, {"年份": 2023, "地区": "福建", "qty": 212880.0}, {"年份": 2023, "地区": "辽宁", "qty": 178660.0}, {"年份": 2023, "地区": "重庆", "qty": 4720.0}, {"年份": 2023, "地区": "陕西", "qty": 2480.0}, {"年份": 2023, "地区": "黑龙江", "qty": 4500.0}, {"年份": 2024, "地区": "上海", "qty": 498000.0}, {"年份": 2024, "地区": "北京", "qty": 220560.0}, {"年份": 2024, "地区": "四川", "qty": 102780.0}, {"年份": 2024, "地区": "天津", "qty": 15000.0}, {"年份": 2024, "地区": "安徽", "qty": 300.0}, {"年份": 2024, "地区": "山东", "qty": 171270.0}, {"年份": 2024, "地区": "山西", "qty": 60.0}, {"年份": 2024, "地区": "广东", "qty": 463200.0}, {"年份": 2024, "地区": "广西", "qty": 42720.0}, {"年份": 2024, "地区": "新疆", "qty": 31980.0}, {"年份": 2024, "地区": "江苏", "qty": 85440.0}, {"年份": 2024, "地区": "江西", "qty": 120.0}, {"年份": 2024, "地区": "河北", "qty": 22620.0}, {"年份": 2024, "地区": "河南", "qty": 125460.0}, {"年份": 2024, "地区": "浙江", "qty": 831420.0}, {"年份": 2024, "地区": "湖北", "qty": 960.0}, {"年份": 2024, "地区": "湖南", "qty": 26220.0}, {"年份": 2024, "地区": "福建", "qty": 267660.0}, {"年份": 2024, "地区": "辽宁", "qty": 208740.0}, {"年份": 2024, "地区": "重庆", "qty": 5340.0}, {"年份": 2024, "地区": "陕西", "qty": 18000.0}, {"年份": 2024, "地区": "黑龙江", "qty": 2880.0}, {"年份": 2025, "地区": "上海", "qty": 608100.0}, {"年份": 2025, "地区": "北京", "qty": 279660.0}, {"年份": 2025, "地区": "四川", "qty": 90900.0}, {"年份": 2025, "地区": "天津", "qty": 18480.0}, {"年份": 2025, "地区": "山东", "qty": 188400.0}, {"年份": 2025, "地区": "广东", "qty": 505980.0}, {"年份": 2025, "地区": "广西", "qty": 36000.0}, {"年份": 2025, "地区": "新疆", "qty": 40440.0}, {"年份": 2025, "地区": "江苏", "qty": 135060.0}, {"年份": 2025, "地区": "江西", "qty": 2820.0}, {"年份": 2025, "地区": "河北", "qty": 14580.0}, {"年份": 2025, "地区": "河南", "qty": 223560.0}, {"年份": 2025, "地区": "浙江", "qty": 891720.0}, {"年份": 2025, "地区": "湖北", "qty": 5520.0}, {"年份": 2025, "地区": "湖南", "qty": 36840.0}, {"年份": 2025, "地区": "福建", "qty": 373440.0}, {"年份": 2025, "地区": "辽宁", "qty": 303900.0}, {"年份": 2025, "地区": "重庆", "qty": 7560.0}, {"年份": 2025, "地区": "陕西", "qty": 7500.0}, {"年份": 2025, "地区": "黑龙江", "qty": 13200.0}, {"年份": 2026, "地区": "B端-药师帮", "qty": 60.0}, {"年份": 2026, "地区": "上海", "qty": 210000.0}, {"年份": 2026, "地区": "北京", "qty": 88140.0}, {"年份": 2026, "地区": "四川", "qty": 24960.0}, {"年份": 2026, "地区": "天津", "qty": 8220.0}, {"年份": 2026, "地区": "山东", "qty": 51600.0}, {"年份": 2026, "地区": "广东", "qty": 117480.0}, {"年份": 2026, "地区": "广西", "qty": 9600.0}, {"年份": 2026, "地区": "新疆", "qty": 600.0}, {"年份": 2026, "地区": "江苏", "qty": 32760.0}, {"年份": 2026, "地区": "江西", "qty": 60.0}, {"年份": 2026, "地区": "河北", "qty": 480.0}, {"年份": 2026, "地区": "河南", "qty": 71640.0}, {"年份": 2026, "地区": "浙江", "qty": 255600.0}, {"年份": 2026, "地区": "湖北", "qty": 5580.0}, {"年份": 2026, "地区": "湖南", "qty": 17640.0}, {"年份": 2026, "地区": "福建", "qty": 84240.0}, {"年份": 2026, "地区": "辽宁", "qty": 42000.0}, {"年份": 2026, "地区": "重庆", "qty": 2220.0}, {"年份": 2026, "地区": "陕西", "qty": 1080.0}, {"年份": 2026, "地区": "黑龙江", "qty": 3600.0}], "硫酸异帕米星注射液": [{"年份": 2020, "地区": "云南", "qty": 10800.0}, {"年份": 2020, "地区": "北京", "qty": 19800.0}, {"年份": 2020, "地区": "吉林", "qty": 7800.0}, {"年份": 2020, "地区": "四川", "qty": 4200.0}, {"年份": 2020, "地区": "天津", "qty": 58200.0}, {"年份": 2020, "地区": "安徽", "qty": 600.0}, {"年份": 2020, "地区": "山东", "qty": 32400.0}, {"年份": 2020, "地区": "山西", "qty": 15000.0}, {"年份": 2020, "地区": "广东", "qty": 6600.0}, {"年份": 2020, "地区": "广西", "qty": 900.0}, {"年份": 2020, "地区": "江苏", "qty": 5400.0}, {"年份": 2020, "地区": "河北", "qty": 22200.0}, {"年份": 2020, "地区": "河南", "qty": 3100.0}, {"年份": 2020, "地区": "浙江", "qty": 279600.0}, {"年份": 2020, "地区": "湖北", "qty": 39600.0}, {"年份": 2020, "地区": "湖南", "qty": 5400.0}, {"年份": 2020, "地区": "甘肃", "qty": 600.0}, {"年份": 2020, "地区": "福建", "qty": 237800.0}, {"年份": 2020, "地区": "重庆", "qty": 39900.0}, {"年份": 2020, "地区": "陕西", "qty": 348400.0}, {"年份": 2021, "地区": "上海", "qty": 5400.0}, {"年份": 2021, "地区": "云南", "qty": 13800.0}, {"年份": 2021, "地区": "内蒙古", "qty": 3000.0}, {"年份": 2021, "地区": "北京", "qty": 32400.0}, {"年份": 2021, "地区": "吉林", "qty": 25200.0}, {"年份": 2021, "地区": "四川", "qty": 4800.0}, {"年份": 2021, "地区": "天津", "qty": 95400.0}, {"年份": 2021, "地区": "安徽", "qty": 1200.0}, {"年份": 2021, "地区": "山东", "qty": 62400.0}, {"年份": 2021, "地区": "山西", "qty": 1800.0}, {"年份": 2021, "地区": "广东", "qty": 3600.0}, {"年份": 2021, "地区": "广西", "qty": 300.0}, {"年份": 2021, "地区": "江苏", "qty": 15600.0}, {"年份": 2021, "地区": "河北", "qty": 91910.0}, {"年份": 2021, "地区": "河南", "qty": 34430.0}, {"年份": 2021, "地区": "浙江", "qty": 343800.0}, {"年份": 2021, "地区": "海南", "qty": 1200.0}, {"年份": 2021, "地区": "湖北", "qty": 94200.0}, {"年份": 2021, "地区": "湖南", "qty": 1200.0}, {"年份": 2021, "地区": "甘肃", "qty": 7800.0}, {"年份": 2021, "地区": "福建", "qty": 360000.0}, {"年份": 2021, "地区": "重庆", "qty": 102790.0}, {"年份": 2021, "地区": "陕西", "qty": 250700.0}, {"年份": 2021, "地区": "黑龙江", "qty": 12000.0}, {"年份": 2022, "地区": "上海", "qty": 8400.0}, {"年份": 2022, "地区": "云南", "qty": 18600.0}, {"年份": 2022, "地区": "内蒙古", "qty": 2400.0}, {"年份": 2022, "地区": "北京", "qty": 20400.0}, {"年份": 2022, "地区": "吉林", "qty": 13800.0}, {"年份": 2022, "地区": "四川", "qty": 5400.0}, {"年份": 2022, "地区": "天津", "qty": 60000.0}, {"年份": 2022, "地区": "山东", "qty": 54600.0}, {"年份": 2022, "地区": "广东", "qty": 9000.0}, {"年份": 2022, "地区": "江苏", "qty": 33600.0}, {"年份": 2022, "地区": "河北", "qty": 67200.0}, {"年份": 2022, "地区": "河南", "qty": 28200.0}, {"年份": 2022, "地区": "浙江", "qty": 396000.0}, {"年份": 2022, "地区": "海南", "qty": 3600.0}, {"年份": 2022, "地区": "湖北", "qty": 79200.0}, {"年份": 2022, "地区": "湖南", "qty": 1800.0}, {"年份": 2022, "地区": "甘肃", "qty": 3600.0}, {"年份": 2022, "地区": "福建", "qty": 196400.0}, {"年份": 2022, "地区": "重庆", "qty": 91200.0}, {"年份": 2022, "地区": "陕西", "qty": 4200.0}, {"年份": 2022, "地区": "黑龙江", "qty": 68400.0}, {"年份": 2023, "地区": "上海", "qty": 31800.0}, {"年份": 2023, "地区": "云南", "qty": 7800.0}, {"年份": 2023, "地区": "北京", "qty": 22200.0}, {"年份": 2023, "地区": "吉林", "qty": 29920.0}, {"年份": 2023, "地区": "四川", "qty": 2400.0}, {"年份": 2023, "地区": "天津", "qty": 33000.0}, {"年份": 2023, "地区": "山东", "qty": 39600.0}, {"年份": 2023, "地区": "广东", "qty": 7200.0}, {"年份": 2023, "地区": "江苏", "qty": 42600.0}, {"年份": 2023, "地区": "河北", "qty": 33000.0}, {"年份": 2023, "地区": "河南", "qty": 45900.0}, {"年份": 2023, "地区": "浙江", "qty": 260000.0}, {"年份": 2023, "地区": "海南", "qty": 6000.0}, {"年份": 2023, "地区": "湖北", "qty": 35400.0}, {"年份": 2023, "地区": "甘肃", "qty": 3600.0}, {"年份": 2023, "地区": "福建", "qty": 202800.0}, {"年份": 2023, "地区": "重庆", "qty": 56100.0}, {"年份": 2023, "地区": "陕西", "qty": 1200.0}, {"年份": 2023, "地区": "黑龙江", "qty": 63000.0}, {"年份": 2024, "地区": "上海", "qty": 31800.0}, {"年份": 2024, "地区": "北京", "qty": 13800.0}, {"年份": 2024, "地区": "吉林", "qty": 21000.0}, {"年份": 2024, "地区": "四川", "qty": 600.0}, {"年份": 2024, "地区": "天津", "qty": 25200.0}, {"年份": 2024, "地区": "山东", "qty": 19200.0}, {"年份": 2024, "地区": "广东", "qty": 4200.0}, {"年份": 2024, "地区": "江苏", "qty": 3000.0}, {"年份": 2024, "地区": "河南", "qty": 40200.0}, {"年份": 2024, "地区": "浙江", "qty": 118800.0}, {"年份": 2024, "地区": "海南", "qty": 600.0}, {"年份": 2024, "地区": "湖北", "qty": 5400.0}, {"年份": 2024, "地区": "福建", "qty": 81000.0}, {"年份": 2024, "地区": "重庆", "qty": 21000.0}, {"年份": 2024, "地区": "黑龙江", "qty": 73200.0}, {"年份": 2025, "地区": "上海", "qty": 84000.0}, {"年份": 2025, "地区": "北京", "qty": 16800.0}, {"年份": 2025, "地区": "吉林", "qty": 40200.0}, {"年份": 2025, "地区": "天津", "qty": 51600.0}, {"年份": 2025, "地区": "山东", "qty": 28800.0}, {"年份": 2025, "地区": "广东", "qty": 6000.0}, {"年份": 2025, "地区": "江苏", "qty": 10200.0}, {"年份": 2025, "地区": "河南", "qty": 57000.0}, {"年份": 2025, "地区": "浙江", "qty": 274200.0}, {"年份": 2025, "地区": "湖北", "qty": 63000.0}, {"年份": 2025, "地区": "福建", "qty": 124800.0}, {"年份": 2025, "地区": "辽宁", "qty": 9000.0}, {"年份": 2025, "地区": "重庆", "qty": 20690.0}, {"年份": 2025, "地区": "黑龙江", "qty": 51000.0}, {"年份": 2026, "地区": "上海", "qty": 28800.0}, {"年份": 2026, "地区": "北京", "qty": 2400.0}, {"年份": 2026, "地区": "吉林", "qty": 5400.0}, {"年份": 2026, "地区": "天津", "qty": 11400.0}, {"年份": 2026, "地区": "山东", "qty": 7800.0}, {"年份": 2026, "地区": "山西", "qty": 1200.0}, {"年份": 2026, "地区": "广东", "qty": 2400.0}, {"年份": 2026, "地区": "江苏", "qty": 3000.0}, {"年份": 2026, "地区": "河南", "qty": 23400.0}, {"年份": 2026, "地区": "浙江", "qty": 46800.0}, {"年份": 2026, "地区": "湖北", "qty": 12600.0}, {"年份": 2026, "地区": "福建", "qty": 34800.0}, {"年份": 2026, "地区": "辽宁", "qty": 3600.0}, {"年份": 2026, "地区": "重庆", "qty": 5850.0}, {"年份": 2026, "地区": "黑龙江", "qty": 21600.0}], "左氧氟沙星片": [{"年份": 2022, "地区": "C端-其他", "qty": 50000.0}, {"年份": 2022, "地区": "上海", "qty": 414750.0}, {"年份": 2022, "地区": "云南", "qty": 600.0}, {"年份": 2022, "地区": "北京", "qty": 309150.0}, {"年份": 2022, "地区": "四川", "qty": 22350.0}, {"年份": 2022, "地区": "天津", "qty": 22200.0}, {"年份": 2022, "地区": "安徽", "qty": 300.0}, {"年份": 2022, "地区": "山东", "qty": 111450.0}, {"年份": 2022, "地区": "广东", "qty": 194800.0}, {"年份": 2022, "地区": "广西", "qty": 600.0}, {"年份": 2022, "地区": "新疆", "qty": 19800.0}, {"年份": 2022, "地区": "江苏", "qty": 197550.0}, {"年份": 2022, "地区": "河南", "qty": 9600.0}, {"年份": 2022, "地区": "浙江", "qty": 1172050.0}, {"年份": 2022, "地区": "海南", "qty": 600.0}, {"年份": 2022, "地区": "湖北", "qty": 9900.0}, {"年份": 2022, "地区": "湖南", "qty": 5400.0}, {"年份": 2022, "地区": "福建", "qty": 84600.0}, {"年份": 2022, "地区": "辽宁", "qty": 11400.0}, {"年份": 2022, "地区": "重庆", "qty": 15044.0}, {"年份": 2022, "地区": "陕西", "qty": 1500.0}, {"年份": 2023, "地区": "B端-其他", "qty": 147692.0}, {"年份": 2023, "地区": "B端-壹药网", "qty": 428400.0}, {"年份": 2023, "地区": "B端-药师帮", "qty": 102600.0}, {"年份": 2023, "地区": "C端-京东", "qty": 353986.0}, {"年份": 2023, "地区": "C端-其他", "qty": 575140.0}, {"年份": 2023, "地区": "C端-阿里", "qty": 85950.0}, {"年份": 2023, "地区": "上海", "qty": 1137532.0}, {"年份": 2023, "地区": "云南", "qty": 18900.0}, {"年份": 2023, "地区": "北京", "qty": 1275934.0}, {"年份": 2023, "地区": "吉林", "qty": 25350.0}, {"年份": 2023, "地区": "四川", "qty": 286650.0}, {"年份": 2023, "地区": "天津", "qty": 48000.0}, {"年份": 2023, "地区": "安徽", "qty": 1800.0}, {"年份": 2023, "地区": "山东", "qty": 477150.0}, {"年份": 2023, "地区": "广东", "qty": 1518384.0}, {"年份": 2023, "地区": "广西", "qty": 95700.0}, {"年份": 2023, "地区": "新疆", "qty": 450300.0}, {"年份": 2023, "地区": "江苏", "qty": 480600.0}, {"年份": 2023, "地区": "江西", "qty": 60.0}, {"年份": 2023, "地区": "河北", "qty": 12150.0}, {"年份": 2023, "地区": "河南", "qty": 132300.0}, {"年份": 2023, "地区": "浙江", "qty": 4957034.0}, {"年份": 2023, "地区": "海南", "qty": 300.0}, {"年份": 2023, "地区": "湖北", "qty": 162450.0}, {"年份": 2023, "地区": "湖南", "qty": 189750.0}, {"年份": 2023, "地区": "福建", "qty": 335400.0}, {"年份": 2023, "地区": "贵州", "qty": 600.0}, {"年份": 2023, "地区": "辽宁", "qty": 200250.0}, {"年份": 2023, "地区": "重庆", "qty": 164640.0}, {"年份": 2023, "地区": "陕西", "qty": 8700.0}, {"年份": 2023, "地区": "黑龙江", "qty": 650.0}, {"年份": 2024, "地区": "B端-壹药网", "qty": 430650.0}, {"年份": 2024, "地区": "B端-药师帮", "qty": 216600.0}, {"年份": 2024, "地区": "C端-京东", "qty": 381900.0}, {"年份": 2024, "地区": "C端-其他", "qty": 362860.0}, {"年份": 2024, "地区": "C端-阿里", "qty": 147740.0}, {"年份": 2024, "地区": "KA", "qty": 5756635.0}, {"年份": 2024, "地区": "上海", "qty": 1185000.0}, {"年份": 2024, "地区": "云南", "qty": 9300.0}, {"年份": 2024, "地区": "北京", "qty": 900450.0}, {"年份": 2024, "地区": "四川", "qty": 150450.0}, {"年份": 2024, "地区": "天津", "qty": 48300.0}, {"年份": 2024, "地区": "安徽", "qty": 2100.0}, {"年份": 2024, "地区": "山东", "qty": 308524.0}, {"年份": 2024, "地区": "广东", "qty": 1387200.0}, {"年份": 2024, "地区": "广西", "qty": 130200.0}, {"年份": 2024, "地区": "新疆", "qty": 303000.0}, {"年份": 2024, "地区": "江苏", "qty": 452550.0}, {"年份": 2024, "地区": "江西", "qty": 430.0}, {"年份": 2024, "地区": "河北", "qty": 8100.0}, {"年份": 2024, "地区": "河南", "qty": 80400.0}, {"年份": 2024, "地区": "浙江", "qty": 5492550.0}, {"年份": 2024, "地区": "湖北", "qty": 92100.0}, {"年份": 2024, "地区": "湖南", "qty": 46950.0}, {"年份": 2024, "地区": "福建", "qty": 424900.0}, {"年份": 2024, "地区": "辽宁", "qty": 179400.0}, {"年份": 2024, "地区": "重庆", "qty": 80850.0}, {"年份": 2024, "地区": "陕西", "qty": 1800.0}, {"年份": 2024, "地区": "黑龙江", "qty": 400.0}, {"年份": 2025, "地区": "B端-壹药网", "qty": 2117465.0}, {"年份": 2025, "地区": "B端-药师帮", "qty": 1804273.0}, {"年份": 2025, "地区": "C端-京东", "qty": 874700.0}, {"年份": 2025, "地区": "C端-其他", "qty": 210450.0}, {"年份": 2025, "地区": "C端-阿里", "qty": 207450.0}, {"年份": 2025, "地区": "KA", "qty": 5765500.0}, {"年份": 2025, "地区": "上海", "qty": 1245300.0}, {"年份": 2025, "地区": "云南", "qty": 3000.0}, {"年份": 2025, "地区": "北京", "qty": 984750.0}, {"年份": 2025, "地区": "四川", "qty": 127595.0}, {"年份": 2025, "地区": "天津", "qty": 74100.0}, {"年份": 2025, "地区": "安徽", "qty": 4200.0}, {"年份": 2025, "地区": "山东", "qty": 313080.0}, {"年份": 2025, "地区": "广东", "qty": 724120.0}, {"年份": 2025, "地区": "广西", "qty": 68400.0}, {"年份": 2025, "地区": "新疆", "qty": 135000.0}, {"年份": 2025, "地区": "江苏", "qty": 444650.0}, {"年份": 2025, "地区": "江西", "qty": 2853.0}, {"年份": 2025, "地区": "河北", "qty": 29700.0}, {"年份": 2025, "地区": "河南", "qty": 76500.0}, {"年份": 2025, "地区": "浙江", "qty": 3859897.0}, {"年份": 2025, "地区": "湖北", "qty": 81138.0}, {"年份": 2025, "地区": "湖南", "qty": 41100.0}, {"年份": 2025, "地区": "福建", "qty": 269315.0}, {"年份": 2025, "地区": "辽宁", "qty": 231000.0}, {"年份": 2025, "地区": "重庆", "qty": 45776.0}, {"年份": 2025, "地区": "陕西", "qty": 2410.0}, {"年份": 2025, "地区": "黑龙江", "qty": 6400.0}, {"年份": 2026, "地区": "B端-壹药网", "qty": 774150.0}, {"年份": 2026, "地区": "B端-药师帮", "qty": 688050.0}, {"年份": 2026, "地区": "C端-京东", "qty": 150000.0}, {"年份": 2026, "地区": "C端-其他", "qty": 57900.0}, {"年份": 2026, "地区": "KA", "qty": 2525697.0}, {"年份": 2026, "地区": "上海", "qty": 374550.0}, {"年份": 2026, "地区": "云南", "qty": 300.0}, {"年份": 2026, "地区": "北京", "qty": 224911.0}, {"年份": 2026, "地区": "吉林", "qty": 300.0}, {"年份": 2026, "地区": "四川", "qty": 23720.0}, {"年份": 2026, "地区": "天津", "qty": 16200.0}, {"年份": 2026, "地区": "安徽", "qty": 1800.0}, {"年份": 2026, "地区": "山东", "qty": 87900.0}, {"年份": 2026, "地区": "广东", "qty": 123900.0}, {"年份": 2026, "地区": "广西", "qty": 14400.0}, {"年份": 2026, "地区": "新疆", "qty": 22200.0}, {"年份": 2026, "地区": "江苏", "qty": 130050.0}, {"年份": 2026, "地区": "江西", "qty": 900.0}, {"年份": 2026, "地区": "河北", "qty": 2400.0}, {"年份": 2026, "地区": "河南", "qty": 21600.0}, {"年份": 2026, "地区": "浙江", "qty": 846000.0}, {"年份": 2026, "地区": "湖北", "qty": 12300.0}, {"年份": 2026, "地区": "湖南", "qty": 3000.0}, {"年份": 2026, "地区": "福建", "qty": 41425.0}, {"年份": 2026, "地区": "辽宁", "qty": 51000.0}, {"年份": 2026, "地区": "重庆", "qty": 9000.0}, {"年份": 2026, "地区": "陕西", "qty": 1200.0}, {"年份": 2026, "地区": "黑龙江", "qty": 1800.0}], "头孢泊肟酯片": [{"年份": 2020, "地区": "山东", "qty": 5400.0}, {"年份": 2020, "地区": "广东", "qty": 47586.0}, {"年份": 2020, "地区": "河北", "qty": 400.0}, {"年份": 2020, "地区": "河南", "qty": 200.0}, {"年份": 2020, "地区": "第三终端部", "qty": 84.0}, {"年份": 2020, "地区": "重庆", "qty": 200.0}, {"年份": 2020, "地区": "黑龙江", "qty": 5200.0}, {"年份": 2021, "地区": "toBtoC", "qty": 290.0}, {"年份": 2021, "地区": "四川", "qty": 1230.0}, {"年份": 2021, "地区": "山东", "qty": 5200.0}, {"年份": 2021, "地区": "广东", "qty": 57600.0}, {"年份": 2021, "地区": "河北", "qty": 400.0}, {"年份": 2021, "地区": "河南", "qty": 1200.0}, {"年份": 2021, "地区": "湖北", "qty": 200.0}, {"年份": 2021, "地区": "福建", "qty": 4000.0}, {"年份": 2021, "地区": "陕西", "qty": 1000.0}, {"年份": 2021, "地区": "黑龙江", "qty": 7400.0}, {"年份": 2022, "地区": "四川", "qty": 1860.0}, {"年份": 2022, "地区": "山东", "qty": 18400.0}, {"年份": 2022, "地区": "广东", "qty": 39050.0}, {"年份": 2022, "地区": "河北", "qty": 3000.0}, {"年份": 2022, "地区": "河南", "qty": 5600.0}, {"年份": 2022, "地区": "湖北", "qty": 200.0}, {"年份": 2022, "地区": "辽宁", "qty": 4536.0}, {"年份": 2022, "地区": "陕西", "qty": 32400.0}, {"年份": 2022, "地区": "黑龙江", "qty": 3400.0}, {"年份": 2023, "地区": "B端-壹药网", "qty": 2198.0}, {"年份": 2023, "地区": "C端-其他", "qty": 202.0}, {"年份": 2023, "地区": "四川", "qty": 60.0}, {"年份": 2023, "地区": "山东", "qty": 9400.0}, {"年份": 2023, "地区": "广东", "qty": 3416.0}, {"年份": 2023, "地区": "河北", "qty": 3000.0}, {"年份": 2023, "地区": "河南", "qty": 4000.0}, {"年份": 2023, "地区": "湖北", "qty": 1400.0}, {"年份": 2023, "地区": "辽宁", "qty": 2000.0}, {"年份": 2023, "地区": "重庆", "qty": 200.0}, {"年份": 2023, "地区": "陕西", "qty": 11600.0}, {"年份": 2023, "地区": "黑龙江", "qty": 6200.0}, {"年份": 2024, "地区": "山东", "qty": 13200.0}, {"年份": 2024, "地区": "河北", "qty": 3400.0}, {"年份": 2024, "地区": "湖北", "qty": 3800.0}, {"年份": 2024, "地区": "辽宁", "qty": 200.0}, {"年份": 2024, "地区": "黑龙江", "qty": 11400.0}, {"年份": 2025, "地区": "C端-其他", "qty": 1500.0}, {"年份": 2025, "地区": "天津", "qty": 1400.0}, {"年份": 2025, "地区": "山东", "qty": 20650.0}, {"年份": 2025, "地区": "广东", "qty": 400.0}, {"年份": 2025, "地区": "河北", "qty": 3000.0}, {"年份": 2025, "地区": "湖北", "qty": 1600.0}, {"年份": 2025, "地区": "辽宁", "qty": 350.0}, {"年份": 2025, "地区": "黑龙江", "qty": 19400.0}, {"年份": 2026, "地区": "山东", "qty": 6400.0}, {"年份": 2026, "地区": "广东", "qty": 600.0}, {"年份": 2026, "地区": "河北", "qty": 800.0}, {"年份": 2026, "地区": "黑龙江", "qty": 3600.0}], "立林": [{"年份": 2023, "地区": "C端-其他", "qty": 300.0}, {"年份": 2023, "地区": "辽宁", "qty": 600.0}, {"年份": 2023, "地区": "重庆", "qty": 1200.0}, {"年份": 2024, "地区": "云南", "qty": 600.0}, {"年份": 2024, "地区": "安徽", "qty": 300.0}, {"年份": 2024, "地区": "山东", "qty": 300.0}, {"年份": 2024, "地区": "江苏", "qty": 300.0}, {"年份": 2024, "地区": "湖北", "qty": 300.0}, {"年份": 2024, "地区": "重庆", "qty": 300.0}, {"年份": 2025, "地区": "北京", "qty": 12600.0}, {"年份": 2025, "地区": "四川", "qty": 600.0}, {"年份": 2025, "地区": "山东", "qty": 12600.0}, {"年份": 2025, "地区": "广东", "qty": 3000.0}, {"年份": 2025, "地区": "新疆", "qty": 1200.0}, {"年份": 2025, "地区": "湖南", "qty": 600.0}, {"年份": 2025, "地区": "重庆", "qty": 1800.0}, {"年份": 2025, "地区": "陕西", "qty": 150.0}, {"年份": 2026, "地区": "北京", "qty": 14400.0}, {"年份": 2026, "地区": "天津", "qty": 365.0}, {"年份": 2026, "地区": "广东", "qty": 1200.0}, {"年份": 2026, "地区": "辽宁", "qty": 50.0}, {"年份": 2026, "地区": "陕西", "qty": 600.0}]}, "all_overview": [{"product": "头孢泊肟酯干混悬剂", "dept": "医院销售部", "actual_qty": 48240.0, "actual_amt": 2547192.96, "target_qty": 400000.0000000001, "target_amt": 19927999.999999996, "qty_rate": 12.1, "amt_rate": 12.8}, {"product": "头孢泊肟酯干混悬剂", "dept": "新营销部", "actual_qty": 4560.0, "actual_amt": 318288.0, "target_qty": 400000.0000000008, "target_amt": 23719999.999999993, "qty_rate": 1.1, "amt_rate": 1.3}, {"product": "头孢泊肟酯干混悬剂", "dept": "总计", "actual_qty": 52800.0, "actual_amt": 2865480.96, "target_qty": 800000.0000000009, "target_amt": 43647999.99999999, "qty_rate": 6.6, "amt_rate": 6.6}, {"product": "左氧氟沙星注射液", "dept": "医院销售部", "actual_qty": 1027500.0, "actual_amt": 80255756.88, "target_qty": 3999999.999999999, "target_amt": 280000000.0, "qty_rate": 25.7, "amt_rate": 28.7}, {"product": "左氧氟沙星注射液", "dept": "新营销部", "actual_qty": 60.0, "actual_amt": 4035.0, "target_qty": 0.0, "target_amt": 0.0, "qty_rate": 0, "amt_rate": 0}, {"product": "左氧氟沙星注射液", "dept": "总计", "actual_qty": 1027560.0, "actual_amt": 80259791.88, "target_qty": 3999999.999999999, "target_amt": 280000000.0, "qty_rate": 25.7, "amt_rate": 28.7}, {"product": "硫酸异帕米星注射液", "dept": "医院销售部", "actual_qty": 211050.0, "actual_amt": 12120784.5, "target_qty": 800000.0, "target_amt": 40800000.0, "qty_rate": 26.4, "amt_rate": 29.7}, {"product": "硫酸异帕米星注射液", "dept": "新营销部", "actual_qty": 0.0, "actual_amt": 0.0, "target_qty": 0.0, "target_amt": 0.0, "qty_rate": 0, "amt_rate": 0}, {"product": "硫酸异帕米星注射液", "dept": "总计", "actual_qty": 211050.0, "actual_amt": 12120784.5, "target_qty": 800000.0, "target_amt": 40800000.0, "qty_rate": 26.4, "amt_rate": 29.7}, {"product": "左氧氟沙星片", "dept": "医院销售部", "actual_qty": 2010856.0, "actual_amt": 63624895.2, "target_qty": 10000000.000000004, "target_amt": 284300000.0, "qty_rate": 20.1, "amt_rate": 22.4}, {"product": "左氧氟沙星片", "dept": "新营销部", "actual_qty": 4195797.0, "actual_amt": 135746177.12, "target_qty": 17000000.0, "target_amt": 473280000.0, "qty_rate": 24.7, "amt_rate": 28.7}, {"product": "左氧氟沙星片", "dept": "总计", "actual_qty": 6206653.0, "actual_amt": 199371072.32, "target_qty": 27000000.000000007, "target_amt": 757580000.0, "qty_rate": 23.0, "amt_rate": 26.3}, {"product": "头孢泊肟酯片", "dept": "医院销售部", "actual_qty": 11400.0, "actual_amt": 607320.0, "target_qty": 50000.0, "target_amt": 2477000.0000000005, "qty_rate": 22.8, "amt_rate": 24.5}, {"product": "头孢泊肟酯片", "dept": "新营销部", "actual_qty": 0.0, "actual_amt": 0.0, "target_qty": 0.0, "target_amt": 0.0, "qty_rate": 0, "amt_rate": 0}, {"product": "头孢泊肟酯片", "dept": "总计", "actual_qty": 11400.0, "actual_amt": 607320.0, "target_qty": 50000.0, "target_amt": 2477000.0000000005, "qty_rate": 22.8, "amt_rate": 24.5}, {"product": "立林", "dept": "医院销售部", "actual_qty": 16615.0, "actual_amt": 163252.8, "target_qty": 120000.0, "target_amt": 637200.0, "qty_rate": 13.8, "amt_rate": 25.6}, {"product": "立林", "dept": "新营销部", "actual_qty": 0.0, "actual_amt": 0.0, "target_qty": 0.0, "target_amt": 0.0, "qty_rate": 0, "amt_rate": 0}, {"product": "立林", "dept": "总计", "actual_qty": 16615.0, "actual_amt": 163252.8, "target_qty": 120000.0, "target_amt": 637200.0, "qty_rate": 13.8, "amt_rate": 25.6}], "all_month": {"头孢泊肟酯干混悬剂": {"1": {"qty": 24240.0, "amt": 1334687.28}, "2": {"qty": 12960.0, "amt": 703816.0800000001}, "3": {"qty": 10320.0, "amt": 580824.0}, "4": {"qty": 5280.0, "amt": 246153.6}, "5": {"qty": 0.0, "amt": 0.0}, "6": {"qty": 0.0, "amt": 0.0}, "7": {"qty": 0.0, "amt": 0.0}, "8": {"qty": 0.0, "amt": 0.0}, "9": {"qty": 0.0, "amt": 0.0}, "10": {"qty": 0.0, "amt": 0.0}, "11": {"qty": 0.0, "amt": 0.0}, "12": {"qty": 0.0, "amt": 0.0}}, "左氧氟沙星注射液": {"1": {"qty": 475140.0, "amt": 36988603.2}, "2": {"qty": 182520.0, "amt": 14532861.0}, "3": {"qty": 274980.0, "amt": 21314897.88}, "4": {"qty": 94920.0, "amt": 7423429.8}, "5": {"qty": 0.0, "amt": 0.0}, "6": {"qty": 0.0, "amt": 0.0}, "7": {"qty": 0.0, "amt": 0.0}, "8": {"qty": 0.0, "amt": 0.0}, "9": {"qty": 0.0, "amt": 0.0}, "10": {"qty": 0.0, "amt": 0.0}, "11": {"qty": 0.0, "amt": 0.0}, "12": {"qty": 0.0, "amt": 0.0}}, "硫酸异帕米星注射液": {"1": {"qty": 110250.0, "amt": 6349924.5}, "2": {"qty": 33000.0, "amt": 1886370.0}, "3": {"qty": 64200.0, "amt": 3677208.0}, "4": {"qty": 3600.0, "amt": 207282.0}, "5": {"qty": 0.0, "amt": 0.0}, "6": {"qty": 0.0, "amt": 0.0}, "7": {"qty": 0.0, "amt": 0.0}, "8": {"qty": 0.0, "amt": 0.0}, "9": {"qty": 0.0, "amt": 0.0}, "10": {"qty": 0.0, "amt": 0.0}, "11": {"qty": 0.0, "amt": 0.0}, "12": {"qty": 0.0, "amt": 0.0}}, "左氧氟沙星片": {"1": {"qty": 3274472.0, "amt": 105024779.62}, "2": {"qty": 595800.0, "amt": 19315935.0}, "3": {"qty": 2111211.0, "amt": 67600910.8}, "4": {"qty": 225170.0, "amt": 7429446.9}, "5": {"qty": 0.0, "amt": 0.0}, "6": {"qty": 0.0, "amt": 0.0}, "7": {"qty": 0.0, "amt": 0.0}, "8": {"qty": 0.0, "amt": 0.0}, "9": {"qty": 0.0, "amt": 0.0}, "10": {"qty": 0.0, "amt": 0.0}, "11": {"qty": 0.0, "amt": 0.0}, "12": {"qty": 0.0, "amt": 0.0}}, "头孢泊肟酯片": {"1": {"qty": 7800.0, "amt": 424360.0}, "2": {"qty": 0.0, "amt": 0.0}, "3": {"qty": 1800.0, "amt": 91480.0}, "4": {"qty": 1800.0, "amt": 91480.0}, "5": {"qty": 0.0, "amt": 0.0}, "6": {"qty": 0.0, "amt": 0.0}, "7": {"qty": 0.0, "amt": 0.0}, "8": {"qty": 0.0, "amt": 0.0}, "9": {"qty": 0.0, "amt": 0.0}, "10": {"qty": 0.0, "amt": 0.0}, "11": {"qty": 0.0, "amt": 0.0}, "12": {"qty": 0.0, "amt": 0.0}}, "立林": {"1": {"qty": 5165.0, "amt": 92692.8}, "2": {"qty": 2400.0, "amt": 14400.0}, "3": {"qty": 9050.0, "amt": 56160.0}, "4": {"qty": 0.0, "amt": 0.0}, "5": {"qty": 0.0, "amt": 0.0}, "6": {"qty": 0.0, "amt": 0.0}, "7": {"qty": 0.0, "amt": 0.0}, "8": {"qty": 0.0, "amt": 0.0}, "9": {"qty": 0.0, "amt": 0.0}, "10": {"qty": 0.0, "amt": 0.0}, "11": {"qty": 0.0, "amt": 0.0}, "12": {"qty": 0.0, "amt": 0.0}}}};
+
+// ============================================================
+// UTILS
+// ============================================================
+function fmt(n){
+  if(n===null||n===undefined||isNaN(n))return '0';
+  n=Number(n);
+  if(Math.abs(n)>=1e8)return (n/1e8).toFixed(2)+'亿';
+  if(Math.abs(n)>=1e4)return (n/1e4).toFixed(1)+'万';
+  return n.toFixed(0);
+}
+function fmtAmt(n){
+  if(n===null||n===undefined||isNaN(n))return '¥0';
+  n=Number(n);
+  if(Math.abs(n)>=1e8)return '¥'+(n/1e8).toFixed(2)+'亿';
+  if(Math.abs(n)>=1e4)return '¥'+(n/1e4).toFixed(1)+'万';
+  return '¥'+n.toFixed(0);
+}
+function rateColor(r){
+  if(r>=100)return '#3fb950';
+  if(r>=80)return '#d29922';
+  if(r>=60)return '#f0883e';
+  return '#f85149';
+}
+function rateClass(r){
+  if(r>=100)return 'rate-green';
+  if(r>=80)return 'rate-yellow';
+  if(r>=60)return 'rate-orange';
+  return 'rate-red';
+}
+
+document.getElementById('currentDate').textContent=new Date().toLocaleDateString('zh-CN',{year:'numeric',month:'long',day:'numeric'});
+
+const MONTHS=['1月','2月','3月','4月','5月','6月','7月','8月','9月','10月','11月','12月'];
+const DEPT_COLORS={'医院销售部':'#1a73e8','新营销部':'#e65100','总计':'#9ca3af'};
+const PRODUCT_COLORS=['#1a73e8','#1e8449','#e65100','#b45309','#7c3aed','#db2777'];
+const EC_BASE={
+  backgroundColor:'transparent',
+  textStyle:{color:'#6b7280',fontSize:11},
+  tooltip:{backgroundColor:'#fff',borderColor:'#e8eaf0',textStyle:{color:'#374151',fontSize:12},extraCssText:'box-shadow:0 4px 12px rgba(0,0,0,0.15)'},
+  legend:{textStyle:{color:'#6b7280',fontSize:11},itemWidth:12,itemHeight:8}
+};
+
+const chartInstances={};
+function makeChart(id,opts){
+  const dom=document.getElementById(id);
+  if(!dom)return null;
+  if(chartInstances[id]){chartInstances[id].dispose();}
+  const c=echarts.init(dom,null,{renderer:'canvas'});
+  c.setOption(Object.assign({},EC_BASE,opts));
+  chartInstances[id]=c;
+  window.addEventListener('resize',()=>c.resize());
+  return c;
+}
+
+const products=['左氧氟沙星注射液','左氧氟沙星片','硫酸异帕米星注射液','头孢泊肟酯干混悬剂','头孢泊肟酯片','立林'];
+const depts=DATA.depts;
+const tabBar=document.getElementById('tabBar');
+const pagesEl=document.getElementById('pages');
+
+// ============================================================
+// BUILD TAB BAR
+// ============================================================
+const allTabEl=document.createElement('div');
+allTabEl.className='tab-item all-tab active';
+allTabEl.innerHTML='📊 全产品总览';
+allTabEl.dataset.tab='all';
+tabBar.appendChild(allTabEl);
+
+products.forEach((p,i)=>{
+  const t=document.createElement('div');
+  t.className='tab-item';
+  t.textContent=p;
+  t.dataset.tab='p'+i;
+  tabBar.appendChild(t);
+});
+
+tabBar.addEventListener('click',e=>{
+  const t=e.target.closest('.tab-item');
+  if(!t)return;
+  document.querySelectorAll('.tab-item').forEach(x=>x.classList.remove('active'));
+  document.querySelectorAll('.page').forEach(x=>x.classList.remove('active'));
+  t.classList.add('active');
+  const key=t.dataset.tab;
+  const pg=document.getElementById('page-'+key);
+  if(pg)pg.classList.add('active');
+});
+
+// ============================================================
+// BUILD ALL OVERVIEW PAGE
+// ============================================================
+function buildAllPage(){
+  const page=document.createElement('div');
+  page.className='page active';
+  page.id='page-all';
+
+  page.innerHTML=`
+<div id="allKpiRow" class="kpi-row"></div>
+
+<div class="dept-filter" id="allDeptFilter">
+  <span class="dept-filter-label">销售部门：</span>
+  <div class="dept-btn active" data-dept="总计">全部</div>
+  ${depts.map(d=>`<div class="dept-btn" data-dept="${d}">${d}</div>`).join('')}
+</div>
+
+<div class="grid-full">
+  <div class="chart-card">
+    <div class="chart-title"><span class="dot blue"></span>2026年各产品发货明细</div>
+    <div class="table-scroll">
+    <table class="target-table" id="allDetailTable">
+      <thead><tr>
+        <th>产品名称</th>
+        <th>发货数量</th>
+        <th>目标数量</th>
+        <th>数量进度</th>
+        <th>含税金额</th>
+        <th>目标金额</th>
+        <th>金额进度</th>
+      </tr></thead>
+      <tbody></tbody>
+    </table>
+    </div>
+  </div>
+</div>
+`;
+  pagesEl.appendChild(page);
+
+  // 产品简称映射
+  const shortNames={
+    '头孢泊肟酯干混悬剂':'头孢泊肟酯\n干混悬剂',
+    '左氧氟沙星注射液':'左氧氟沙星\n注射液',
+    '硫酸异帕米星注射液':'硫酸异帕米星\n注射液',
+    '左氧氟沙星片':'左氧氟沙星片',
+    '头孢泊肟酯片':'头孢泊肟酯片',
+    '立林':'立林'
+  };
+
+  // 渲染 KPI 行（按产品）
+  function renderAllKpi(dept){
+    const kpiRow=document.getElementById('allKpiRow');
+    const deptKey=(dept==='总计')?'总计':dept;
+    const rows=DATA.all_overview.filter(r=>r.dept===deptKey);
+
+    kpiRow.innerHTML=products.map((p,i)=>{
+      const r=rows.find(x=>x.product===p)||{};
+      const qr=r.qty_rate||0;
+      const label=(shortNames[p]||p).replace(/\n/g,'<br>');
+      return `<div class="kpi-card">
+  <div class="kpi-label" style="font-size:12px;line-height:1.4">${label}</div>
+  <div class="kpi-value blue" style="font-size:18px">${fmt(r.actual_qty||0)}</div>
+  <div class="kpi-sub" style="font-size:12px">${fmtAmt(r.actual_amt||0)}</div>
+  <div class="kpi-rate ${rateClass(qr)}">${qr>0?qr+'% 完成':'—'}</div>
+</div>`;
+    }).join('');
+  }
+
+  // 渲染明细表格
+  function renderAllTable(dept){
+    const tbody=document.querySelector('#allDetailTable tbody');
+    const titleEl=document.querySelector('#allDetailTable').closest('.chart-card').querySelector('.chart-title');
+    const deptLabel=dept==='总计'?'全品种汇总':dept;
+    if(titleEl) titleEl.innerHTML=`<span class="dot blue"></span>2026年各产品发货明细 · <span style="color:#6b7280;font-weight:400;font-size:12px">${deptLabel}</span>`;
+
+    tbody.innerHTML='';
+
+    const deptKey=(dept==='总计')?'总计':dept;
+    const rows=DATA.all_overview.filter(r=>r.dept===deptKey);
+    rows.forEach(r=>{
+      const qr=r.qty_rate||0; const ar=r.amt_rate||0;
+      const tr=document.createElement('tr');
+      tr.innerHTML=`
+        <td><strong>${r.product}</strong></td>
+        <td>${fmt(r.actual_qty)}</td>
+        <td>${r.target_qty>0?fmt(r.target_qty):'—'}</td>
+        <td>
+          <div style="display:flex;align-items:center;gap:8px;">
+            <div class="progress-bar-bg" style="width:80px"><div class="progress-bar-fill" style="width:${Math.min(qr,100)}%;background:${rateColor(qr)}"></div></div>
+            <span class="${rateClass(qr)}">${r.target_qty>0?qr+'%':'—'}</span>
+          </div>
+        </td>
+        <td>${fmtAmt(r.actual_amt)}</td>
+        <td>${r.target_amt>0?fmtAmt(r.target_amt):'—'}</td>
+        <td>
+          <div style="display:flex;align-items:center;gap:8px;">
+            <div class="progress-bar-bg" style="width:80px"><div class="progress-bar-fill" style="width:${Math.min(ar,100)}%;background:${rateColor(ar)}"></div></div>
+            <span class="${rateClass(ar)}">${r.target_amt>0?ar+'%':'—'}</span>
+          </div>
+        </td>`;
+      tbody.appendChild(tr);
+    });
+  }
+
+  // 部门筛选联动
+  function renderAll(dept){
+    renderAllKpi(dept);
+    renderAllTable(dept);
+  }
+
+  document.getElementById('allDeptFilter').addEventListener('click',e=>{
+    const btn=e.target.closest('.dept-btn');
+    if(!btn)return;
+    document.querySelectorAll('#allDeptFilter .dept-btn').forEach(b=>b.classList.remove('active'));
+    btn.classList.add('active');
+    renderAll(btn.dataset.dept);
+  });
+
+  renderAll('总计');
+}
+
+// ============================================================
+// BUILD PRODUCT PAGE
+// ============================================================
+function buildProductPage(p, pi){
+  const page=document.createElement('div');
+  page.className='page';
+  page.id='page-p'+pi;
+
+  const totData=DATA.dept_total[p]||{};
+  const tgtData=DATA.target_data[p]||{};
+  const total=totData['总计']||{};
+  const tgtTotal=tgtData['总计']||{};
+  const qr=tgtTotal.qty_rate||0;
+  const ar=tgtTotal.amt_rate||0;
+
+  const deptBtns=(['总计',...depts]).map(d=>{
+    const cls=d==='总计'?'dept-btn active':'dept-btn';
+    return `<div class="${cls}" data-dept="${d}">${d==='总计'?'全部':d}</div>`;
+  }).join('');
+
+  page.innerHTML=`
+<!-- KPI -->
+<div class="kpi-row">
+  <div class="kpi-card">
+    <div class="kpi-label">2026年总发货数量</div>
+    <div class="kpi-value blue">${fmt(total.qty)}</div>
+    <div class="kpi-sub">统计物料数量</div>
+  </div>
+  <div class="kpi-card">
+    <div class="kpi-label">2026年总含税金额</div>
+    <div class="kpi-value orange">${fmtAmt(total.amt)}</div>
+    <div class="kpi-sub">含税金额</div>
+  </div>
+  <div class="kpi-card">
+    <div class="kpi-label">全年目标数量</div>
+    <div class="kpi-value yellow">${tgtTotal.target_qty>0?fmt(tgtTotal.target_qty):'—'}</div>
+    <div class="kpi-rate ${rateClass(qr)}">${tgtTotal.target_qty>0?qr+'% 完成':'—'}</div>
+  </div>
+  <div class="kpi-card">
+    <div class="kpi-label">全年目标金额</div>
+    <div class="kpi-value yellow">${tgtTotal.target_amt>0?fmtAmt(tgtTotal.target_amt):'—'}</div>
+    <div class="kpi-rate ${rateClass(ar)}">${tgtTotal.target_amt>0?ar+'% 完成':'—'}</div>
+  </div>
+  ${depts.map(d=>{
+    const dt=totData[d]||{}; const tt=tgtData[d]||{};
+    return `<div class="kpi-card">
+      <div class="kpi-label">${d} · 2026年</div>
+      <div class="kpi-value" style="color:${DEPT_COLORS[d]};font-size:17px">${fmt(dt.qty)}</div>
+      <div class="kpi-sub">${fmtAmt(dt.amt)}</div>
+      <div class="kpi-rate ${rateClass(tt.qty_rate||0)}">${tt.target_qty>0?(tt.qty_rate||0)+'% 进度':'无目标'}</div>
+    </div>`;
+  }).join('')}
+</div>
+
+<!-- 维度筛选 -->
+<div class="dept-filter" id="deptFilter${pi}">
+  <span class="dept-filter-label">按销售部门查看：</span>
+  ${deptBtns}
+</div>
+
+<!-- 月度发货 -->
+<div class="grid-full">
+  <div class="chart-card">
+    <div class="chart-title"><span class="dot blue"></span>2026年月度发货数量 &amp; 含税金额</div>
+    <div id="chartMonth${pi}" class="chart-h300"></div>
+  </div>
+</div>
+
+<!-- 趋势 -->
+<div class="grid-full">
+  <div class="chart-card">
+    <div class="chart-title"><span class="dot green"></span>2023-2026年发货数量变动趋势（分销售部门）</div>
+    <div id="chartTrend${pi}" class="chart-h300"></div>
+  </div>
+</div>
+
+<!-- 目标进度 -->
+<div class="grid-full">
+  <div class="chart-card">
+    <div class="chart-title"><span class="dot purple"></span>2026年发货目标进度</div>
+    <div id="targetProgress${pi}"></div>
+  </div>
+</div>
+
+<!-- 地区进度 -->
+<div class="grid-full">
+  <div class="chart-card">
+    <div class="chart-title"><span class="dot orange"></span>2026年地区发货进度</div>
+    <div class="sub-tab-bar" id="regionDeptTab${pi}">
+      <div class="sub-tab active" data-dept="总计">总计</div>
+      ${depts.map(d=>`<div class="sub-tab" data-dept="${d}">${d}</div>`).join('')}
+    </div>
+    <div id="regionProgressTable${pi}"></div>
+  </div>
+</div>
+
+
+`;
+
+  pagesEl.appendChild(page);
+
+  // —— 渲染各图表 ——
+  let curDept='总计';
+
+  function renderAllCharts(dept){
+    curDept=dept;
+    renderMonthChart(dept);
+    renderTargetProgress(dept);
+  }
+
+  // 月度图
+  function renderMonthChart(dept){
+    const mObj=DATA.month_data[p]&&DATA.month_data[p][dept]?DATA.month_data[p][dept]:{};
+    const qtyArr=MONTHS.map((_,i)=>(mObj[String(i+1)]||{}).qty||0);
+    const amtArr=MONTHS.map((_,i)=>(mObj[String(i+1)]||{}).amt||0);
+    makeChart('chartMonth'+pi,{
+      tooltip:{trigger:'axis',axisPointer:{type:'cross'}},
+      legend:{data:['发货数量','含税金额'],top:0},
+      grid:{left:10,right:50,bottom:5,top:40,containLabel:true},
+      xAxis:{type:'category',data:MONTHS,axisLabel:{fontSize:11}},
+      yAxis:[
+        {type:'value',name:'数量',axisLabel:{formatter:v=>fmt(v)},splitLine:{lineStyle:{color:'#f0f1f5'}}},
+        {type:'value',name:'金额',axisLabel:{formatter:v=>fmtAmt(v)},splitLine:{show:false}}
+      ],
+      series:[
+        {name:'发货数量',type:'bar',data:qtyArr,itemStyle:{color:DEPT_COLORS[dept]||'#1a73e8'},barMaxWidth:30,label:{show:true,position:'top',formatter:p=>p.value>0?fmt(p.value):'',fontSize:10,color:'#6b7280'}},
+        {name:'含税金额',type:'line',yAxisIndex:1,data:amtArr,smooth:true,itemStyle:{color:'#e65100'},lineStyle:{color:'#e65100',width:2},symbol:'circle',symbolSize:5}
+      ]
+    });
+  }
+
+  // 部门对比柱状图
+  function renderDeptBar(dept){
+    const deptList=dept==='总计'?[...depts]:([dept]);
+    const barSeries=deptList.map(d=>{
+      const mObj=DATA.month_data[p]&&DATA.month_data[p][d]?DATA.month_data[p][d]:{};
+      return{
+        name:d,type:'bar',stack:'dept',
+        data:MONTHS.map((_,i)=>(mObj[String(i+1)]||{}).qty||0),
+        itemStyle:{color:DEPT_COLORS[d]||'#8b949e'}
+      };
+    });
+    makeChart('chartDeptBar'+pi,{
+      tooltip:{trigger:'axis',axisPointer:{type:'shadow'}},
+      legend:{data:deptList,top:0},
+      grid:{left:10,right:10,bottom:5,top:40,containLabel:true},
+      xAxis:{type:'category',data:MONTHS,axisLabel:{fontSize:11}},
+      yAxis:{type:'value',axisLabel:{formatter:v=>fmt(v)},splitLine:{lineStyle:{color:'#f0f1f5'}}},
+      series:barSeries
+    });
+  }
+
+  // 趋势图（初始化一次，不随部门切换）
+  function renderTrend(){
+    const years=['2023','2024','2025','2026'];
+    const trendSeries=[...depts,'总计'].map(d=>({
+      name:d,type:'line',smooth:true,
+      itemStyle:{color:DEPT_COLORS[d]||'#9ca3af'},
+      lineStyle:{color:DEPT_COLORS[d]||'#9ca3af',width:d==='总计'?1:2,type:d==='总计'?'dashed':'solid'},
+      data:years.map(y=>DATA.trend_data[p]&&DATA.trend_data[p][d]?DATA.trend_data[p][d][y]||0:0)
+    }));
+    makeChart('chartTrend'+pi,{
+      tooltip:{trigger:'axis'},
+      legend:{data:[...depts,'总计'],top:0},
+      grid:{left:10,right:10,bottom:5,top:40,containLabel:true},
+      xAxis:{type:'category',data:years,axisLabel:{fontSize:12}},
+      yAxis:{type:'value',axisLabel:{formatter:v=>fmt(v)},splitLine:{lineStyle:{color:'#f0f1f5'}}},
+      series:trendSeries
+    });
+  }
+
+  // 目标进度（部门+数量/金额）
+  function renderTargetProgress(dept){
+    const wrap=document.getElementById('targetProgress'+pi);
+    const deptList=dept==='总计'?['总计',...depts]:[dept];
+    const tD=DATA.target_data[p]||{};
+    let html=`<div style="display:flex;gap:12px;flex-wrap:wrap;">`;
+    deptList.forEach(d=>{
+      const td=tD[d]||{};
+      const qr=td.qty_rate||0; const ar=td.amt_rate||0;
+      if(!td.target_qty&&!td.actual_qty)return;
+      html+=`<div style="flex:1;min-width:200px;background:#f8f9fc;border:1px solid #e8eaf0;border-radius:10px;padding:12px;">
+        <div style="font-size:13px;font-weight:600;color:${DEPT_COLORS[d]||'#2d3142'};margin-bottom:10px;">${d}</div>
+        <div style="margin-bottom:8px;">
+          <div style="display:flex;justify-content:space-between;font-size:11px;color:#6b7280;margin-bottom:4px;">
+            <span>数量进度</span><span>${fmt(td.actual_qty)} / ${td.target_qty>0?fmt(td.target_qty):'—'}</span>
+          </div>
+          <div class="progress-bar-bg"><div class="progress-bar-fill" style="width:${Math.min(qr,100)}%;background:${rateColor(qr)};height:8px;border-radius:4px;"></div></div>
+          <div style="text-align:right;font-size:12px;margin-top:3px;" class="${rateClass(qr)}">${td.target_qty>0?qr+'%':'无目标'}</div>
+        </div>
+        <div>
+          <div style="display:flex;justify-content:space-between;font-size:11px;color:#6b7280;margin-bottom:4px;">
+            <span>金额进度</span><span>${fmtAmt(td.actual_amt)} / ${td.target_amt>0?fmtAmt(td.target_amt):'—'}</span>
+          </div>
+          <div class="progress-bar-bg"><div class="progress-bar-fill" style="width:${Math.min(ar,100)}%;background:${rateColor(ar)};height:8px;border-radius:4px;"></div></div>
+          <div style="text-align:right;font-size:12px;margin-top:3px;" class="${rateClass(ar)}">${td.target_amt>0?ar+'%':'无目标'}</div>
+        </div>
+      </div>`;
+    });
+    html+=`</div>`;
+    wrap.innerHTML=html;
+  }
+
+  // 地区进度表（按完成率降序）
+  function renderRegionProgress(dept){
+    const wrap=document.getElementById('regionProgressTable'+pi);
+    const rows=((DATA.dept_region_target[p]&&DATA.dept_region_target[p][dept])||[]).sort((a,b)=>(b.qty_rate||0)-(a.qty_rate||0));
+    if(!rows.length){wrap.innerHTML='<div style="color:#8b949e;padding:10px;">暂无地区目标数据</div>';return;}
+    let html=`<div class="table-scroll"><table class="target-table">
+      <thead><tr>
+        <th>地区</th>
+        <th>实际数量</th><th>目标数量</th><th>数量进度</th>
+        <th>实际金额</th><th>目标金额</th><th>金额进度</th>
+      </tr></thead><tbody>`;
+    rows.forEach(r=>{
+      const qr=r.qty_rate||0; const ar=r.amt_rate||0;
+      html+=`<tr>
+        <td><strong>${r.region}</strong></td>
+        <td>${fmt(r.actual_qty)}</td>
+        <td>${r.target_qty>0?fmt(r.target_qty):'—'}</td>
+        <td><div style="display:flex;align-items:center;gap:6px;">
+          <div class="progress-bar-bg" style="width:70px"><div class="progress-bar-fill" style="width:${Math.min(qr,100)}%;background:${rateColor(qr)}"></div></div>
+          <span class="${rateClass(qr)}">${r.target_qty>0?qr+'%':'—'}</span>
+        </div></td>
+        <td>${fmtAmt(r.actual_amt)}</td>
+        <td>${r.target_amt>0?fmtAmt(r.target_amt):'—'}</td>
+        <td><div style="display:flex;align-items:center;gap:6px;">
+          <div class="progress-bar-bg" style="width:70px"><div class="progress-bar-fill" style="width:${Math.min(ar,100)}%;background:${rateColor(ar)}"></div></div>
+          <span class="${rateClass(ar)}">${r.target_amt>0?ar+'%':'—'}</span>
+        </div></td>
+      </tr>`;
+    });
+    html+=`</tbody></table></div>`;
+    wrap.innerHTML=html;
+  }
+
+  // 地区饼图
+  function renderRegionPie(){
+    const rData=(DATA.region_data[p]||[]).slice(0,12);
+    makeChart('chartRegionPie'+pi,{
+      tooltip:{trigger:'item',formatter:'{b}: {c} ({d}%)'},
+      legend:{type:'scroll',bottom:0,textStyle:{color:'#8b949e',fontSize:10}},
+      series:[{
+        type:'pie',radius:['35%','65%'],center:['50%','45%'],
+        data:rData.map((r,i)=>({name:r['地区']||r.region,value:r.qty,itemStyle:{color:PRODUCT_COLORS[i%6]}})),
+        label:{formatter:'{b}\n{d}%',fontSize:10,color:'#c9d1d9'},
+        emphasis:{itemStyle:{shadowBlur:10,shadowOffsetX:0,shadowColor:'rgba(0,0,0,0.5)'}}
+      }]
+    });
+  }
+
+  // 地区趋势折线
+  function renderRegionTrend(){
+    const allRt=DATA.region_trend[p]||[];
+    const years=[2023,2024,2025,2026];
+    // 找 top 地区（按2026年发货量排序，取前8）
+    const r2026={};
+    allRt.filter(r=>r['年份']===2026).forEach(r=>{r2026[r['地区']]=(r2026[r['地区']]||0)+r.qty;});
+    const topRegions=Object.entries(r2026).sort((a,b)=>b[1]-a[1]).slice(0,8).map(e=>e[0]);
+    const series=topRegions.map((reg,i)=>({
+      name:reg,type:'line',smooth:true,
+      itemStyle:{color:PRODUCT_COLORS[i%6]},
+      lineStyle:{color:PRODUCT_COLORS[i%6],width:2},
+      data:years.map(y=>{
+        const row=allRt.find(r=>r['年份']===y&&r['地区']===reg);
+        return row?row.qty:0;
+      })
+    }));
+    makeChart('chartRegionTrend'+pi,{
+      tooltip:{trigger:'axis'},
+      legend:{data:topRegions,top:0,type:'scroll'},
+      grid:{left:10,right:10,bottom:5,top:40,containLabel:true},
+      xAxis:{type:'category',data:years.map(y=>y+'年'),axisLabel:{fontSize:11}},
+      yAxis:{type:'value',axisLabel:{formatter:v=>fmt(v)},splitLine:{lineStyle:{color:'#f0f1f5'}}},
+      series
+    });
+  }
+
+  // 部门筛选事件
+  document.getElementById('deptFilter'+pi).addEventListener('click',e=>{
+    const btn=e.target.closest('.dept-btn');
+    if(!btn)return;
+    document.querySelectorAll('#deptFilter'+pi+' .dept-btn').forEach(b=>b.classList.remove('active'));
+    btn.classList.add('active');
+    renderAllCharts(btn.dataset.dept);
+  });
+
+  // 地区进度部门切换
+  document.getElementById('regionDeptTab'+pi).addEventListener('click',e=>{
+    const t=e.target.closest('.sub-tab');
+    if(!t)return;
+    document.querySelectorAll('#regionDeptTab'+pi+' .sub-tab').forEach(b=>b.classList.remove('active'));
+    t.classList.add('active');
+    renderRegionProgress(t.dataset.dept);
+  });
+
+  // 初始化
+  renderAllCharts('总计');
+  renderTrend();
+  renderRegionProgress('总计');
+}
+
+// ============================================================
+// INIT
+// ============================================================
+buildAllPage();
+products.forEach((p,i)=>buildProductPage(p,i));
+
+
+</script>
+</body>
+</html>
