@@ -1,0 +1,1382 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>规划公司（渝中南岸巴南）销售看板</title>
+<script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<style>
+  :root {
+    --primary: #1976D2;
+    --primary-light: #2196F3;
+    --accent: #1565C0;
+    --bg: #f0f4f8;
+    --card-bg: #ffffff;
+    --card-border: rgba(25,118,210,0.15);
+    --text: #1a2a3a;
+    --text-muted: #5c7a9a;
+    --green: #2E7D32;
+    --orange: #E65100;
+    --red: #C62828;
+    --yellow: #F9A825;
+    --brand-color: #1976D2;
+    --comm-color: #0288D1;
+    --agent-color: #7B1FA2;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'PingFang SC','Microsoft YaHei',sans-serif;
+    min-height: 100vh;
+    padding: 0;
+  }
+  /* 顶栏 */
+  .header {
+    background: linear-gradient(90deg, #1565C0 0%, #1976D2 50%, #1565C0 100%);
+    border-bottom: none;
+    padding: 12px 48px;  /* 左侧padding增大，让蓝色块更宽 */
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    box-shadow: 0 2px 8px rgba(21,101,192,0.25);
+  }
+  .header-title {
+    font-size: 20px;
+    font-weight: 700;
+    color: #ffffff;
+    letter-spacing: 2px;
+  }
+  .header-subtitle { font-size: 12px; color: rgba(255,255,255,0.7); margin-top: 2px; }
+  .header-right { display: flex; align-items: center; gap: 8px; }
+  .time-display { color: rgba(255,255,255,0.8); font-size: 13px; }
+
+  /* 切片器 */
+  .slicer-bar {
+    background: #ffffff;
+    border-bottom: 1px solid rgba(25,118,210,0.12);
+    padding: 10px 24px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    box-shadow: 0 1px 4px rgba(21,101,192,0.06);
+    flex-wrap: wrap;
+  }
+  .slicer-group {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding-right: 16px;
+    border-right: 1px solid rgba(25,118,210,0.12);
+  }
+  .slicer-group:last-child {
+    border-right: none;
+  }
+  .slicer-label { color: var(--text-muted); font-size: 13px; font-weight: 600; margin-right: 4px; }
+  .slicer-btn {
+    padding: 4px 14px;
+    border: 1px solid rgba(25,118,210,0.3);
+    background: transparent;
+    color: #1976D2;
+    border-radius: 20px;
+    cursor: pointer;
+    font-size: 12px;
+    transition: all .2s;
+  }
+  .slicer-btn:hover { border-color: #1976D2; background: rgba(25,118,210,0.06); }
+  .slicer-btn.active {
+    background: #1976D2;
+    border-color: #1976D2;
+    color: #fff;
+    font-weight: 600;
+    box-shadow: 0 2px 8px rgba(25,118,210,0.3);
+  }
+
+  /* 主体 */
+  .main { padding: 16px 24px; }
+
+  /* KPI卡片 */
+  .kpi-grid {
+    display: grid;
+    grid-template-columns: repeat(6, 1fr);
+    gap: 12px;
+    margin-bottom: 16px;
+  }
+  .kpi-card {
+    background: #ffffff;
+    border: 1px solid rgba(25,118,210,0.12);
+    border-radius: 10px;
+    padding: 16px 14px;
+    position: relative;
+    overflow: hidden;
+    transition: transform .2s, box-shadow .2s;
+    box-shadow: 0 1px 6px rgba(21,101,192,0.07);
+  }
+  .kpi-card:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(25,118,210,0.15); }
+  .kpi-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 3px;
+    border-radius: 10px 10px 0 0;
+  }
+  .kpi-card.blue::before { background: linear-gradient(90deg,#1565C0,#42A5F5); }
+  .kpi-card.cyan::before { background: linear-gradient(90deg,#0277BD,#29B6F6); }
+  .kpi-card.green::before { background: linear-gradient(90deg,#2E7D32,#66BB6A); }
+  .kpi-card.orange::before { background: linear-gradient(90deg,#E65100,#FFA726); }
+  .kpi-card.purple::before { background: linear-gradient(90deg,#6A1B9A,#AB47BC); }
+  .kpi-card.red::before { background: linear-gradient(90deg,#B71C1C,#EF5350); }
+  .kpi-label { font-size: 11px; color: #7a93aa; margin-bottom: 6px; letter-spacing: 0.5px; }
+  .kpi-value { font-size: 22px; font-weight: 700; letter-spacing: 1px; color: #1a2a3a; }
+  .kpi-sub { font-size: 11px; color: #7a93aa; margin-top: 4px; }
+  .kpi-tag {
+    display: inline-block;
+    padding: 1px 6px;
+    border-radius: 10px;
+    font-size: 10px;
+    margin-top: 4px;
+  }
+  .kpi-tag.good { background: rgba(46,125,50,.1); color: #2E7D32; }
+  .kpi-tag.warn { background: rgba(230,81,0,.1); color: #E65100; }
+  .kpi-tag.bad  { background: rgba(198,40,40,.1); color: #C62828; }
+
+  /* 图表区 */
+  .chart-row {
+    display: grid;
+    grid-template-columns: 380px 1fr;
+    gap: 12px;
+    margin-bottom: 16px;
+  }
+  .chart-card {
+    background: #ffffff;
+    border: 1px solid rgba(25,118,210,0.12);
+    border-radius: 10px;
+    padding: 14px 16px;
+    box-shadow: 0 1px 6px rgba(21,101,192,0.07);
+  }
+  .chart-title {
+    font-size: 13px;
+    font-weight: 600;
+    color: #1a2a3a;
+    margin-bottom: 12px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .chart-title::before {
+    content: '';
+    width: 3px;
+    height: 14px;
+    background: linear-gradient(180deg,#1976D2,#29B6F5);
+    border-radius: 2px;
+  }
+  .chart-body { width: 100%; }
+
+  /* 第四部分：明细表 */
+  .section-title {
+    font-size: 14px;
+    font-weight: 600;
+    color: #1a2a3a;
+    margin-bottom: 12px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .section-title::before {
+    content: '';
+    width: 4px;
+    height: 16px;
+    background: linear-gradient(180deg,#1976D2,#29B6F5);
+    border-radius: 2px;
+  }
+
+  /* 筛选栏 */
+  .filter-bar {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 10px;
+    flex-wrap: wrap;
+  }
+  .filter-bar label { font-size: 12px; color: #5c7a9a; }
+  .filter-select, .filter-input {
+    background: #f5f8fd;
+    border: 1px solid rgba(25,118,210,0.2);
+    color: #1a2a3a;
+    padding: 4px 10px;
+    border-radius: 6px;
+    font-size: 12px;
+    cursor: pointer;
+    min-width: 160px;
+  }
+  .filter-input { min-width: 220px; }
+  .filter-select:focus, .filter-input:focus { outline: none; border-color: #1976D2; }
+
+  /* 表格 */
+  .table-wrap {
+    overflow-x: auto;
+    max-height: 420px;
+    overflow-y: auto;
+  }
+  .data-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 12px;
+  }
+  .data-table th {
+    background: #EBF3FB;
+    color: #1565C0;
+    padding: 8px 10px;
+    text-align: center;  /* 默认居中 */
+    font-weight: 600;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    border-bottom: 2px solid rgba(25,118,210,0.2);
+    white-space: nowrap;
+  }
+  .data-table th:first-child {
+    text-align: left;  /* 医院名称/产品名称 左对齐 */
+  }
+  .data-table td {
+    padding: 7px 10px;
+    border-bottom: 1px solid #f0f4f8;
+    color: #1a2a3a;
+    white-space: nowrap;
+    text-align: center;  /* 默认居中 */
+  }
+  .data-table td:first-child {
+    text-align: left;  /* 医院名称/产品名称 左对齐 */
+  }
+  .data-table td:nth-child(2) {
+    text-align: center;  /* 序号居中 */
+  }
+  .data-table tr:hover td { background: #f0f7ff; }
+  
+  /* 分页控件 */
+  .pagination-bar {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    margin-top: 12px;
+    padding: 8px 0;
+  }
+  .page-btn {
+    padding: 4px 10px;
+    border: 1px solid #dde6f0;
+    background: #fff;
+    color: #1565C0;
+    font-size: 12px;
+    border-radius: 4px;
+    cursor: pointer;
+    min-width: 32px;
+  }
+  .page-btn:hover { background: #EBF3FB; }
+  .page-btn.active { background: #1565C0; color: #fff; border-color: #1565C0; }
+  .page-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+  .page-info { font-size: 12px; color: #5c7a9a; margin: 0 8px; }
+  .data-table tr:last-child td { border-bottom: none; }
+  /* 钻取展开行 */
+  .detail-row td {
+    background: #f8fafc !important;
+    padding: 0 !important;
+  }
+  .detail-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 11px;
+    margin: 0;
+  }
+  .detail-table th {
+    background: #e8f0f8;
+    color: #1565C0;
+    padding: 6px 10px;
+    font-weight: 600;
+    text-align: center;
+    border-bottom: 1px solid #cde0f0;
+  }
+  .detail-table td {
+    padding: 5px 10px;
+    border-bottom: 1px solid #f0f4f8;
+    color: #1a2a3a;
+    text-align: center;
+  }
+  .detail-table td:first-child { text-align: left; }
+  .detail-wrap {
+    padding: 10px 20px 15px 60px;
+    background: linear-gradient(to bottom, #f8fafc, #fff);
+    border-bottom: 2px solid #d0e0f0;
+  }
+  .detail-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 8px;
+  }
+  .detail-title {
+    font-size: 12px;
+    color: #1565C0;
+    font-weight: 600;
+  }
+  .detail-close {
+    font-size: 11px;
+    color: #888;
+    cursor: pointer;
+    padding: 2px 8px;
+    background: #eee;
+    border-radius: 3px;
+  }
+  .detail-close:hover { background: #ddd; }
+  .badge {
+    display: inline-block;
+    padding: 1px 7px;
+    border-radius: 10px;
+    font-size: 10px;
+    font-weight: 600;
+  }
+  .badge-brand  { background: rgba(25,118,210,.1); color: #1565C0; }
+  .badge-comm   { background: rgba(2,136,209,.1); color: #0277BD; }
+  .badge-agent  { background: rgba(123,31,162,.1); color: #7B1FA2; }
+  .rate-bar {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+  }
+  .rate-track {
+    width: 60px;
+    height: 5px;
+    background: rgba(25,118,210,0.1);
+    border-radius: 3px;
+    overflow: hidden;
+  }
+  .rate-fill { height: 100%; border-radius: 3px; }
+  .tab-bar {
+    display: flex;
+    gap: 0;
+    margin-bottom: 12px;
+    border-bottom: 2px solid #e8f0fb;
+  }
+  .tab-btn {
+    padding: 6px 18px;
+    background: transparent;
+    border: none;
+    color: #5c7a9a;
+    font-size: 13px;
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+    margin-bottom: -2px;
+    transition: all .2s;
+  }
+  .tab-btn.active {
+    color: #1976D2;
+    border-bottom-color: #1976D2;
+    font-weight: 600;
+  }
+  .tab-content { display: none; }
+  .tab-content.active { display: block; }
+
+  /* 滚动条 */
+  ::-webkit-scrollbar { width: 5px; height: 5px; }
+  ::-webkit-scrollbar-track { background: #f5f8fd; }
+  ::-webkit-scrollbar-thumb { background: rgba(25,118,210,0.25); border-radius: 3px; }
+
+  .text-right { text-align: right; }
+  .text-center { text-align: center; }
+  .font-bold { font-weight: 600; }
+  .color-green { color: #2E7D32; }
+  .color-orange { color: #E65100; }
+  .color-red { color: #C62828; }
+  .color-blue { color: #1976D2; }
+  
+  /* 响应式 */
+  @media (max-width: 1024px) {
+    .kpi-grid { grid-template-columns: repeat(3, 1fr); }
+    .chart-row { grid-template-columns: 1fr; }
+    .slicer-bar { padding: 8px 16px; }
+    .slicer-group { padding-right: 10px; margin-bottom: 6px; }
+  }
+  @media (max-width: 768px) {
+    .header { padding: 10px 16px; }
+    .header-title { font-size: 16px; }
+    .main { padding: 12px 16px; }
+    .kpi-grid { grid-template-columns: repeat(2, 1fr); gap: 8px; }
+    .kpi-value { font-size: 18px; }
+  }
+</style>
+</head>
+<body>
+
+<!-- 顶栏 -->
+<div class="header">
+  <div>
+    <div class="header-title">📊 规划公司（渝中南岸巴南）看板</div>
+  </div>
+  <div class="header-right">
+    <div class="time-display" id="timeDisplay"></div>
+  </div>
+</div>
+
+<!-- 切片器 -->
+<div class="slicer-bar">
+  <!-- 区域切片 -->
+  <div class="slicer-group">
+    <span class="slicer-label">区域：</span>
+    <button class="slicer-btn active" onclick="switchDistrict('全部')">全部</button>
+    <button class="slicer-btn" onclick="switchDistrict('渝中区')">渝中区</button>
+    <button class="slicer-btn" onclick="switchDistrict('南岸区')">南岸区</button>
+    <button class="slicer-btn" onclick="switchDistrict('巴南区')">巴南区</button>
+  </div>
+  
+  <!-- 产品分类切片 -->
+  <div class="slicer-group">
+    <span class="slicer-label">产品分类：</span>
+    <button class="slicer-btn active" onclick="switchProductType('全部')">全产品</button>
+    <button class="slicer-btn" onclick="switchProductType('品牌品')">品牌品</button>
+    <button class="slicer-btn" onclick="switchProductType('商销品')">商销品</button>
+    <button class="slicer-btn" onclick="switchProductType('代理品')">代理品</button>
+  </div>
+  
+  <!-- 医院等级切片 -->
+  <div class="slicer-group">
+    <span class="slicer-label">医院等级：</span>
+    <button class="slicer-btn active" onclick="switchGrade('全部')">全部等级</button>
+    <button class="slicer-btn" onclick="switchGrade('三级')">三级</button>
+    <button class="slicer-btn" onclick="switchGrade('二级')">二级</button>
+    <button class="slicer-btn" onclick="switchGrade('其他')">其他</button>
+  </div>
+</div>
+
+<div class="main">
+  <!-- KPI卡片 -->
+  <div class="kpi-grid" id="kpiGrid">
+    <div class="kpi-card blue">
+      <div class="kpi-label">销售目标金额</div>
+      <div class="kpi-value color-blue" id="kpi-target">—</div>
+      <div class="kpi-sub">26年全年目标（万元）</div>
+    </div>
+    <div class="kpi-card cyan">
+      <div class="kpi-label">当前销售金额</div>
+      <div class="kpi-value" id="kpi-sales" style="color:#26C6DA">—</div>
+      <div class="kpi-sub">26年累计销售（万元）</div>
+    </div>
+    <div class="kpi-card green">
+      <div class="kpi-label">目标完成率</div>
+      <div class="kpi-value" id="kpi-rate">—</div>
+      <div class="kpi-sub" id="kpi-rate-tag"></div>
+    </div>
+    <div class="kpi-card orange">
+      <div class="kpi-label">终端数 / 在销终端数</div>
+      <div class="kpi-value" id="kpi-terminal">—</div>
+      <div class="kpi-sub" id="kpi-terminal-rate"></div>
+    </div>
+    <div class="kpi-card purple">
+      <div class="kpi-label">在销产品数</div>
+      <div class="kpi-value" id="kpi-products" style="color:#AB47BC">—</div>
+      <div class="kpi-sub">款</div>
+    </div>
+    <div class="kpi-card red">
+      <div class="kpi-label">26年预估销售费用</div>
+      <div class="kpi-value" id="kpi-fee" style="color:#EF5350">—</div>
+      <div class="kpi-sub" id="kpi-fee-rate"></div>
+    </div>
+  </div>
+
+  <!-- 图表区 -->
+  <div class="chart-row">
+    <div class="chart-card">
+      <div class="chart-title">销售类型占比（品牌品 / 商销品 / 代理品）</div>
+      <div id="pieChart" class="chart-body" style="height:300px;"></div>
+      <div id="typeDetail" style="margin-top:12px;"></div>
+    </div>
+    <div class="chart-card">
+      <div class="chart-title">销售进度展示（目标 vs 完成）</div>
+      <div id="progressChart" class="chart-body" style="height:340px;"></div>
+    </div>
+  </div>
+
+  <!-- 明细表 -->
+  <div class="chart-card">
+    <div class="tab-bar">
+      <button class="tab-btn active" onclick="switchTab('terminal')">终端销售情况</button>
+      <button class="tab-btn" onclick="switchTab('product')">产品销售明细</button>
+    </div>
+
+    <!-- 终端明细 -->
+    <div class="tab-content active" id="tab-terminal">
+      <div class="filter-bar">
+        <label>搜索医院：</label>
+        <input type="text" id="terminalSearch" placeholder="输入医院名称筛选..." 
+          class="filter-input" oninput="goTerminalPage(1)">
+      </div>
+      <div class="table-wrap">
+        <table class="data-table" id="terminalTable">
+          <thead>
+            <tr>
+              <th style="width:50px;">序号</th>
+              <th>医院名称</th>
+              <th>所属区</th>
+              <th>医院等级</th>
+              <th class="text-right">规划产品数</th>
+              <th class="text-right">在销产品数</th>
+              <th class="text-right">医院药品销售规模(万元)</th>
+              <th class="text-right">累计销售金额(元)</th>
+              <th class="text-right">目标销售金额(元)</th>
+              <th class="text-right">完成率</th>
+              <th class="text-right">26年预估销售费用</th>
+              <th class="text-right">费用率</th>
+            </tr>
+          </thead>
+          <tbody id="terminalTbody"></tbody>
+        </table>
+      </div>
+      <div class="pagination-bar" id="terminalPagination"></div>
+    </div>
+
+    <!-- 产品明细 -->
+    <div class="tab-content" id="tab-product">
+      <div class="filter-bar">
+        <label>搜索产品：</label>
+        <input type="text" id="productSearch" placeholder="输入产品名称筛选..." 
+          class="filter-input" oninput="goProductPage(1)">
+      </div>
+      <div class="table-wrap">
+        <table class="data-table" id="productTable">
+          <thead>
+            <tr>
+              <th style="width:50px;">序号</th>
+              <th>产品名称</th>
+              <th class="text-center">分类</th>
+              <th class="text-right">终端数</th>
+              <th class="text-right">年市场规模（销量）</th>
+              <th class="text-right">当前销量(1-3月)</th>
+              <th class="text-right">目标销量</th>
+              <th class="text-right">累计销售金额(元)</th>
+              <th class="text-right">目标销售金额(元)</th>
+              <th class="text-right">完成率</th>
+              <th class="text-right">26年预估销售费用</th>
+              <th class="text-right">费用率</th>
+            </tr>
+          </thead>
+          <tbody id="productTbody"></tbody>
+        </table>
+      </div>
+      <div class="pagination-bar" id="productPagination"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ======= 全局变量 =======
+let RAW_DATA = [];      // Sheet1: 药友制药产品销售数据
+let ALL_TERMINALS = []; // Sheet2: 所有终端目录
+let TERMINAL_SCALE = {}; // Sheet2终端名称 → 医院药品销售规模(万元)
+let currentDistrict = '全部';      // 当前区域
+let currentProductType = '全部';   // 当前产品分类
+let currentGrade = '全部';         // 当前医院等级
+let pieChart, progressChart;
+const PAGE_SIZE = 10;  // 每页10条
+let terminalPage = 1, terminalTotalPage = 1;
+let productPage = 1, productTotalPage = 1;
+let expandedTerminal = null;  // 当前展开的终端
+let expandedProduct = null;   // 当前展开的产品
+
+// ======= 加载数据（两个Sheet） =======
+async function loadData() {
+  try {
+    const xlsxResp = await fetch('重庆看板底层数据合并-渝中南岸巴南.xlsx');
+    const buffer = await xlsxResp.arrayBuffer();
+    const workbook = XLSX.read(buffer, {type:'array'});
+    
+    // Sheet1: 药友制药产品在渝中南岸巴南有销售的产品情况
+    const sheet1Name = workbook.SheetNames.find(n => n.includes('药友制药'));
+    if (sheet1Name) {
+      RAW_DATA = XLSX.utils.sheet_to_json(workbook.Sheets[sheet1Name]);
+    }
+    
+    // Sheet2: 渝中南岸巴南所有终端目录
+    const sheet2Name = workbook.SheetNames.find(n => n.includes('所有终端') || n.includes('终端目录'));
+    if (sheet2Name) {
+      ALL_TERMINALS = XLSX.utils.sheet_to_json(workbook.Sheets[sheet2Name]);
+      // 构建终端名称 → 医院药品销售规模映射
+      TERMINAL_SCALE = {};
+      ALL_TERMINALS.forEach(r => {
+        if (r['终端名称']) {
+          TERMINAL_SCALE[r['终端名称']] = r['医院药品销售规模(万元)'] || 0;
+        }
+      });
+    }
+    
+    init();
+  } catch(e) {
+    console.error('数据加载失败:', e);
+    document.querySelector('.main').innerHTML = '<div style="padding:50px;text-align:center;color:#C62828;">数据加载失败，请确保Excel文件在同一目录下</div>';
+  }
+}
+
+// ======= 工具函数 =======
+function fmt(n, digit=0) {
+  if (n === null || n === undefined || n === '') return '—';
+  const v = parseFloat(n);
+  if (isNaN(v)) return '—';
+  if (Math.abs(v) >= 100000000) return (v/100000000).toFixed(2) + '亿';
+  if (Math.abs(v) >= 10000) return (v/10000).toFixed(2) + '万';
+  return v.toLocaleString('zh-CN', {minimumFractionDigits: digit, maximumFractionDigits: digit});
+}
+
+function fmtWan(n) {
+  if (!n && n !== 0) return '—';
+  const v = parseFloat(n);
+  if (isNaN(v)) return '—';
+  if (Math.abs(v) >= 10000) return (v/10000).toFixed(2) + '万';
+  return v.toFixed(2);
+}
+
+function rateColor(r) {
+  // 销售达成率 < 25% 红色，>= 25% 绿色
+  if (r >= 25) return '#2E7D32';
+  return '#C62828';
+}
+
+function getRateClass(r) {
+  if (r >= 80) return 'good';
+  if (r >= 40) return 'warn';
+  return 'bad';
+}
+
+function badgeHtml(type) {
+  const map = {
+    '品牌品': '<span class="badge badge-brand">品牌品</span>',
+    '商销品': '<span class="badge badge-comm">商销品</span>',
+    '代理品': '<span class="badge badge-agent">代理品</span>',
+  };
+  return map[type] || type;
+}
+
+function rateBarHtml(rate, color) {
+  const w = Math.min(parseFloat(rate) || 0, 100);
+  return `<div class="rate-bar"><div class="rate-track"><div class="rate-fill" style="width:${w}%;background:${color}"></div></div><span style="color:${color};font-weight:600">${rate}%</span></div>`;
+}
+
+// ======= 获取过滤后的数据 =======
+function getFilteredData() {
+  let data = [...RAW_DATA];
+  
+  // 填充空值
+  data.forEach(r => {
+    r['26年累计销售金额（无税）'] = r['26年累计销售金额（无税）'] || 0;
+    r['26年目标销售金额（无税）'] = r['26年目标销售金额（无税）'] || 0;
+    r['26年预估销售费用'] = r['26年预估销售费用'] || 0;
+    r['年销量预估/目标量'] = r['年销量预估/目标量'] || 0;
+    r['挂网价/中选价（片/支）'] = r['挂网价/中选价（片/支）'] || 0;
+  });
+  
+  // 按区域过滤
+  if (currentDistrict !== '全部') {
+    const districtKey = currentDistrict.replace('区', '');
+    data = data.filter(r => (r['区县'] || '').includes(districtKey));
+  }
+  
+  // 按产品分类过滤
+  if (currentProductType !== '全部') {
+    data = data.filter(r => r['产品分类'] === currentProductType);
+  }
+  
+  // 按医院等级过滤
+  if (currentGrade !== '全部') {
+    data = data.filter(r => (r['医院等级'] || '其他') === currentGrade);
+  }
+  
+  return data;
+}
+
+// ======= 计算统计数据 =======
+function calcStats(filteredData) {
+  const totalSales = filteredData.reduce((s,r) => s + r['26年累计销售金额（无税）'], 0);
+  const totalTarget = filteredData.reduce((s,r) => s + r['26年目标销售金额（无税）'], 0);
+  
+  // 预估年销售金额 = Σ(挂网价 × 年销量预估)
+  let estimatedSales = 0;
+  let totalFee = 0;
+  filteredData.forEach(r => {
+    const price = r['挂网价/中选价（片/支）'] || 0;
+    const qty = r['年销量预估/目标量'] || 0;
+    const fee = r['26年预估销售费用'] || 0;
+    estimatedSales += price * qty;
+    totalFee += fee;
+  });
+  
+  // 费用率 = 销售费用 / 预估年销售金额
+  const fee_rate = estimatedSales > 0 ? totalFee / estimatedSales * 100 : 0;
+  
+  // 从Sheet2（终端目录）获取总终端数 - 支持区域切片联动
+  let totalTerminals = [...ALL_TERMINALS];
+  if (currentDistrict !== '全部') {
+    // Sheet2的"区"字段格式为"重庆市-渝中区"
+    const districtKey = currentDistrict; // 如"渝中区"
+    totalTerminals = totalTerminals.filter(r => {
+      const area = r['区'] || r['省市区'] || '';
+      return area.includes(districtKey);
+    });
+  }
+  const totalTerminalCount = totalTerminals.length;
+  
+  // 在销终端数：26年累计销售金额>0 或 26年目标销售金额>0 的终端（取并集）
+  const activeTerminals = [...new Set(
+    filteredData
+      .filter(r => (r['26年累计销售金额（无税）'] > 0 || r['26年目标销售金额（无税）'] > 0) && r['终端名称'])
+      .map(r => r['终端名称'])
+  )];
+  const products = [...new Set(filteredData.filter(r => r['在销品'] === '在销品').map(r => r['药品名称']).filter(Boolean))];
+  
+  // 分类统计（仅在"全产品"时显示完整分类）
+  const byType = {};
+  const types = ['品牌品', '商销品', '代理品'];
+  
+  if (currentProductType === '全部') {
+    for (const t of types) {
+      const tdf = filteredData.filter(r => r['产品分类'] === t);
+      const sales = tdf.reduce((s,r) => s + r['26年累计销售金额（无税）'], 0);
+      const target = tdf.reduce((s,r) => s + r['26年目标销售金额（无税）'], 0);
+      byType[t] = { sales, target, completion: target > 0 ? sales/target*100 : 0 };
+    }
+  } else {
+    // 单一分类时，只显示当前分类
+    byType[currentProductType] = { 
+      sales: totalSales, 
+      target: totalTarget, 
+      completion: totalTarget > 0 ? totalSales/totalTarget*100 : 0 
+    };
+  }
+  
+  return {
+    total_sales: totalSales,
+    total_target: totalTarget,
+    total_fee: totalFee,
+    estimated_sales: estimatedSales,  // 预估年销售金额（挂网价×年销量预估）
+    completion_rate: totalTarget > 0 ? totalSales/totalTarget*100 : 0,
+    fee_rate: fee_rate,  // 费用率 = 销售费用 / 预估年销售金额
+    total_terminals: totalTerminalCount,  // 从Sheet2终端目录获取
+    active_terminals: activeTerminals.length,  // Sheet1中26年目标销售金额>0的终端
+    active_products: products.length,
+    by_type: byType
+  };
+}
+
+// ======= 终端列表 =======
+function getTerminalList(filteredData) {
+  const termMap = {};
+  filteredData.forEach(r => {
+    const name = r['终端名称'];
+    if(!name) return;
+    if(!termMap[name]) {
+      termMap[name] = {
+        '终端名称': name,
+        '区': r['区县'] || r['区'] || '',
+        '产品数': 0,
+        '在销产品数': 0,  // 26年目标销售金额>0 或 26年累计销售金额>0
+        '分类列表': new Set(),
+        '累计销售金额': 0,
+        '目标销售金额': 0,
+        '26年预估销售费用': 0,
+        '预估年销售': 0,  // 挂网价 × 年销量预估
+        '医院药品销售规模': TERMINAL_SCALE[name] || 0,  // 从Sheet2获取
+        '医院等级': r['医院等级'] || '其他'
+      };
+    }
+    termMap[name].产品数++;
+    // 在销产品：26年累计销售金额>0 或 26年目标销售金额>0
+    const actualAmt = r['26年累计销售金额（无税）'] || 0;
+    const targetAmt = r['26年目标销售金额（无税）'] || 0;
+    if (actualAmt > 0 || targetAmt > 0) {
+      termMap[name].在销产品数++;
+    }
+    termMap[name].分类列表.add(r['产品分类']);
+    termMap[name].累计销售金额 += actualAmt;
+    termMap[name].目标销售金额 += targetAmt;
+    termMap[name]['26年预估销售费用'] += r['26年预估销售费用'] || 0;
+    termMap[name].预估年销售 += (r['挂网价/中选价（片/支）'] || 0) * (r['年销量预估/目标量'] || 0);
+  });
+  
+  return Object.values(termMap).map(t => ({
+    ...t,
+    '分类文本': [...t.分类列表].join('、'),
+    '完成率': t.目标销售金额 > 0 ? t.累计销售金额/t.目标销售金额*100 : 0,
+    '费用率': t.预估年销售 > 0 ? t['26年预估销售费用']/t.预估年销售*100 : 0
+  }));
+}
+
+// ======= 产品列表 =======
+function getProductList(filteredData) {
+  const prodMap = {};
+  filteredData.forEach(r => {
+    const name = r['药品名称'];
+    if(!name) return;
+    if(!prodMap[name]) {
+      prodMap[name] = {
+        '药品名称': name,
+        '产品分类': r['产品分类'],
+        '终端数': 0,
+        '终端集合': new Set(),  // 记录该产品的终端，用于汇总市场规模
+        '累计销售金额': 0,
+        '目标销售金额': 0,
+        '当前销量': 0,
+        '目标销量': 0,
+        '26年预估销售费用': 0,
+        '预估年销售': 0,  // 挂网价 × 年销量预估
+        '年市场规模（销量）': 0  // 从Sheet2汇总各终端规模
+      };
+    }
+    prodMap[name].终端数++;
+    prodMap[name].终端集合.add(r['终端名称']);
+    prodMap[name].累计销售金额 += r['26年累计销售金额（无税）'];
+    prodMap[name].目标销售金额 += r['26年目标销售金额（无税）'];
+    prodMap[name].当前销量 += r['当前销量（1-3月流向）'] || 0;
+    prodMap[name].目标销量 += r['年销量预估/目标量'] || 0;
+    prodMap[name]['26年预估销售费用'] += r['26年预估销售费用'] || 0;
+    prodMap[name].预估年销售 += (r['挂网价/中选价（片/支）'] || 0) * (r['年销量预估/目标量'] || 0);
+  });
+  
+  // 汇总每个产品的年市场规模（销量）（从Sheet2）
+  Object.values(prodMap).forEach(p => {
+    p.终端集合.forEach(tname => {
+      p['年市场规模（销量）'] += TERMINAL_SCALE[tname] || 0;
+    });
+    delete p.终端集合;  // 删除临时集合
+  });
+  
+  return Object.values(prodMap).map(p => ({
+    ...p,
+    '完成率': p.目标销售金额 > 0 ? p.累计销售金额/p.目标销售金额*100 : 0,
+    '费用率': p.预估年销售 > 0 ? p['26年预估销售费用']/p.预估年销售*100 : 0
+  }));
+}
+
+// ======= 切换区域 =======
+function switchDistrict(name) {
+  currentDistrict = name;
+  document.querySelectorAll('.slicer-group').forEach((g, gi) => {
+    if (gi === 0) {
+      g.querySelectorAll('.slicer-btn').forEach(b => {
+        b.classList.toggle('active', b.textContent.trim() === name);
+      });
+    }
+  });
+  renderAll();
+}
+
+// ======= 切换产品分类 =======
+function switchProductType(type) {
+  currentProductType = type;
+  document.querySelectorAll('.slicer-group').forEach((g, gi) => {
+    if (gi === 1) {
+      const labels = { '全部': '全产品', '品牌品': '品牌品', '商销品': '商销品', '代理品': '代理品' };
+      g.querySelectorAll('.slicer-btn').forEach(b => {
+        b.classList.toggle('active', b.textContent.trim() === labels[type]);
+      });
+    }
+  });
+  renderAll();
+}
+
+// ======= 切换医院等级 =======
+function switchGrade(grade) {
+  currentGrade = grade;
+  document.querySelectorAll('.slicer-group').forEach((g, gi) => {
+    if (gi === 2) {
+      g.querySelectorAll('.slicer-btn').forEach(b => {
+        b.classList.toggle('active', b.textContent.trim() === grade);
+      });
+    }
+  });
+  renderAll();
+}
+
+// ======= 渲染KPI卡片 =======
+function renderKPI() {
+  const filteredData = getFilteredData();
+  const s = calcStats(filteredData);
+  
+  document.getElementById('kpi-target').textContent = fmtWan(s.total_target);
+  document.getElementById('kpi-target').style.color = '#1565C0';
+  document.getElementById('kpi-sales').textContent = fmtWan(s.total_sales);
+  document.getElementById('kpi-sales').style.color = '#0277BD';
+  
+  const rEl = document.getElementById('kpi-rate');
+  rEl.textContent = s.completion_rate.toFixed(1) + '%';
+  rEl.className = 'kpi-value';
+  rEl.style.color = rateColor(s.completion_rate);
+  document.getElementById('kpi-rate-tag').innerHTML = `<span class="kpi-tag ${getRateClass(s.completion_rate)}">${s.completion_rate >= 80 ? '良好' : s.completion_rate >= 40 ? '一般' : '待提升'}</span>`;
+
+  document.getElementById('kpi-terminal').textContent = s.total_terminals + ' / ' + s.active_terminals;
+  document.getElementById('kpi-terminal').style.color = '#E65100';
+  document.getElementById('kpi-terminal-rate').textContent = `在销率 ${(s.active_terminals/s.total_terminals*100).toFixed(1)}%`;
+  document.getElementById('kpi-products').textContent = s.active_products;
+  document.getElementById('kpi-products').style.color = '#7B1FA2';
+  document.getElementById('kpi-fee').textContent = fmtWan(s.total_fee);
+  document.getElementById('kpi-fee').style.color = '#C62828';
+  document.getElementById('kpi-fee-rate').textContent = `费用率 ${s.fee_rate.toFixed(1)}%`;
+}
+
+// ======= 渲染饼图 =======
+function renderPie() {
+  if (!pieChart) {
+    pieChart = echarts.init(document.getElementById('pieChart'));
+  }
+  const filteredData = getFilteredData();
+  const s = calcStats(filteredData);
+  const bt = s.by_type;
+  const types = ['品牌品', '商销品', '代理品'];
+  const colors = ['#1976D2', '#0288D1', '#7B1FA2'];
+  
+  // 计算总数用于显示百分比
+  const total = types.reduce((sum, t) => sum + (bt[t]?.sales || 0), 0);
+  
+  const pieData = types.map((t, i) => ({
+    name: t,
+    value: bt[t]?.sales || 0,
+    itemStyle: { color: colors[i] }
+  })).filter(d => d.value > 0);
+  
+  pieChart.setOption({
+    backgroundColor: 'transparent',
+    tooltip: {
+      trigger: 'item',
+      formatter: p => `${p.name}<br/>销售金额：${fmtWan(p.value)}<br/>占比：${p.percent}%`
+    },
+    legend: {
+      bottom: 0,
+      textStyle: { color: '#5c7a9a', fontSize: 11 },
+      itemWidth: 10, itemHeight: 10,
+    },
+    series: [{
+      type: 'pie',
+      radius: ['38%', '68%'],
+      center: ['50%', '42%'],
+      avoidLabelOverlap: true,
+      label: {
+        show: true,
+        formatter: p => `${p.percent.toFixed(1)}%`,
+        color: '#1a2a3a', fontSize: 11
+      },
+      labelLine: { lineStyle: { color: 'rgba(90,120,160,0.4)' } },
+      data: pieData,
+    }]
+  });
+
+  const html = types.map((t, i) => {
+    const info = bt[t] || { sales: 0, target: 0, completion: 0 };
+    return `<div style="display:flex;align-items:center;justify-content:space-between;padding:5px 0;border-bottom:1px solid #f0f4f8;">
+      <span style="color:${colors[i]};font-weight:600;font-size:12px;min-width:60px;">${t}</span>
+      <span style="color:#1a2a3a;font-size:12px;font-weight:600;">${fmtWan(info.sales)}</span>
+      <span style="color:#7a93aa;font-size:11px;">目标 ${fmtWan(info.target)}</span>
+      <span style="color:${rateColor(info.completion)};font-size:12px;font-weight:600;">${info.completion.toFixed(1)}%</span>
+    </div>`;
+  }).join('');
+  document.getElementById('typeDetail').innerHTML = html;
+}
+
+// ======= 渲染进度柱状图 =======
+function renderProgress() {
+  if (!progressChart) {
+    progressChart = echarts.init(document.getElementById('progressChart'));
+  }
+  const filteredData = getFilteredData();
+  const s = calcStats(filteredData);
+  const bt = s.by_type;
+  const types = ['品牌品', '商销品', '代理品'];
+  
+  // 过滤掉没有数据的类型
+  const visibleTypes = types.filter(t => (bt[t]?.sales || 0) > 0 || (bt[t]?.target || 0) > 0);
+
+  const option = {
+    backgroundColor: 'transparent',
+    tooltip: {
+      trigger: 'axis',
+      axisPointer: { type: 'shadow' },
+      backgroundColor: '#fff',
+      borderColor: '#dde6f0',
+      textStyle: { color: '#1a2a3a' },
+      formatter: params => {
+        let str = `<b>${params[0].axisValue}</b><br/>`;
+        params.forEach(p => {
+          str += `${p.marker}${p.seriesName}：${fmtWan(p.value)}<br/>`;
+        });
+        return str;
+      }
+    },
+    legend: {
+      data: ['目标金额', '完成金额'],
+      bottom: 0,
+      textStyle: { color: '#5c7a9a', fontSize: 11 },
+      itemWidth: 10, itemHeight: 10,
+    },
+    grid: { left: '3%', right: '4%', bottom: '18%', top: '6%', containLabel: true },
+    xAxis: {
+      type: 'category',
+      data: visibleTypes,
+      axisLine: { lineStyle: { color: '#dde6f0' } },
+      axisLabel: { color: '#5c7a9a', fontSize: 12 },
+    },
+    yAxis: {
+      type: 'value',
+      axisLabel: {
+        color: '#5c7a9a', fontSize: 10,
+        formatter: v => fmtWan(v)
+      },
+      splitLine: { lineStyle: { color: '#f0f4f8' } },
+    },
+    series: [
+      {
+        name: '目标金额',
+        type: 'bar',
+        barGap: '10%',
+        barMaxWidth: 40,
+        data: visibleTypes.map(t => bt[t]?.target || 0),
+        itemStyle: {
+          color: p => {
+            const c = {'品牌品':'#1976D2','商销品':'#0288D1','代理品':'#7B1FA2'}[visibleTypes[p.dataIndex]];
+            return { type:'linear', x:0,y:0,x2:0,y2:1, colorStops:[{offset:0,color:c+'40'},{offset:1,color:c+'15'}] };
+          },
+          borderRadius: [4,4,0,0],
+          borderColor: p => ({'品牌品':'#1976D2','商销品':'#0288D1','代理品':'#7B1FA2'}[visibleTypes[p.dataIndex]]),
+          borderWidth: 1,
+        },
+        label: { show: false },
+      },
+      {
+        name: '完成金额',
+        type: 'bar',
+        barMaxWidth: 40,
+        data: visibleTypes.map(t => bt[t]?.sales || 0),
+        itemStyle: {
+          color: p => {
+            const c = {'品牌品':'#1976D2','商销品':'#0288D1','代理品':'#7B1FA2'}[visibleTypes[p.dataIndex]];
+            return { type:'linear', x:0,y:0,x2:0,y2:1, colorStops:[{offset:0,color:c},{offset:1,color:c+'cc'}] };
+          },
+          borderRadius: [4,4,0,0],
+        },
+        label: {
+          show: true,
+          position: 'top',
+          formatter: p => {
+            const t = visibleTypes[p.dataIndex];
+            return (bt[t]?.completion || 0).toFixed(1) + '%';
+          },
+          color: p => rateColor(bt[visibleTypes[p.dataIndex]]?.completion || 0),
+          fontSize: 11,
+          fontWeight: 600,
+        }
+      }
+    ]
+  };
+  progressChart.setOption(option, true);
+}
+
+// ======= 渲染终端表格 =======
+function renderTerminalTable() {
+  const filteredData = getFilteredData();
+  const terminals = getTerminalList(filteredData);
+  
+  const search = (document.getElementById('terminalSearch').value || '').trim().toLowerCase();
+  let rows = terminals.filter(r => {
+    if (search && !r['终端名称'].toLowerCase().includes(search)) return false;
+    return true;
+  });
+  rows.sort((a, b) => b['累计销售金额'] - a['累计销售金额']);
+  
+  // 分页计算
+  terminalTotalPage = Math.max(1, Math.ceil(rows.length / PAGE_SIZE));
+  if (terminalPage > terminalTotalPage) terminalPage = terminalTotalPage;
+  const startIdx = (terminalPage - 1) * PAGE_SIZE;
+  const pageRows = rows.slice(startIdx, startIdx + PAGE_SIZE);
+  
+  const tbody = document.getElementById('terminalTbody');
+  tbody.innerHTML = pageRows.map((r, i) => {
+    const cr = parseFloat(r['完成率']) || 0;
+    const fr = parseFloat(r['费用率']) || 0;
+    const activeProd = r['在销产品数'] || 0;
+    const totalProd = r['产品数'] || 0;
+    const idx = startIdx + i + 1;
+    const scale = r['医院药品销售规模'];
+    const isExpanded = expandedTerminal === r['终端名称'];
+    const expandBtn = activeProd > 0 
+      ? `<span class="expand-btn" onclick="toggleTerminalDetail('${r['终端名称'].replace(/'/g, "\\'")}')" style="cursor:pointer;color:#1565C0;">${isExpanded ? '▼' : '▶'}</span>` 
+      : '<span style="color:#ccc;">—</span>';
+    let detailHtml = '';
+    if (isExpanded) {
+      detailHtml = getTerminalProductDetailHtml(r['终端名称'], filteredData);
+    }
+    return `<tr data-name="${r['终端名称'].replace(/"/g, '&quot;')}">
+      <td class="text-center" style="color:#888;font-size:11px;">${idx}</td>
+      <td class="font-bold">${r['终端名称']}</td>
+      <td>${r['区']}</td>
+      <td><span style="color:#1565C0;font-size:11px;background:#EBF3FB;padding:1px 5px;border-radius:3px;">${r['医院等级'] || '其他'}</span></td>
+      <td class="text-right">${totalProd}</td>
+      <td class="text-right font-bold" style="color:${activeProd > 0 ? '#2E7D32' : '#C62828'};">${expandBtn} ${activeProd}</td>
+      <td class="text-right">${scale != null && scale > 0 ? scale.toFixed(2) : '—'}</td>
+      <td class="text-right font-bold color-blue">${fmt(r['累计销售金额'], 2)}</td>
+      <td class="text-right">${fmt(r['目标销售金额'], 2)}</td>
+      <td class="text-right">${rateBarHtml(cr.toFixed(1), rateColor(cr))}</td>
+      <td class="text-right">${fmt(r['26年预估销售费用'], 2)}</td>
+      <td class="text-right" style="color:${fr > 100 ? '#C62828' : fr > 50 ? '#E65100' : '#2E7D32'};font-weight:600;">${fr > 0 ? fr.toFixed(1) + '%' : '—'}</td>
+    </tr>${detailHtml}`;
+  }).join('');
+
+  // 渲染分页控件
+  renderPagination('terminalPagination', terminalPage, terminalTotalPage, rows.length, startIdx, goTerminalPage);
+}
+
+// 终端分页跳转
+function goTerminalPage(page) {
+  terminalPage = page;
+  renderTerminalTable();
+}
+
+// 切换终端明细展开
+function toggleTerminalDetail(terminalName) {
+  if (expandedTerminal === terminalName) {
+    expandedTerminal = null;
+  } else {
+    expandedTerminal = terminalName;
+    // 取消产品展开
+    expandedProduct = null;
+  }
+  renderTerminalTable();
+}
+
+// 获取终端的产品明细HTML
+function getTerminalProductDetailHtml(terminalName, filteredData) {
+  const products = filteredData.filter(r => r['终端名称'] === terminalName && 
+    ((r['26年累计销售金额（无税）'] > 0) || (r['26年目标销售金额（无税）'] > 0)));
+  if (products.length === 0) return '';
+  
+  const rows = products.map((p, i) => {
+    const actualAmt = p['26年累计销售金额（无税）'] || 0;
+    const targetAmt = p['26年目标销售金额（无税）'] || 0;
+    const cr = targetAmt > 0 ? actualAmt / targetAmt * 100 : 0;
+    const estSales = (p['挂网价/中选价（片/支）'] || 0) * (p['年销量预估/目标量'] || 0);
+    const fee = p['26年预估销售费用'] || 0;
+    const fr = estSales > 0 ? fee / estSales * 100 : 0;
+    return `<tr>
+      <td>${i+1}</td>
+      <td>${p['药品名称'] || '—'}</td>
+      <td>${badgeHtml(p['产品分类'])}</td>
+      <td class="text-right">${fmt(actualAmt, 2)}</td>
+      <td class="text-right">${fmt(targetAmt, 2)}</td>
+      <td class="text-right">${rateBarHtml(cr.toFixed(1), rateColor(cr))}</td>
+      <td class="text-right">${fmt(fee, 2)}</td>
+      <td class="text-right" style="color:${fr > 100 ? '#C62828' : fr > 50 ? '#E65100' : '#2E7D32'};font-weight:600;">${fr > 0 ? fr.toFixed(1) + '%' : '—'}</td>
+    </tr>`;
+  }).join('');
+  
+  return `<tr class="detail-row"><td colspan="12"><div class="detail-wrap">
+    <div class="detail-header">
+      <span class="detail-title">📋 ${terminalName} - 在销产品明细</span>
+      <span class="detail-close" onclick="toggleTerminalDetail('${terminalName.replace(/'/g, "\\'")}')">收起 ▲</span>
+    </div>
+    <table class="detail-table">
+      <thead>
+        <tr>
+          <th style="width:40px;">序号</th>
+          <th>产品名称</th>
+          <th>分类</th>
+          <th class="text-right">累计销售金额</th>
+          <th class="text-right">目标销售金额</th>
+          <th class="text-right">完成率</th>
+          <th class="text-right">26年预估销售费用</th>
+          <th class="text-right">费用率</th>
+        </tr>
+      </thead>
+      <tbody>${rows}</tbody>
+    </table>
+  </div></td></tr>`;
+}
+
+// 渲染分页控件
+function renderPagination(containerId, current, total, totalCount, startIdx, callback) {
+  const container = document.getElementById(containerId);
+  if (total <= 1) {
+    container.innerHTML = `<span class="page-info">共 ${totalCount} 条</span>`;
+    return;
+  }
+  let html = `<button class="page-btn" onclick="${callback.name}(${Math.max(1, current-1)})" ${current===1?'disabled':''}>‹</button>`;
+  const start = Math.max(1, current - 2);
+  const end = Math.min(total, current + 2);
+  if (start > 1) html += `<button class="page-btn" onclick="${callback.name}(1)">1</button>`;
+  if (start > 2) html += `<span style="color:#888;">...</span>`;
+  for (let i = start; i <= end; i++) {
+    html += `<button class="page-btn ${i===current?'active':''}" onclick="${callback.name}(${i})">${i}</button>`;
+  }
+  if (end < total - 1) html += `<span style="color:#888;">...</span>`;
+  if (end < total) html += `<button class="page-btn" onclick="${callback.name}(${total})">${total}</button>`;
+  html += `<button class="page-btn" onclick="${callback.name}(${Math.min(total, current+1)})" ${current===total?'disabled':''}>›</button>`;
+  html += `<span class="page-info">第${current}/${total}页，共${totalCount}条</span>`;
+  container.innerHTML = html;
+}
+
+// ======= 渲染产品表格 =======
+function renderProductTable() {
+  const filteredData = getFilteredData();
+  const products = getProductList(filteredData);
+  
+  const search = (document.getElementById('productSearch').value || '').trim().toLowerCase();
+  let rows = products.filter(r => {
+    if (search && !r['药品名称'].toLowerCase().includes(search)) return false;
+    return true;
+  });
+  rows.sort((a, b) => b['累计销售金额'] - a['累计销售金额']);
+  
+  // 分页计算
+  productTotalPage = Math.max(1, Math.ceil(rows.length / PAGE_SIZE));
+  if (productPage > productTotalPage) productPage = productTotalPage;
+  const startIdx = (productPage - 1) * PAGE_SIZE;
+  const pageRows = rows.slice(startIdx, startIdx + PAGE_SIZE);
+  
+  const tbody = document.getElementById('productTbody');
+  tbody.innerHTML = pageRows.map((r, i) => {
+    const cr = parseFloat(r['完成率']) || 0;
+    const fr = parseFloat(r['费用率']) || 0;
+    const idx = startIdx + i + 1;
+    const isExpanded = expandedProduct === r['药品名称'];
+    const expandBtn = r['终端数'] > 0 
+      ? `<span class="expand-btn" onclick="toggleProductDetail('${r['药品名称'].replace(/'/g, "\\'")}')" style="cursor:pointer;color:#1565C0;">${isExpanded ? '▼' : '▶'}</span>` 
+      : '<span style="color:#ccc;">—</span>';
+    let detailHtml = '';
+    if (isExpanded) {
+      detailHtml = getProductTerminalDetailHtml(r['药品名称'], filteredData);
+    }
+    return `<tr>
+      <td class="text-center" style="color:#888;font-size:11px;">${idx}</td>
+      <td class="font-bold">${r['药品名称']}</td>
+      <td class="text-center">${badgeHtml(r['产品分类'])}</td>
+      <td class="text-right">${expandBtn} ${r['终端数']}</td>
+      <td class="text-right">${r['年市场规模（销量）'] > 0 ? r['年市场规模（销量）'].toFixed(2) : '—'}</td>
+      <td class="text-right">${fmt(r['当前销量'], 0)}</td>
+      <td class="text-right">${fmt(r['目标销量'], 0)}</td>
+      <td class="text-right font-bold color-blue">${fmt(r['累计销售金额'], 2)}</td>
+      <td class="text-right">${fmt(r['目标销售金额'], 2)}</td>
+      <td class="text-right">${rateBarHtml(cr.toFixed(1), rateColor(cr))}</td>
+      <td class="text-right">${fmt(r['26年预估销售费用'], 2)}</td>
+      <td class="text-right" style="color:${fr > 100 ? '#C62828' : fr > 50 ? '#E65100' : '#2E7D32'};font-weight:600;">${fr > 0 ? fr.toFixed(1) + '%' : '—'}</td>
+    </tr>${detailHtml}`;
+  }).join('');
+
+  // 渲染分页控件
+  renderPagination('productPagination', productPage, productTotalPage, rows.length, startIdx, goProductPage);
+}
+
+// 产品分页跳转
+function goProductPage(page) {
+  productPage = page;
+  renderProductTable();
+}
+
+// 切换产品终端明细展开
+function toggleProductDetail(productName) {
+  if (expandedProduct === productName) {
+    expandedProduct = null;
+  } else {
+    expandedProduct = productName;
+    // 取消终端展开
+    expandedTerminal = null;
+  }
+  renderProductTable();
+}
+
+// 获取产品的终端明细HTML
+function getProductTerminalDetailHtml(productName, filteredData) {
+  const terminals = filteredData.filter(r => r['药品名称'] === productName);
+  if (terminals.length === 0) return '';
+  
+  const rows = terminals.map((t, i) => {
+    const actualAmt = t['26年累计销售金额（无税）'] || 0;
+    const targetAmt = t['26年目标销售金额（无税）'] || 0;
+    const cr = targetAmt > 0 ? actualAmt / targetAmt * 100 : 0;
+    const estSales = (t['挂网价/中选价（片/支）'] || 0) * (t['年销量预估/目标量'] || 0);
+    const fee = t['26年预估销售费用'] || 0;
+    const fr = estSales > 0 ? fee / estSales * 100 : 0;
+    return `<tr>
+      <td>${i+1}</td>
+      <td>${t['终端名称'] || '—'}</td>
+      <td>${t['区县'] || t['区'] || '—'}</td>
+      <td><span style="color:#1565C0;font-size:10px;background:#EBF3FB;padding:1px 5px;border-radius:3px;">${t['医院等级'] || '其他'}</span></td>
+      <td class="text-right">${fmt(actualAmt, 2)}</td>
+      <td class="text-right">${fmt(targetAmt, 2)}</td>
+      <td class="text-right">${rateBarHtml(cr.toFixed(1), rateColor(cr))}</td>
+      <td class="text-right">${fmt(fee, 2)}</td>
+      <td class="text-right" style="color:${fr > 100 ? '#C62828' : fr > 50 ? '#E65100' : '#2E7D32'};font-weight:600;">${fr > 0 ? fr.toFixed(1) + '%' : '—'}</td>
+    </tr>`;
+  }).join('');
+  
+  return `<tr class="detail-row"><td colspan="12"><div class="detail-wrap">
+    <div class="detail-header">
+      <span class="detail-title">📋 ${productName} - 销售终端明细</span>
+      <span class="detail-close" onclick="toggleProductDetail('${productName.replace(/'/g, "\\'")}')">收起 ▲</span>
+    </div>
+    <table class="detail-table">
+      <thead>
+        <tr>
+          <th style="width:40px;">序号</th>
+          <th>终端名称</th>
+          <th>所属区</th>
+          <th>医院等级</th>
+          <th class="text-right">累计销售金额</th>
+          <th class="text-right">目标销售金额</th>
+          <th class="text-right">完成率</th>
+          <th class="text-right">26年预估销售费用</th>
+          <th class="text-right">费用率</th>
+        </tr>
+      </thead>
+      <tbody>${rows}</tbody>
+    </table>
+  </div></td></tr>`;
+}
+
+// ======= Tab 切换 =======
+function switchTab(tab) {
+  document.querySelectorAll('.tab-btn').forEach((b, i) => {
+    b.classList.toggle('active', ['terminal','product'][i] === tab);
+  });
+  document.getElementById('tab-terminal').classList.toggle('active', tab === 'terminal');
+  document.getElementById('tab-product').classList.toggle('active', tab === 'product');
+}
+
+// ======= 全部渲染 =======
+function renderAll() {
+  renderKPI();
+  renderPie();
+  renderProgress();
+  renderTerminalTable();
+  renderProductTable();
+}
+
+// ======= 初始化 =======
+function init() {
+  renderAll();
+}
+
+// ======= 时间 =======
+function updateTime() {
+  const now = new Date();
+  document.getElementById('timeDisplay').textContent =
+    now.toLocaleDateString('zh-CN') + ' ' + now.toLocaleTimeString('zh-CN');
+}
+setInterval(updateTime, 1000);
+updateTime();
+
+// ======= 窗口缩放 =======
+window.addEventListener('resize', () => {
+  if (pieChart) pieChart.resize();
+  if (progressChart) progressChart.resize();
+});
+
+// ======= 启动 =======
+loadData();
+</script>
+</body>
+</html>
