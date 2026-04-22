@@ -1,0 +1,1068 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>万州公司销售看板</title>
+<script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
+<style>
+  :root {
+    --primary: #1976D2;
+    --primary-light: #2196F3;
+    --accent: #1565C0;
+    --bg: #f0f4f8;
+    --card-bg: #ffffff;
+    --card-border: rgba(25,118,210,0.15);
+    --text: #1a2a3a;
+    --text-muted: #5c7a9a;
+    --green: #2E7D32;
+    --orange: #E65100;
+    --red: #C62828;
+    --yellow: #F9A825;
+    --brand-color: #1976D2;
+    --comm-color: #0288D1;
+    --agent-color: #7B1FA2;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'PingFang SC','Microsoft YaHei',sans-serif;
+    min-height: 100vh;
+    padding: 0;
+  }
+  /* 顶栏 */
+  .header {
+    background: linear-gradient(90deg, #1565C0 0%, #1976D2 50%, #1565C0 100%);
+    border-bottom: none;
+    padding: 12px 24px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    box-shadow: 0 2px 8px rgba(21,101,192,0.25);
+  }
+  .header-title {
+    font-size: 20px;
+    font-weight: 700;
+    color: #ffffff;
+    letter-spacing: 2px;
+  }
+  .header-subtitle { font-size: 12px; color: rgba(255,255,255,0.7); margin-top: 2px; }
+  .header-right { display: flex; align-items: center; gap: 8px; }
+  .time-display { color: rgba(255,255,255,0.8); font-size: 13px; }
+
+  /* 切片器 */
+  .slicer-bar {
+    background: #ffffff;
+    border-bottom: 1px solid rgba(25,118,210,0.12);
+    padding: 10px 24px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    box-shadow: 0 1px 4px rgba(21,101,192,0.06);
+  }
+  .slicer-label { color: var(--text-muted); font-size: 13px; margin-right: 4px; }
+  .slicer-btn {
+    padding: 4px 16px;
+    border: 1px solid rgba(25,118,210,0.3);
+    background: transparent;
+    color: #1976D2;
+    border-radius: 20px;
+    cursor: pointer;
+    font-size: 13px;
+    transition: all .2s;
+  }
+  .slicer-btn:hover { border-color: #1976D2; background: rgba(25,118,210,0.06); }
+  .slicer-btn.active {
+    background: #1976D2;
+    border-color: #1976D2;
+    color: #fff;
+    font-weight: 600;
+    box-shadow: 0 2px 8px rgba(25,118,210,0.3);
+  }
+
+  /* 主体 */
+  .main { padding: 16px 24px; }
+
+  /* 第一部分：KPI卡片 */
+  .kpi-grid {
+    display: grid;
+    grid-template-columns: repeat(6, 1fr);
+    gap: 12px;
+    margin-bottom: 16px;
+  }
+  .kpi-card {
+    background: #ffffff;
+    border: 1px solid rgba(25,118,210,0.12);
+    border-radius: 10px;
+    padding: 16px 14px;
+    position: relative;
+    overflow: hidden;
+    transition: transform .2s, box-shadow .2s;
+    box-shadow: 0 1px 6px rgba(21,101,192,0.07);
+  }
+  .kpi-card:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(25,118,210,0.15); }
+  .kpi-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 3px;
+    border-radius: 10px 10px 0 0;
+  }
+  .kpi-card.blue::before { background: linear-gradient(90deg,#1565C0,#42A5F5); }
+  .kpi-card.cyan::before { background: linear-gradient(90deg,#0277BD,#29B6F6); }
+  .kpi-card.green::before { background: linear-gradient(90deg,#2E7D32,#66BB6A); }
+  .kpi-card.orange::before { background: linear-gradient(90deg,#E65100,#FFA726); }
+  .kpi-card.purple::before { background: linear-gradient(90deg,#6A1B9A,#AB47BC); }
+  .kpi-card.red::before { background: linear-gradient(90deg,#B71C1C,#EF5350); }
+  .kpi-label { font-size: 11px; color: #7a93aa; margin-bottom: 6px; letter-spacing: 0.5px; }
+  .kpi-value { font-size: 22px; font-weight: 700; letter-spacing: 1px; color: #1a2a3a; }
+  .kpi-sub { font-size: 11px; color: #7a93aa; margin-top: 4px; }
+  .kpi-tag {
+    display: inline-block;
+    padding: 1px 6px;
+    border-radius: 10px;
+    font-size: 10px;
+    margin-top: 4px;
+  }
+  .kpi-tag.good { background: rgba(46,125,50,.1); color: #2E7D32; }
+  .kpi-tag.warn { background: rgba(230,81,0,.1); color: #E65100; }
+  .kpi-tag.bad  { background: rgba(198,40,40,.1); color: #C62828; }
+
+  /* 第二、三部分：图表区 */
+  .chart-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    margin-bottom: 16px;
+  }
+  .chart-card {
+    background: #ffffff;
+    border: 1px solid rgba(25,118,210,0.12);
+    border-radius: 10px;
+    padding: 14px 16px;
+    box-shadow: 0 1px 6px rgba(21,101,192,0.07);
+  }
+  .chart-title {
+    font-size: 13px;
+    font-weight: 600;
+    color: #1a2a3a;
+    margin-bottom: 12px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .chart-title::before {
+    content: '';
+    width: 3px;
+    height: 14px;
+    background: linear-gradient(180deg,#1976D2,#29B6F6);
+    border-radius: 2px;
+  }
+  .chart-body { width: 100%; }
+  .color-blue { color: #1565C0; }
+  .color-green { color: #2E7D32; }
+  .color-muted { color: #B0BEC5; }
+  .font-bold { font-weight: 700; }
+  .text-right { text-align: right; }
+  .text-center { text-align: center; }
+
+  /* 第四部分：明细表 */
+  .section-title {
+    font-size: 14px;
+    font-weight: 600;
+    color: #1a2a3a;
+    margin-bottom: 12px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .section-title::before {
+    content: '';
+    width: 4px;
+    height: 16px;
+    background: linear-gradient(180deg,#1976D2,#29B6F6);
+    border-radius: 2px;
+  }
+
+  /* 筛选栏 */
+  .filter-bar {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 10px;
+    flex-wrap: wrap;
+  }
+  .filter-bar label { font-size: 12px; color: #5c7a9a; }
+  .filter-select {
+    background: #f5f8fd;
+    border: 1px solid rgba(25,118,210,0.2);
+    color: #1a2a3a;
+    padding: 4px 10px;
+    border-radius: 6px;
+    font-size: 12px;
+    cursor: pointer;
+    min-width: 160px;
+  }
+  .filter-select:focus { outline: none; border-color: #1976D2; }
+
+  /* 表格 */
+  .table-wrap {
+    overflow-x: auto;
+    max-height: 420px;
+    overflow-y: auto;
+  }
+  .data-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 12px;
+  }
+  .data-table th {
+    background: #EBF3FB;
+    color: #1565C0;
+    padding: 8px 10px;
+    text-align: left;
+    font-weight: 600;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    border-bottom: 2px solid rgba(25,118,210,0.2);
+    white-space: nowrap;
+  }
+  .data-table td {
+    padding: 7px 10px;
+    border-bottom: 1px solid #f0f4f8;
+    color: #1a2a3a;
+    white-space: nowrap;
+  }
+  .data-table tr:hover td { background: #f0f7ff; }
+  .data-table tr:last-child td { border-bottom: none; }
+  .badge {
+    display: inline-block;
+    padding: 1px 7px;
+    border-radius: 10px;
+    font-size: 10px;
+    font-weight: 600;
+  }
+  .badge-brand  { background: rgba(25,118,210,.1); color: #1565C0; }
+  .badge-comm   { background: rgba(2,136,209,.1); color: #0277BD; }
+  .badge-agent  { background: rgba(123,31,162,.1); color: #7B1FA2; }
+  .rate-bar {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+  }
+  .rate-track {
+    width: 60px;
+    height: 5px;
+    background: rgba(25,118,210,0.1);
+    border-radius: 3px;
+    overflow: hidden;
+  }
+  .rate-fill { height: 100%; border-radius: 3px; }
+  .tab-bar {
+    display: flex;
+    gap: 0;
+    margin-bottom: 12px;
+    border-bottom: 2px solid #e8f0fb;
+  }
+  .tab-btn {
+    padding: 6px 18px;
+    background: transparent;
+    border: none;
+    color: #5c7a9a;
+    font-size: 13px;
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+    margin-bottom: -2px;
+    transition: all .2s;
+  }
+  .tab-btn.active {
+    color: #1976D2;
+    border-bottom-color: #1976D2;
+    font-weight: 600;
+  }
+  .tab-content { display: none; }
+  .tab-content.active { display: block; }
+
+  /* 进度组件 */
+  .progress-list { display: flex; flex-direction: column; gap: 10px; }
+  .progress-item { }
+  .progress-header {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 4px;
+    font-size: 12px;
+  }
+  .progress-name { color: #1a2a3a; font-weight: 500; }
+  .progress-val { color: #5c7a9a; }
+  .progress-track {
+    height: 8px;
+    background: rgba(25,118,210,0.1);
+    border-radius: 4px;
+    overflow: hidden;
+    position: relative;
+  }
+  .progress-fill {
+    height: 100%;
+    border-radius: 4px;
+    transition: width 0.6s ease;
+    position: relative;
+  }
+
+  /* 滚动条 */
+  ::-webkit-scrollbar { width: 5px; height: 5px; }
+  ::-webkit-scrollbar-track { background: #f5f8fd; }
+  ::-webkit-scrollbar-thumb { background: rgba(25,118,210,0.25); border-radius: 3px; }
+
+  .text-right { text-align: right; }
+  .text-center { text-align: center; }
+  .font-bold { font-weight: 600; }
+  .color-green { color: #2E7D32; }
+  .color-orange { color: #E65100; }
+  .color-red { color: #C62828; }
+  .color-blue { color: #1976D2; }
+
+  /* ========================
+     响应式设计 - 平板适配 (768px以下)
+     ======================== */
+  @media screen and (max-width: 1024px) {
+    .main { padding: 12px 16px; }
+    
+    /* KPI卡片：6列 -> 3列 */
+    .kpi-grid {
+      grid-template-columns: repeat(3, 1fr);
+      gap: 10px;
+    }
+    .kpi-card { padding: 12px 10px; }
+    .kpi-value { font-size: 18px; }
+    .kpi-label { font-size: 10px; }
+    .kpi-sub { font-size: 10px; }
+    
+    /* 图表行：保持2列 */
+    .chart-row {
+      grid-template-columns: 1fr 1fr;
+    }
+    #pieChart, #progressChart { height: 300px !important; }
+  }
+
+  /* ========================
+     响应式设计 - 大手机/小平板 (768px以下)
+     ======================== */
+  @media screen and (max-width: 768px) {
+    /* 顶栏优化 */
+    .header { padding: 10px 14px; }
+    .header-title { font-size: 16px; letter-spacing: 1px; }
+    .header-subtitle { font-size: 10px; }
+    .time-display { font-size: 11px; }
+    
+    /* 切片器优化 - 允许换行 */
+    .slicer-bar {
+      padding: 8px 14px;
+      gap: 6px;
+      flex-wrap: wrap;
+    }
+    .slicer-label { font-size: 11px; width: 100%; margin-bottom: 2px; }
+    .slicer-btn {
+      padding: 3px 12px;
+      font-size: 11px;
+    }
+    
+    /* 主体区域 */
+    .main { padding: 10px 14px; }
+    
+    /* KPI卡片：3列 */
+    .kpi-grid {
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px;
+    }
+    .kpi-card { padding: 10px 8px; }
+    .kpi-value { font-size: 16px; }
+    .kpi-label { font-size: 9px; }
+    .kpi-sub { font-size: 9px; }
+    
+    /* 图表区改为单列堆叠 */
+    .chart-row {
+      grid-template-columns: 1fr;
+      gap: 10px;
+    }
+    .chart-card { padding: 12px; }
+    .chart-title { font-size: 12px; }
+    #pieChart, #progressChart { height: 280px !important; }
+    
+    /* 明细表区域 */
+    .section-title { font-size: 13px; }
+    
+    /* 筛选栏优化 */
+    .filter-bar {
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+    .filter-bar label { font-size: 11px; }
+    .filter-select {
+      font-size: 11px;
+      padding: 3px 8px;
+      min-width: 100px;
+    }
+    .filter-bar input[type="text"] {
+      font-size: 11px;
+      padding: 3px 8px;
+      min-width: 120px;
+    }
+    
+    /* 表格优化 */
+    .data-table { font-size: 11px; }
+    .data-table th, .data-table td { padding: 5px 6px; }
+    .table-wrap { max-height: 300px; overflow-x: auto; -webkit-overflow-scrolling: touch; }
+    
+    /* Tab按钮优化 */
+    .tab-btn { padding: 5px 12px; font-size: 12px; }
+  }
+
+  /* ========================
+     响应式设计 - 手机 (480px以下)
+     ======================== */
+  @media screen and (max-width: 480px) {
+    /* 顶栏 */
+    .header { padding: 8px 12px; }
+    .header-title { font-size: 14px; letter-spacing: 0.5px; }
+    .header-subtitle { font-size: 9px; }
+    
+    /* 切片器 - 紧凑模式 */
+    .slicer-bar {
+      padding: 6px 10px;
+      gap: 5px;
+    }
+    .slicer-label { font-size: 10px; }
+    .slicer-btn {
+      padding: 2px 10px;
+      font-size: 10px;
+      border-radius: 15px;
+    }
+    
+    /* 主体区域 */
+    .main { padding: 8px 10px; }
+    
+    /* KPI卡片：2列 */
+    .kpi-grid {
+      grid-template-columns: repeat(2, 1fr);
+      gap: 8px;
+    }
+    .kpi-card {
+      padding: 10px 8px;
+      border-radius: 8px;
+    }
+    .kpi-card::before { height: 2px; }
+    .kpi-value { font-size: 15px; }
+    .kpi-label { font-size: 9px; margin-bottom: 4px; }
+    .kpi-sub { font-size: 8px; margin-top: 2px; }
+    .kpi-tag { font-size: 9px; }
+    
+    /* 图表区 */
+    .chart-row { gap: 8px; }
+    .chart-card { padding: 10px; border-radius: 8px; }
+    .chart-title { font-size: 11px; margin-bottom: 8px; }
+    #pieChart, #progressChart { height: 250px !important; }
+    
+    /* Tab切换 */
+    .tab-bar { margin-bottom: 8px; }
+    .tab-btn { padding: 4px 10px; font-size: 11px; }
+    
+    /* 筛选栏 - 紧凑单列 */
+    .filter-bar {
+      gap: 6px;
+    }
+    .filter-bar label { font-size: 10px; }
+    .filter-select {
+      font-size: 10px;
+      padding: 2px 6px;
+      min-width: 80px;
+    }
+    .filter-bar input[type="text"] {
+      font-size: 10px;
+      padding: 2px 6px;
+      min-width: 100px;
+    }
+    
+    /* 表格 - 更紧凑 */
+    .data-table { font-size: 10px; min-width: 500px; }
+    .data-table th, .data-table td {
+      padding: 4px 5px;
+    }
+    .data-table th {
+      font-size: 9px;
+      background: #EBF3FB;
+    }
+    .table-wrap { 
+      max-height: 250px;
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+    }
+    
+    /* Badge和标签缩小 */
+    .badge { font-size: 9px; padding: 1px 5px; }
+    .rate-track { width: 40px; }
+    
+    /* 进度条列表 */
+    .progress-list { gap: 8px; }
+    .progress-header { font-size: 11px; }
+  }
+
+  /* ========================
+     响应式设计 - 超小屏幕 (360px以下)
+     ======================== */
+  @media screen and (max-width: 360px) {
+    .header-title { font-size: 13px; }
+    .kpi-grid { gap: 6px; }
+    .kpi-card { padding: 8px 6px; }
+    .kpi-value { font-size: 14px; }
+    .kpi-label { font-size: 8px; }
+    .kpi-sub { font-size: 7px; }
+    
+    /* 确保表格可滚动 */
+    .table-wrap { 
+      max-height: 200px;
+      -webkit-overflow-scrolling: touch;
+    }
+    .data-table { min-width: 600px; }
+  }
+
+  /* ========================
+     横屏模式优化
+     ======================== */
+  @media screen and (max-height: 500px) and (orientation: landscape) {
+    .kpi-grid {
+      grid-template-columns: repeat(6, 1fr);
+    }
+    .chart-row {
+      grid-template-columns: 1fr 1fr;
+    }
+    .kpi-value { font-size: 16px; }
+    .table-wrap { max-height: 180px; }
+  }
+</style>
+</head>
+<body>
+
+<!-- 顶栏 -->
+<div class="header">
+  <div>
+    <div class="header-title">万州公司销售看板</div>
+    <div class="header-subtitle">数据来源：万州公司销售数据 &amp; 终端目录 | 2026年度</div>
+  </div>
+  <div class="header-right">
+    <div class="time-display" id="timeDisplay"></div>
+  </div>
+</div>
+
+<!-- 区域切片器 -->
+<div class="slicer-bar">
+  <span class="slicer-label">区域切片：</span>
+  <button class="slicer-btn active" onclick="switchSlice('全部')">全部</button>
+  <button class="slicer-btn" onclick="switchSlice('万州区')">万州区</button>
+  <button class="slicer-btn" onclick="switchSlice('石柱县')">石柱县</button>
+  <button class="slicer-btn" onclick="switchSlice('梁平区')">梁平区</button>
+  <button class="slicer-btn" onclick="switchSlice('忠县')">忠县</button>
+</div>
+
+<div class="main">
+  <!-- 第一部分：KPI卡片 -->
+  <div class="kpi-grid" id="kpiGrid">
+    <div class="kpi-card blue">
+      <div class="kpi-label">销售目标金额</div>
+      <div class="kpi-value color-blue" id="kpi-target">—</div>
+      <div class="kpi-sub">26年全年目标（无税）</div>
+    </div>
+    <div class="kpi-card cyan">
+      <div class="kpi-label">当前销售金额</div>
+      <div class="kpi-value" id="kpi-sales" style="color:#26C6DA">—</div>
+      <div class="kpi-sub">26年累计销售（无税）</div>
+    </div>
+    <div class="kpi-card green">
+      <div class="kpi-label">目标完成率</div>
+      <div class="kpi-value" id="kpi-rate">—</div>
+      <div class="kpi-sub" id="kpi-rate-tag"></div>
+    </div>
+    <div class="kpi-card orange">
+      <div class="kpi-label">终端数 / 在销终端数</div>
+      <div class="kpi-value" id="kpi-terminal">—</div>
+      <div class="kpi-sub" id="kpi-terminal-rate"></div>
+    </div>
+    <div class="kpi-card purple">
+      <div class="kpi-label">在销产品数</div>
+      <div class="kpi-value" id="kpi-products" style="color:#AB47BC">—</div>
+      <div class="kpi-sub">有实际销量的品种数</div>
+    </div>
+    <div class="kpi-card red">
+      <div class="kpi-label">销售费用</div>
+      <div class="kpi-value" id="kpi-fee" style="color:#EF5350">—</div>
+      <div class="kpi-sub" id="kpi-fee-rate"></div>
+    </div>
+  </div>
+
+  <!-- 第二、三部分：图表区 -->
+  <div class="chart-row">
+    <!-- 左：销售类型占比饼图 -->
+    <div class="chart-card">
+      <div class="chart-title">销售类型占比（品牌品 / 商销品 / 代理品）</div>
+      <div id="pieChart" class="chart-body" style="height:340px;"></div>
+      <!-- 类型金额明细 -->
+      <div id="typeDetail" style="margin-top:8px;"></div>
+    </div>
+
+    <!-- 右：销售进度展示 -->
+    <div class="chart-card">
+      <div class="chart-title">销售进度展示（目标 vs 完成）</div>
+      <div id="progressChart" class="chart-body" style="height:340px;"></div>
+    </div>
+  </div>
+
+  <!-- 第四部分：明细表 -->
+  <div class="chart-card">
+    <div class="tab-bar">
+      <button class="tab-btn active" onclick="switchTab('terminal')">终端销售情况</button>
+      <button class="tab-btn" onclick="switchTab('product')">产品销售明细</button>
+    </div>
+
+    <!-- 终端明细 -->
+    <div class="tab-content active" id="tab-terminal">
+      <div class="filter-bar">
+        <label>筛选医院：</label>
+        <input type="text" id="terminalSearch" placeholder="输入医院名称筛选..."
+          style="background:#f5f8fd;border:1px solid rgba(25,118,210,0.2);color:#1a2a3a;padding:4px 10px;border-radius:6px;font-size:12px;min-width:180px;"
+          oninput="renderTerminalTable()">
+        <label>筛选产品：</label>
+        <input type="text" id="productFilter" placeholder="输入产品名称筛选..."
+          style="background:#f5f8fd;border:1px solid rgba(25,118,210,0.2);color:#1a2a3a;padding:4px 10px;border-radius:6px;font-size:12px;min-width:180px;"
+          oninput="renderTerminalTable()">
+        <label>医院等级：</label>
+        <select class="filter-select" id="gradeFilter" style="min-width:100px;" onchange="renderTerminalTable()">
+          <option value="">全部</option>
+          <option value="一级">一级</option>
+          <option value="二级">二级</option>
+          <option value="三级">三级</option>
+          <option value="二甲">二甲</option>
+          <option value="其他">其他</option>
+        </select>
+      </div>
+      <div class="table-wrap">
+        <table class="data-table" id="terminalTable">
+          <thead>
+            <tr>
+              <th>医院名称</th>
+              <th>所属区</th>
+              <th>医院等级</th>
+              <th class="text-right">在销产品数</th>
+              <th class="text-right">累计销售金额(元)</th>
+              <th class="text-right">目标销售金额(元)</th>
+              <th class="text-right">完成率</th>
+              <th class="text-right">销售费用(元)</th>
+              <th class="text-right">费用率</th>
+            </tr>
+          </thead>
+          <tbody id="terminalTbody"></tbody>
+        </table>
+      </div>
+      <div id="terminalCount" style="font-size:11px;color:var(--text-muted);margin-top:6px;"></div>
+    </div>
+
+    <!-- 产品明细 -->
+    <div class="tab-content" id="tab-product">
+      <div class="filter-bar">
+        <label>筛选产品：</label>
+        <input type="text" id="productSearch" placeholder="输入产品名称筛选..."
+          style="background:#f5f8fd;border:1px solid rgba(25,118,210,0.2);color:#1a2a3a;padding:4px 10px;border-radius:6px;font-size:12px;min-width:160px;"
+          oninput="renderProductTable()">
+        <label>筛选医院：</label>
+        <input type="text" id="terminalFilter" placeholder="输入医院名称筛选..."
+          style="background:#f5f8fd;border:1px solid rgba(25,118,210,0.2);color:#1a2a3a;padding:4px 10px;border-radius:6px;font-size:12px;min-width:160px;"
+          oninput="renderProductTable()">
+        <label>产品分类：</label>
+        <select class="filter-select" id="typeFilter" style="min-width:100px;" onchange="renderProductTable()">
+          <option value="">全部</option>
+          <option value="品牌品">品牌品</option>
+          <option value="商销品">商销品</option>
+          <option value="代理品">代理品</option>
+        </select>
+      </div>
+      <div class="table-wrap">
+        <table class="data-table" id="productTable">
+          <thead>
+            <tr>
+              <th>产品名称</th>
+              <th class="text-center">分类</th>
+              <th class="text-right">终端数</th>
+              <th class="text-right">在销终端数</th>
+              <th class="text-right">年市场规模(销量)</th>
+              <th class="text-right">当前销量(1-3月)</th>
+              <th class="text-right">目标销量</th>
+              <th class="text-right">累计销售金额(元)</th>
+              <th class="text-right">目标销售金额(元)</th>
+              <th class="text-right">完成率</th>
+              <th class="text-right">销售费用(元)</th>
+              <th class="text-right">费用率</th>
+            </tr>
+          </thead>
+          <tbody id="productTbody"></tbody>
+        </table>
+      </div>
+      <div id="productCount" style="font-size:11px;color:var(--text-muted);margin-top:6px;"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ======= 数据 =======
+const DASHBOARD_DATA = {"全部": {"stats": {"total_terminals": 161, "active_terminals": 126, "active_products": 19, "total_sales": 2812041.48, "total_target": 15596459.39, "total_fee": 4517884.17, "completion_rate": 18.03, "fee_rate": 18.43}, "by_type": {"品牌品": {"sales": 1526053.88, "target": 7726829.35, "completion": 19.75}, "商销品": {"sales": 1251559.0, "target": 6085623.98, "completion": 20.57}, "代理品": {"sales": 7761.6, "target": 1782858.24, "completion": 0.44}}, "terminals": [{"终端名称": "忠县东溪中心卫生院", "区": "忠县", "产品数": 4, "在销产品数量": 1, "累计销售金额": 0.0, "目标销售金额": 6340.43, "销售费用": 1147.81, "年市场规模": 100.0, "医院等级": "其他", "完成率": 0.0, "费用率": 0.0, "产品列表": ["注射用谷胱甘肽", "盐酸二甲双胍片", "盐酸二甲双胍缓释片", "阿法骨化醇片"]}, {"终端名称": "忠县乌杨街道卫生院", "区": "忠县", "产品数": 1, "在销产品数量": 1, "累计销售金额": 96.0, "目标销售金额": 0.0, "销售费用": 0.0, "年市场规模": 0.0, "医院等级": "一级", "完成率": 0.0, "费用率": 0.0, "产品列表": ["阿卡波糖片"]}, {"终端名称": "忠县任家镇卫生院", "区": "忠县", "产品数": 4, "在销产品数量": 2, "累计销售金额": 941.0, "目标销售金额": 5849.78, "销售费用": 3003.13, "年市场规模": 0.0, "医院等级": "一级", "完成率": 16.09, "费用率": 0.0, "产品列表": ["注射用泮托拉唑钠", "盐酸二甲双胍缓释片", "阿卡波糖片", "阿托伐他汀钙片"]}, {"终端名称": "忠县兴峰乡卫生院", "区": "忠县", "产品数": 1, "在销产品数量": 0, "累计销售金额": 0.0, "目标销售金额": 253.71, "销售费用": 120.71, "年市场规模": 0.0, "医院等级": "其他", "完成率": 0.0, "费用率": 0.0, "产品列表": ["氯化钾缓释片"]}, {"终端名称": "忠县双桂镇卫生院", "区": "忠县", "产品数": 2, "在销产品数量": 2, "累计销售金额": 1141.0, "目标销售金额": 3417.81, "销售费用": 0.0, "年市场规模": 0.0, "医院等级": "其他", "完成率": 33.38, "费用率": 0.0, "产品列表": ["恩替卡韦片", "苯磺酸氨氯地平片"]}, {"终端名称": "忠县善广乡卫生院", "区": "忠县", "产品数": 1, "在销产品数量": 0, "累计销售金额": 0.0, "目标销售金额": 2130.69, "销售费用": 0.0, "年市场规模": 0.0, "医院等级": "其他", "完成率": 0.0, "费用率": 0.0, "产品列表": ["吲达帕胺片"]}, {"终端名称": "忠县复兴镇卫生院", "区": "忠县", "产品数": 4, "在销产品数量": 4, "累计销售金额": 1476.82, "目标销售金额": 2149.18, "销售费用": 25.23, "年市场规模": 4082.0, "医院等级": "其他", "完成率": 68.72, "费用率": 7.4, "产品列表": ["注射用水溶性维生素", "注射用谷胱甘肽", "炎琥宁80mg", "阿法骨化醇片"]}, {"终端名称": "忠县妇幼保健院", "区": "忠县", "产品数": 4, "在销产品数量": 4, "累计销售金额": 480.48, "目标销售金额": 10472.89, "销售费用": 489.41, "年市场规模": 16660.0, "医院等级": "二级", "完成率": 4.59, "费用率": 0.0, "产品列表": ["注射用谷胱甘肽", "炎琥宁80mg", "谷胱甘肽片0.1g", "阿卡波糖片"]}, {"终端名称": "忠县官坝中心卫生院", "区": "忠县", "产品数": 8, "在销产品数量": 2, "累计销售金额": 3164.24, "目标销售金额": 42067.25, "销售费用": 16587.45, "年市场规模": 5660.0, "医院等级": "一级", "完成率": 7.52, "费用率": 25.26, "产品列表": ["吲达帕胺片", "氯化钾缓释片", "注射用奥美拉唑钠", "炎琥宁80mg", "琥珀酸美托洛尔缓释片", "盐酸二甲双胍片", "盐酸二甲双胍缓释片", "盐酸度洛西汀肠溶胶囊"]}, {"终端名称": "忠县新生街道卫生院", "区": "忠县", "产品数": 2, "在销产品数量": 1, "累计销售金额": 263.72, "目标销售金额": 13921.76, "销售费用": 987.2, "年市场规模": 15000.0, "医院等级": "一级", "完成率": 1.89, "费用率": 7.4, "产品列表": ["炎琥宁80mg", "阿法骨化醇片"]}, {"终端名称": "忠县新立中心卫生院", "区": "忠县", "产品数": 3, "在销产品数量": 2, "累计销售金额": 31935.58, "目标销售金额": 19952.42, "销售费用": 2855.69, "年市场规模": 24280.0, "医院等级": "一级", "完成率": 160.06, "费用率": 18.67, "产品列表": ["炎琥宁80mg", "苯磺酸氨氯地平片", "阿法骨化醇片"]}, {"终端名称": "忠县永丰镇卫生院", "区": "忠县", "产品数": 8, "在销产品数量": 6, "累计销售金额": 3983.0, "目标销售金额": 16849.75, "销售费用": 1867.96, "年市场规模": 19150.0, "医院等级": "其他", "完成率": 23.64, "费用率": 1.1, "产品列表": ["恩替卡韦片", "氯化钾缓释片", "氯化钾颗粒", "注射用泮托拉唑钠", "炎琥宁80mg", "盐酸二甲双胍缓释片", "苯磺酸氨氯地平片", "阿卡波糖片"]}, {"终端名称": "忠县汝溪中心卫生院", "区": "忠县", "产品数": 1, "在销产品数量": 1, "累计销售金额": 0.0, "目标销售金额": 3779.07, "销售费用": 0.0, "年市场规模": 0.0, "医院等级": "一级", "完成率": 0.0, "费用率": 0.0, "产品列表": ["注射用二氯醋酸二异丙胺"]}, {"终端名称": "忠县洋渡镇卫生院", "区": "忠县", "产品数": 1, "在销产品数量": 0, "累计销售金额": 0.0, "目标销售金额": 916.31, "销售费用": 381.47, "年市场规模": 0.0, "医院等级": "其他", "完成率": 0.0, "费用率": 0.0, "产品列表": ["盐酸二甲双胍缓释片"]}, {"终端名称": "忠县涂井乡卫生院", "区": "忠县", "产品数": 2, "在销产品数量": 1, "累计销售金额": 0.0, "目标销售金额": 1026.92, "销售费用": 243.65, "年市场规模": 0.0, "医院等级": "其他", "完成率": 0.0, "费用率": 0.0, "产品列表": ["氯化钾颗粒", "注射用泮托拉唑钠"]}, {"终端名称": "忠县白石中心卫生院", "区": "忠县", "产品数": 2, "在销产品数量": 2, "累计销售金额": 6147.0, "目标销售金额": 3578.42, "销售费用": 0.0, "年市场规模": 0.0, "医院等级": "一级", "完成率": 171.78, "费用率": 0.0, "产品列表": ["注射用二氯醋酸二异丙胺", "苯磺酸氨氯地平片"]}, {"终端名称": "忠县石子乡卫生院", "区": "忠县", "产品数": 4, "在销产品数量": 1, "累计销售金额": 474.69, "目标销售金额": 1487.67, "销售费用": 467.19, "年市场规模": 7000.0, "医院等级": "其他", "完成率": 31.91, "费用率": 7.4, "产品列表": ["氯化钾缓释片", "炎琥宁80mg", "琥珀酸美托洛尔缓释片", "盐酸二甲双胍缓释片"]}, {"终端名称": "忠县石宝中心卫生院", "区": "忠县", "产品数": 4, "在销产品数量": 3, "累计销售金额": 10660.45, "目标销售金额": 69519.6, "销售费用": 16734.17, "年市场规模": 1800.0, "医院等级": "一级", "完成率": 15.33, "费用率": 3.08, "产品列表": ["炎琥宁80mg", "盐酸二甲双胍缓释片", "苯磺酸氨氯地平片", "谷胱甘肽片0.1g"]}, {"终端名称": "忠县石黄镇卫生院", "区": "忠县", "产品数": 3, "在销产品数量": 1, "累计销售金额": 0.0, "目标销售金额": 4038.15, "销售费用": 696.19, "年市场规模": 0.0, "医院等级": "其他", "完成率": 0.0, "费用率": 0.0, "产品列表": ["氯化钾缓释片", "琥珀酸美托洛尔缓释片", "苯磺酸氨氯地平片"]}, {"终端名称": "忠县磨子土家族乡卫生院", "区": "忠县", "产品数": 4, "在销产品数量": 2, "累计销售金额": 0.0, "目标销售金额": 6964.62, "销售费用": 409.54, "年市场规模": 5200.0, "医院等级": "一级", "完成率": 0.0, "费用率": 0.0, "产品列表": ["注射用泮托拉唑钠", "注射用谷胱甘肽", "谷胱甘肽片0.1g", "阿法骨化醇片"]}, {"终端名称": "忠县花桥镇卫生院", "区": "忠县", "产品数": 1, "在销产品数量": 1, "累计销售金额": 738.41, "目标销售金额": 1074.42, "销售费用": 94.62, "年市场规模": 10440.0, "医院等级": "一级", "完成率": 68.73, "费用率": 7.4, "产品列表": ["炎琥宁80mg"]}, {"终端名称": "忠县野鹤镇卫生院", "区": "忠县", "产品数": 4, "在销产品数量": 1, "累计销售金额": 74.0, "目标销售金额": 1499.26, "销售费用": 112.57, "年市场规模": 0.0, "医院等级": "一级", "完成率": 4.94, "费用率": 0.0, "产品列表": ["恩替卡韦片", "盐酸二甲双胍片", "阿卡波糖片", "阿法骨化醇片"]}, {"终端名称": "忠县金声乡卫生院", "区": "忠县", "产品数": 2, "在销产品数量": 2, "累计销售金额": 2257.0, "目标销售金额": 2578.62, "销售费用": 227.09, "年市场规模": 3148.0, "医院等级": "其他", "完成率": 87.53, "费用率": 0.0, "产品列表": ["炎琥宁80mg", "阿卡波糖片"]}, {"终端名称": "忠县金鸡镇卫生院", "区": "忠县", "产品数": 4, "在销产品数量": 2, "累计销售金额": 655.0, "目标销售金额": 4903.17, "销售费用": 2121.93, "年市场规模": 7300.0, "医院等级": "其他", "完成率": 13.36, "费用率": 0.0, "产品列表": ["富马酸替诺福韦二吡呋酯片", "炎琥宁80mg", "盐酸二甲双胍片", "盐酸二甲双胍缓释片"]}, {"终端名称": "忠县马灌中心卫生院", "区": "忠县", "产品数": 3, "在销产品数量": 2, "累计销售金额": 4205.0, "目标销售金额": 35207.06, "销售费用": 6529.67, "年市场规模": 13460.0, "医院等级": "一级", "完成率": 11.94, "费用率": 0.0, "产品列表": ["炎琥宁80mg", "盐酸二甲双胍缓释片", "苯磺酸氨氯地平片"]}, {"终端名称": "忠县黄金镇卫生院（忠县黄金中心卫生院）", "区": "忠县", "产品数": 3, "在销产品数量": 3, "累计销售金额": 1527.61, "目标销售金额": 4387.24, "销售费用": 0.0, "年市场规模": 10160.0, "医院等级": "其他", "完成率": 34.82, "费用率": 0.0, "产品列表": ["恩替卡韦片", "注射用谷胱甘肽", "炎琥宁80mg"]}, {"终端名称": "石柱县土家族自治县龙沙镇卫生院", "区": "石柱县", "产品数": 3, "在销产品数量": 2, "累计销售金额": 3667.0, "目标销售金额": 2097.1, "销售费用": 549.62, "年市场规模": 0.0, "医院等级": "其他", "完成率": 174.86, "费用率": 17.52, "产品列表": ["氯化钾缓释片", "注射用泮托拉唑钠", "苯磺酸氨氯地平片"]}, {"终端名称": "石柱土家族自治县万安街道社区卫生服务中心", "区": "石柱县", "产品数": 2, "在销产品数量": 2, "累计销售金额": 35338.54, "目标销售金额": 53064.18, "销售费用": 15218.97, "年市场规模": 0.0, "医院等级": "其他", "完成率": 66.6, "费用率": 20.21, "产品列表": ["苯磺酸氨氯地平片", "谷胱甘肽片0.1g"]}, {"终端名称": "石柱土家族自治县万朝镇卫生院", "区": "石柱县", "产品数": 1, "在销产品数量": 1, "累计销售金额": 685.0, "目标销售金额": 4983.72, "销售费用": 0.0, "年市场规模": 0.0, "医院等级": "其他", "完成率": 13.74, "费用率": 0.0, "产品列表": ["苯磺酸氨氯地平片"]}, {"终端名称": "石柱土家族自治县三星乡卫生院", "区": "石柱县", "产品数": 4, "在销产品数量": 3, "累计销售金额": 16272.0, "目标销售金额": 6259.19, "销售费用": 1452.16, "年市场规模": 0.0, "医院等级": "其他", "完成率": 259.97, "费用率": 19.31, "产品列表": ["氯化钾缓释片", "苯磺酸氨氯地平片", "阿法骨化醇片", "雷贝拉唑钠肠溶片"]}, {"终端名称": "石柱土家族自治县三河镇卫生院", "区": "石柱县", "产品数": 2, "在销产品数量": 2, "累计销售金额": 17130.0, "目标销售金额": 26466.56, "销售费用": 5758.63, "年市场规模": 60.0, "医院等级": "其他", "完成率": 64.72, "费用率": 18.01, "产品列表": ["苯磺酸氨氯地平片", "阿法骨化醇片"]}, {"终端名称": "石柱土家族自治县三益乡卫生院", "区": "石柱县", "产品数": 2, "在销产品数量": 2, "累计销售金额": 2696.6, "目标销售金额": 160.19, "销售费用": 38.11, "年市场规模": 600.0, "医院等级": "其他", "完成率": 1683.37, "费用率": 17.47, "产品列表": ["苯磺酸氨氯地平片", "阿法骨化醇片"]}, {"终端名称": "石柱土家族自治县下路街道社区卫生服务中心", "区": "石柱县", "产品数": 4, "在销产品数量": 4, "累计销售金额": 2730.6, "目标销售金额": 9002.62, "销售费用": 1870.73, "年市场规模": 2800.0, "医院等级": "其他", "完成率": 30.33, "费用率": 24.74, "产品列表": ["注射用谷胱甘肽", "炎琥宁80mg", "苯磺酸氨氯地平片", "雷贝拉唑钠肠溶片"]}, {"终端名称": "石柱土家族自治县中医院", "区": "石柱县", "产品数": 12, "在销产品数量": 11, "累计销售金额": 137768.95, "目标销售金额": 469002.98, "销售费用": 66941.18, "年市场规模": 109600.0, "医院等级": "二级", "完成率": 29.37, "费用率": 13.36, "产品列表": ["依匹斯汀10mg", "氯化钾颗粒", "注射用二氯醋酸二异丙胺", "注射用水溶性维生素", "注射用泮托拉唑钠", "注射用谷胱甘肽", "炎琥宁80mg", "盐酸度洛西汀肠溶胶囊", "腺苷钴胺", "谷胱甘肽片0.1g", "阿法骨化醇片", "阿魏酸钠"]}, {"终端名称": "石柱土家族自治县中益乡卫生院", "区": "石柱县", "产品数": 4, "在销产品数量": 4, "累计销售金额": 5267.86, "目标销售金额": 8257.4, "销售费用": 1108.3, "年市场规模": 5035.0, "医院等级": "其他", "完成率": 63.8, "费用率": 19.31, "产品列表": ["注射用谷胱甘肽", "炎琥宁80mg", "苯磺酸氨氯地平片", "阿法骨化醇片"]}, {"终端名称": "石柱土家族自治县临溪镇中心卫生院", "区": "石柱县", "产品数": 3, "在销产品数量": 3, "累计销售金额": 20445.8, "目标销售金额": 17089.84, "销售费用": 3675.36, "年市场规模": 3900.0, "医院等级": "其他", "完成率": 119.64, "费用率": 19.0, "产品列表": ["氯化钾颗粒", "苯磺酸氨氯地平片", "阿法骨化醇片"]}, {"终端名称": "石柱土家族自治县人民医院", "区": "石柱县", "产品数": 14, "在销产品数量": 11, "累计销售金额": 255249.77, "目标销售金额": 1175397.12, "销售费用": 371058.0, "年市场规模": 215260.0, "医院等级": "二级", "完成率": 21.72, "费用率": 19.47, "产品列表": ["依匹斯汀10mg", "富马酸替诺福韦二吡呋酯片", "氯化钾颗粒", "注射用二氯醋酸二异丙胺", "注射用培美曲塞二钠", "注射用艾司奥美拉唑钠", "注射用谷胱甘肽", "炎琥宁80mg", "甲苯磺酸索拉非尼片", "盐酸度洛西汀肠溶胶囊", "硫辛酸注射液", "苯磺酸氨氯地平片", "谷胱甘肽片0.1g", "阿法骨化醇片"]}, {"终端名称": "石柱土家族自治县六塘乡卫生院", "区": "石柱县", "产品数": 3, "在销产品数量": 2, "累计销售金额": 2785.0, "目标销售金额": 621.04, "销售费用": 110.28, "年市场规模": 2550.0, "医院等级": "其他", "完成率": 448.44, "费用率": 20.0, "产品列表": ["吲达帕胺片", "炎琥宁80mg", "苯磺酸氨氯地平片"]}, {"终端名称": "石柱土家族自治县南宾街道社区卫生服务中心", "区": "石柱县", "产品数": 3, "在销产品数量": 3, "累计销售金额": 40698.0, "目标销售金额": 30452.95, "销售费用": 6985.56, "年市场规模": 13090.0, "医院等级": "一级", "完成率": 133.64, "费用率": 20.0, "产品列表": ["注射用谷胱甘肽", "苯磺酸氨氯地平片", "阿法骨化醇片"]}, {"终端名称": "石柱土家族自治县大歇镇卫生院", "区": "石柱县", "产品数": 3, "在销产品数量": 2, "累计销售金额": 3286.0, "目标销售金额": 1778.02, "销售费用": 566.75, "年市场规模": 0.0, "医院等级": "其他", "完成率": 184.81, "费用率": 20.0, "产品列表": ["氯化钾缓释片", "苯磺酸氨氯地平片", "阿法骨化醇片"]}, {"终端名称": "石柱土家族自治县妇幼保健院", "区": "石柱县", "产品数": 3, "在销产品数量": 3, "累计销售金额": 887.17, "目标销售金额": 971.35, "销售费用": 0.0, "年市场规模": 900.0, "医院等级": "一级", "完成率": 91.33, "费用率": 0.0, "产品列表": ["恩替卡韦片", "炎琥宁80mg", "阿法骨化醇片"]}, {"终端名称": "石柱土家族自治县悦崃镇中心卫生院", "区": "石柱县", "产品数": 3, "在销产品数量": 3, "累计销售金额": 8568.0, "目标销售金额": 8672.33, "销售费用": 1449.14, "年市场规模": 2070.0, "医院等级": "其他", "完成率": 98.8, "费用率": 20.0, "产品列表": ["注射用谷胱甘肽", "苯磺酸氨氯地平片", "阿法骨化醇片"]}, {"终端名称": "石柱土家族自治县新乐乡卫生院", "区": "石柱县", "产品数": 1, "在销产品数量": 1, "累计销售金额": 377.0, "目标销售金额": 39.87, "销售费用": 9.48, "年市场规模": 0.0, "医院等级": "其他", "完成率": 945.58, "费用率": 20.0, "产品列表": ["苯磺酸氨氯地平片"]}, {"终端名称": "石柱土家族自治县枫木镇卫生院", "区": "石柱县", "产品数": 3, "在销产品数量": 3, "累计销售金额": 1368.2, "目标销售金额": 4879.95, "销售费用": 0.0, "年市场规模": 1520.0, "医院等级": "其他", "完成率": 28.04, "费用率": 0.0, "产品列表": ["注射用谷胱甘肽", "苯磺酸氨氯地平片", "阿法骨化醇片"]}, {"终端名称": "石柱土家族自治县桥头镇卫生院", "区": "石柱县", "产品数": 2, "在销产品数量": 2, "累计销售金额": 5427.6, "目标销售金额": 7181.73, "销售费用": 1647.05, "年市场规模": 600.0, "医院等级": "其他", "完成率": 75.58, "费用率": 18.74, "产品列表": ["苯磺酸氨氯地平片", "阿法骨化醇片"]}, {"终端名称": "石柱土家族自治县沙子镇中心卫生院", "区": "石柱县", "产品数": 3, "在销产品数量": 2, "累计销售金额": 2234.4, "目标销售金额": 6044.91, "销售费用": 287.55, "年市场规模": 150.0, "医院等级": "其他", "完成率": 36.96, "费用率": 0.0, "产品列表": ["氯化钾缓释片", "苯磺酸氨氯地平片", "阿法骨化醇片"]}, {"终端名称": "石柱土家族自治县河嘴乡卫生院", "区": "石柱县", "产品数": 1, "在销产品数量": 1, "累计销售金额": 1651.0, "目标销售金额": 5639.91, "销售费用": 0.0, "年市场规模": 0.0, "医院等级": "其他", "完成率": 29.27, "费用率": 0.0, "产品列表": ["苯磺酸氨氯地平片"]}, {"终端名称": "石柱土家族自治县沿溪镇卫生院", "区": "石柱县", "产品数": 1, "在销产品数量": 1, "累计销售金额": 6846.0, "目标销售金额": 7613.16, "销售费用": 1811.13, "年市场规模": 0.0, "医院等级": "其他", "完成率": 89.92, "费用率": 20.0, "产品列表": ["苯磺酸氨氯地平片"]}, {"终端名称": "石柱土家族自治县洗新乡卫生院", "区": "石柱县", "产品数": 1, "在销产品数量": 1, "累计销售金额": 0.0, "目标销售金额": 186.89, "销售费用": 0.0, "年市场规模": 0.0, "医院等级": "其他", "完成率": 0.0, "费用率": 0.0, "产品列表": ["苯磺酸氨氯地平片"]}, {"终端名称": "石柱土家族自治县王场镇卫生院", "区": "石柱县", "产品数": 4, "在销产品数量": 2, "累计销售金额": 1557.0, "目标销售金额": 5667.81, "销售费用": 232.32, "年市场规模": 1500.0, "医院等级": "其他", "完成率": 27.47, "费用率": 0.0, "产品列表": ["瑞舒伐他汀钙片", "苯磺酸氨氯地平片", "阿托伐他汀钙片", "阿法骨化醇片"]}, {"终端名称": "石柱土家族自治县王家乡卫生院", "区": "石柱县", "产品数": 3, "在销产品数量": 3, "累计销售金额": 251.72, "目标销售金额": 2378.57, "销售费用": 0.0, "年市场规模": 10.0, "医院等级": "其他", "完成率": 10.58, "费用率": 0.0, "产品列表": ["依匹斯汀10mg", "注射用谷胱甘肽", "苯磺酸氨氯地平片"]}, {"终端名称": "石柱土家族自治县石家乡卫生院", "区": "石柱县", "产品数": 2, "在销产品数量": 2, "累计销售金额": 10194.6, "目标销售金额": 3025.83, "销售费用": 719.83, "年市场规模": 0.0, "医院等级": "其他", "完成率": 336.92, "费用率": 19.33, "产品列表": ["苯磺酸氨氯地平片", "阿法骨化醇片"]}, {"终端名称": "石柱土家族自治县西沱镇中心卫生院", "区": "石柱县", "产品数": 2, "在销产品数量": 2, "累计销售金额": 14506.62, "目标销售金额": 70833.67, "销售费用": 22041.52, "年市场规模": 0.0, "医院等级": "其他", "完成率": 20.48, "费用率": 21.53, "产品列表": ["苯磺酸氨氯地平片", "谷胱甘肽片0.1g"]}, {"终端名称": "石柱土家族自治县金铃乡卫生院", "区": "石柱县", "产品数": 1, "在销产品数量": 1, "累计销售金额": 0.0, "目标销售金额": 20.77, "销售费用": 0.0, "年市场规模": 0.0, "医院等级": "其他", "完成率": 0.0, "费用率": 0.0, "产品列表": ["苯磺酸氨氯地平片"]}, {"终端名称": "石柱土家族自治县马武镇中心卫生院", "区": "石柱县", "产品数": 2, "在销产品数量": 2, "累计销售金额": 1976.0, "目标销售金额": 1334.92, "销售费用": 317.57, "年市场规模": 0.0, "医院等级": "其他", "完成率": 148.02, "费用率": 20.0, "产品列表": ["苯磺酸氨氯地平片", "谷胱甘肽片0.1g"]}, {"终端名称": "石柱土家族自治县鱼池镇卫生院", "区": "石柱县", "产品数": 1, "在销产品数量": 1, "累计销售金额": 125.0, "目标销售金额": 6520.36, "销售费用": 0.0, "年市场规模": 0.0, "医院等级": "其他", "完成率": 1.92, "费用率": 0.0, "产品列表": ["苯磺酸氨氯地平片"]}, {"终端名称": "石柱土家族自治县黄水镇中心卫生院", "区": "石柱县", "产品数": 5, "在销产品数量": 5, "累计销售金额": 712.04, "目标销售金额": 28673.69, "销售费用": 72.54, "年市场规模": 52900.0, "医院等级": "其他", "完成率": 2.48, "费用率": 7.4, "产品列表": ["依匹斯汀10mg", "注射用谷胱甘肽", "炎琥宁80mg", "苯磺酸氨氯地平片", "阿法骨化醇片"]}, {"终端名称": "石柱土家族自治县黄鹤镇卫生院", "区": "石柱县", "产品数": 3, "在销产品数量": 3, "累计销售金额": 2797.4, "目标销售金额": 2999.96, "销售费用": 521.66, "年市场规模": 3900.0, "医院等级": "其他", "完成率": 93.25, "费用率": 16.34, "产品列表": ["苯磺酸氨氯地平片", "谷胱甘肽片0.1g", "阿法骨化醇片"]}, {"终端名称": "石柱土家族自治县黎场乡卫生院", "区": "石柱县", "产品数": 2, "在销产品数量": 2, "累计销售金额": 1428.0, "目标销售金额": 4345.8, "销售费用": 1033.84, "年市场规模": 0.0, "医院等级": "其他", "完成率": 32.86, "费用率": 20.0, "产品列表": ["苯磺酸氨氯地平片", "阿法骨化醇片"]}, {"终端名称": "石柱土家族自治县龙潭乡卫生院", "区": "石柱县", "产品数": 2, "在销产品数量": 2, "累计销售金额": 0.0, "目标销售金额": 362.13, "销售费用": 0.0, "年市场规模": 45.0, "医院等级": "其他", "完成率": 0.0, "费用率": 0.0, "产品列表": ["注射用谷胱甘肽", "阿法骨化醇片"]}, {"终端名称": "重庆万州安宇医院", "区": "万州区", "产品数": 2, "在销产品数量": 1, "累计销售金额": 0.0, "目标销售金额": 2686.06, "销售费用": 0.0, "年市场规模": 5940.0, "医院等级": "一级", "完成率": 0.0, "费用率": 0.0, "产品列表": ["炎琥宁80mg", "阿法骨化醇片"]}, {"终端名称": "重庆万州欣欣医院", "区": "万州区", "产品数": 1, "在销产品数量": 1, "累计销售金额": 0.0, "目标销售金额": 286.84, "销售费用": 0.0, "年市场规模": 50.0, "医院等级": "其他", "完成率": 0.0, "费用率": 0.0, "产品列表": ["注射用谷胱甘肽"]}, {"终端名称": "重庆三峡医药高等专科学校附属中医院", "区": "万州区", "产品数": 11, "在销产品数量": 7, "累计销售金额": 97143.46, "目标销售金额": 262718.94, "销售费用": 59480.8, "年市场规模": 116400.0, "医院等级": "三级", "完成率": 36.98, "费用率": 8.82, "产品列表": ["恩替卡韦片", "注射用泮托拉唑钠", "注射用美罗培南", "注射用艾司奥美拉唑钠", "注射用谷胱甘肽", "炎琥宁80mg", "盐酸二甲双胍缓释片", "苯磺酸氨氯地平片", "谷胱甘肽片0.1g", "阿托伐他汀钙片", "阿法骨化醇片"]}, {"终端名称": "重庆三峡医药高等专科学校附属人民医院", "区": "万州区", "产品数": 25, "在销产品数量": 7, "累计销售金额": 163550.16, "目标销售金额": 3472213.73, "销售费用": 1344106.63, "年市场规模": 120000.0, "医院等级": "三级", "完成率": 4.71, "费用率": 25.05, "产品列表": ["依匹斯汀10mg", "吲达帕胺片", "富马酸丙酚替诺福韦片", "富马酸替诺福韦二吡呋酯片", "恩替卡韦片", "氯化钾缓释片", "注射用伏立康唑", "注射用头孢他啶", "注射用拉氧头孢钠", "注射用泮托拉唑钠", "注射用艾司奥美拉唑钠", "注射用谷胱甘肽", "琥珀酸美托洛尔缓释片", "瑞舒伐他汀钙片", "盐酸二甲双胍片", "盐酸二甲双胍缓释片", "盐酸克林霉素胶囊", "盐酸度洛西汀肠溶胶囊", "硫辛酸注射液", "硫酸异帕米星注射液", "硫酸氢氯吡格雷片", "苯磺酸氨氯地平片", "谷胱甘肽片0.1g", "阿托伐他汀钙片", "阿法骨化醇片"]}, {"终端名称": "重庆三峡医药高等专科学校附属医院", "区": "万州区", "产品数": 1, "在销产品数量": 1, "累计销售金额": 0.0, "目标销售金额": 0.0, "销售费用": 0.0, "年市场规模": 0.0, "医院等级": "二甲", "完成率": 0.0, "费用率": 0.0, "产品列表": ["硫代硫酸钠注射液"]}, {"终端名称": "重庆三峡民康医院", "区": "忠县", "产品数": 4, "在销产品数量": 3, "累计销售金额": 744.0, "目标销售金额": 5656.46, "销售费用": 1155.87, "年市场规模": 5460.0, "医院等级": "二级", "完成率": 13.15, "费用率": 0.0, "产品列表": ["恩替卡韦片", "氯化钾缓释片", "炎琥宁80mg", "盐酸度洛西汀肠溶胶囊"]}, {"终端名称": "重庆大学附属三峡医院", "区": "万州区", "产品数": 13, "在销产品数量": 9, "累计销售金额": 591949.79, "目标销售金额": 4562899.67, "销售费用": 1447721.63, "年市场规模": 320070.0, "医院等级": "二级", "完成率": 12.97, "费用率": 20.32, "产品列表": ["依匹斯汀10mg", "氯化钾缓释片", "注射用拉氧头孢钠", "注射用水溶性维生素", "甲苯磺酸索拉非尼片", "盐酸二甲双胍缓释片", "盐酸度洛西汀肠溶胶囊", "谷胱甘肽片0.1g", "阿卡波糖片", "阿托伐他汀钙片", "阿法骨化醇片", "阿立哌唑口崩片", "阿魏酸钠"]}, {"终端名称": "重庆市万州区上海医院", "区": "万州区", "产品数": 5, "在销产品数量": 4, "累计销售金额": 43728.0, "目标销售金额": 98270.18, "销售费用": 11622.53, "年市场规模": 0.0, "医院等级": "二级", "完成率": 44.5, "费用率": 14.34, "产品列表": ["恩替卡韦片", "瑞舒伐他汀钙片", "盐酸度洛西汀肠溶胶囊", "苯磺酸氨氯地平片", "阿卡波糖片"]}, {"终端名称": "重庆市万州区九池街道社区卫生服务中心(九池分院)", "区": "万州区", "产品数": 4, "在销产品数量": 2, "累计销售金额": 1095.72, "目标销售金额": 26732.9, "销售费用": 7346.3, "年市场规模": 1790.0, "医院等级": "其他", "完成率": 4.1, "费用率": 1.78, "产品列表": ["注射用谷胱甘肽", "炎琥宁80mg", "盐酸二甲双胍缓释片", "阿卡波糖片"]}, {"终端名称": "重庆市万州区五桥街道社区卫生服务中心", "区": "万州区", "产品数": 2, "在销产品数量": 2, "累计销售金额": 19631.15, "目标销售金额": 1576.72, "销售费用": 337.53, "年市场规模": 1220.0, "医院等级": "一级", "完成率": 1245.06, "费用率": 19.49, "产品列表": ["炎琥宁80mg", "苯磺酸氨氯地平片"]}, {"终端名称": "重庆市万州区余家镇中心卫生院", "区": "万州区", "产品数": 2, "在销产品数量": 1, "累计销售金额": 5211.0, "目标销售金额": 12210.36, "销售费用": 2904.78, "年市场规模": 0.0, "医院等级": "其他", "完成率": 42.68, "费用率": 20.0, "产品列表": ["注射用泮托拉唑钠", "瑞舒伐他汀钙片"]}, {"终端名称": "重庆市万州区分水镇中心卫生院", "区": "万州区", "产品数": 7, "在销产品数量": 6, "累计销售金额": 32213.29, "目标销售金额": 42994.75, "销售费用": 10072.97, "年市场规模": 19600.0, "医院等级": "一级", "完成率": 74.92, "费用率": 18.82, "产品列表": ["恩替卡韦片", "氯化钾颗粒", "注射用泮托拉唑钠", "注射用谷胱甘肽", "炎琥宁80mg", "苯磺酸氨氯地平片", "阿法骨化醇片"]}, {"终端名称": "重庆市万州区双河口街道社区卫生服务中心", "区": "万州区", "产品数": 4, "在销产品数量": 3, "累计销售金额": 15072.7, "目标销售金额": 41253.0, "销售费用": 2602.05, "年市场规模": 15796.0, "医院等级": "其他", "完成率": 36.54, "费用率": 6.99, "产品列表": ["恩替卡韦片", "注射用谷胱甘肽", "炎琥宁80mg", "阿法骨化醇片"]}, {"终端名称": "重庆市万州区后山镇卫生院", "区": "万州区", "产品数": 4, "在销产品数量": 2, "累计销售金额": 1869.0, "目标销售金额": 8227.0, "销售费用": 1.3, "年市场规模": 2592.0, "医院等级": "其他", "完成率": 22.72, "费用率": 0.0, "产品列表": ["注射用泮托拉唑钠", "炎琥宁80mg", "苯磺酸氨氯地平片", "阿法骨化醇片"]}, {"终端名称": "重庆市万州区周家坝街道社区卫生服务中心", "区": "万州区", "产品数": 3, "在销产品数量": 2, "累计销售金额": 416.0, "目标销售金额": 4146.32, "销售费用": 93.6, "年市场规模": 80.0, "医院等级": "其他", "完成率": 10.03, "费用率": 0.0, "产品列表": ["注射用艾司奥美拉唑钠", "注射用谷胱甘肽", "苯磺酸氨氯地平片"]}, {"终端名称": "重庆市万州区响水镇中心卫生院", "区": "万州区", "产品数": 1, "在销产品数量": 1, "累计销售金额": 1020.0, "目标销售金额": 3626.41, "销售费用": 862.7, "年市场规模": 0.0, "医院等级": "其他", "完成率": 28.13, "费用率": 20.0, "产品列表": ["注射用泮托拉唑钠"]}, {"终端名称": "重庆市万州区地宝土家族乡卫生院", "区": "万州区", "产品数": 1, "在销产品数量": 1, "累计销售金额": 311.0, "目标销售金额": 311.48, "销售费用": 0.0, "年市场规模": 0.0, "医院等级": "一级", "完成率": 99.85, "费用率": 0.0, "产品列表": ["苯磺酸氨氯地平片"]}, {"终端名称": "重庆市万州区大周镇卫生院", "区": "万州区", "产品数": 1, "在销产品数量": 1, "累计销售金额": 0.0, "目标销售金额": 11960.92, "销售费用": 2845.44, "年市场规模": 0.0, "医院等级": "其他", "完成率": 0.0, "费用率": 0.0, "产品列表": ["苯磺酸氨氯地平片"]}, {"终端名称": "重庆市万州区天城街道社区卫生服务中心", "区": "万州区", "产品数": 4, "在销产品数量": 1, "累计销售金额": 2375.1, "目标销售金额": 59391.47, "销售费用": 19712.16, "年市场规模": 400.0, "医院等级": "其他", "完成率": 4.0, "费用率": 0.0, "产品列表": ["注射用谷胱甘肽", "盐酸二甲双胍缓释片", "苯磺酸氨氯地平片", "阿法骨化醇片"]}, {"终端名称": "重庆市万州区太白街道社区卫生服务中心", "区": "万州区", "产品数": 4, "在销产品数量": 2, "累计销售金额": 0.0, "目标销售金额": 39862.95, "销售费用": 10175.87, "年市场规模": 6000.0, "医院等级": "其他", "完成率": 0.0, "费用率": 0.0, "产品列表": ["恩替卡韦片", "炎琥宁80mg", "琥珀酸美托洛尔缓释片", "苯磺酸氨氯地平片"]}, {"终端名称": "重庆市万州区太龙镇中心卫生院", "区": "万州区", "产品数": 5, "在销产品数量": 3, "累计销售金额": 263.72, "目标销售金额": 15830.9, "销售费用": 284.97, "年市场规模": 320.0, "医院等级": "一级", "完成率": 1.67, "费用率": 7.4, "产品列表": ["吲达帕胺片", "注射用谷胱甘肽", "炎琥宁80mg", "琥珀酸美托洛尔缓释片", "苯磺酸氨氯地平片"]}, {"终端名称": "重庆市万州区妇幼保健院", "区": "万州区", "产品数": 5, "在销产品数量": 4, "累计销售金额": 2496.0, "目标销售金额": 86734.18, "销售费用": 22794.39, "年市场规模": 24030.0, "医院等级": "三级", "完成率": 2.88, "费用率": 0.0, "产品列表": ["富马酸替诺福韦二吡呋酯片", "氯化钾颗粒", "注射用水溶性维生素", "注射用谷胱甘肽", "炎琥宁80mg"]}, {"终端名称": "重庆市万州区孙家镇卫生院", "区": "万州区", "产品数": 2, "在销产品数量": 2, "累计销售金额": 85.4, "目标销售金额": 6085.12, "销售费用": 1447.62, "年市场规模": 0.0, "医院等级": "其他", "完成率": 1.4, "费用率": 0.0, "产品列表": ["苯磺酸氨氯地平片", "阿法骨化醇片"]}, {"终端名称": "重庆市万州区小周镇卫生院", "区": "万州区", "产品数": 1, "在销产品数量": 1, "累计销售金额": 1869.0, "目标销售金额": 207.65, "销售费用": 0.0, "年市场规模": 0.0, "医院等级": "一级", "完成率": 900.05, "费用率": 0.0, "产品列表": ["苯磺酸氨氯地平片"]}, {"终端名称": "重庆市万州区弹子镇卫生院（重庆市万州区弹子镇计划生育服务站）", "区": "万州区", "产品数": 5, "在销产品数量": 2, "累计销售金额": 0.0, "目标销售金额": 16319.29, "销售费用": 4500.79, "年市场规模": 500.0, "医院等级": "其他", "完成率": 0.0, "费用率": 0.0, "产品列表": ["注射用泮托拉唑钠", "炎琥宁80mg", "盐酸二甲双胍缓释片", "苯磺酸氨氯地平片", "阿卡波糖片"]}, {"终端名称": "重庆市万州区恒合土家族乡卫生院", "区": "万州区", "产品数": 2, "在销产品数量": 2, "累计销售金额": 1816.0, "目标销售金额": 103.83, "销售费用": 0.0, "年市场规模": 0.0, "医院等级": "其他", "完成率": 1749.06, "费用率": 0.0, "产品列表": ["注射用泮托拉唑钠", "苯磺酸氨氯地平片"]}, {"终端名称": "重庆市万州区新乡镇卫生院", "区": "万州区", "产品数": 3, "在销产品数量": 3, "累计销售金额": 568.43, "目标销售金额": 4507.29, "销售费用": 331.17, "年市场规模": 1780.0, "医院等级": "其他", "完成率": 12.61, "费用率": 6.87, "产品列表": ["恩替卡韦片", "炎琥宁80mg", "苯磺酸氨氯地平片"]}, {"终端名称": "重庆市万州区新田镇中心卫生院（重庆市万州区新田镇计划生育服务站）", "区": "万州区", "产品数": 4, "在销产品数量": 1, "累计销售金额": 4160.0, "目标销售金额": 24860.45, "销售费用": 4688.47, "年市场规模": 950.0, "医院等级": "其他", "完成率": 16.73, "费用率": 0.0, "产品列表": ["中/长链脂肪乳注射液（C6~24）", "注射用谷胱甘肽", "盐酸二甲双胍片", "阿卡波糖片"]}, {"终端名称": "重庆市万州区普子乡卫生院", "区": "万州区", "产品数": 1, "在销产品数量": 0, "累计销售金额": 0.0, "目标销售金额": 236.07, "销售费用": 140.4, "年市场规模": 0.0, "医院等级": "其他", "完成率": 0.0, "费用率": 0.0, "产品列表": ["注射用艾司奥美拉唑钠"]}, {"终端名称": "重庆市万州区李河镇卫生院", "区": "万州区", "产品数": 1, "在销产品数量": 1, "累计销售金额": 681.0, "目标销售金额": 0.0, "销售费用": 0.0, "年市场规模": 0.0, "医院等级": "一级", "完成率": 0.0, "费用率": 0.0, "产品列表": ["注射用泮托拉唑钠"]}, {"终端名称": "重庆市万州区柱山乡卫生院（重庆市万州区柱山乡计划生育服务站）", "区": "万州区", "产品数": 2, "在销产品数量": 0, "累计销售金额": 0.0, "目标销售金额": 2767.23, "销售费用": 64.08, "年市场规模": 0.0, "医院等级": "其他", "完成率": 0.0, "费用率": 0.0, "产品列表": ["吲达帕胺片", "阿卡波糖片"]}, {"终端名称": "重庆市万州区梨树乡卫生院", "区": "万州区", "产品数": 4, "在销产品数量": 3, "累计销售金额": 1294.72, "目标销售金额": 10248.88, "销售费用": 1929.57, "年市场规模": 640.0, "医院等级": "一级", "完成率": 12.63, "费用率": 5.48, "产品列表": ["注射用泮托拉唑钠", "炎琥宁80mg", "苯磺酸氨氯地平片", "阿卡波糖片"]}, {"终端名称": "重庆市万州区武陵镇中心卫生院", "区": "万州区", "产品数": 4, "在销产品数量": 4, "累计销售金额": 1530.0, "目标销售金额": 38420.27, "销售费用": 2596.75, "年市场规模": 2100.0, "医院等级": "其他", "完成率": 3.98, "费用率": 20.0, "产品列表": ["恩替卡韦片", "注射用拉氧头孢钠", "注射用泮托拉唑钠", "阿法骨化醇片"]}, {"终端名称": "重庆市万州区沙河街道社区卫生服务中心", "区": "万州区", "产品数": 7, "在销产品数量": 5, "累计销售金额": 4740.45, "目标销售金额": 11689.0, "销售费用": 1021.65, "年市场规模": 3650.0, "医院等级": "一级", "完成率": 40.55, "费用率": 3.71, "产品列表": ["吲达帕胺片", "氯化钾颗粒", "注射用奥美拉唑钠", "注射用泮托拉唑钠", "炎琥宁80mg", "阿卡波糖片", "阿法骨化醇片"]}, {"终端名称": "重庆市万州区溪口乡卫生院", "区": "万州区", "产品数": 1, "在销产品数量": 1, "累计销售金额": 9797.0, "目标销售金额": 7196.49, "销售费用": 1712.01, "年市场规模": 0.0, "医院等级": "其他", "完成率": 136.14, "费用率": 20.0, "产品列表": ["苯磺酸氨氯地平片"]}, {"终端名称": "重庆市万州区瀼渡镇卫生院", "区": "万州区", "产品数": 1, "在销产品数量": 1, "累计销售金额": 9139.0, "目标销售金额": 3927.17, "销售费用": 934.25, "年市场规模": 0.0, "医院等级": "其他", "完成率": 232.71, "费用率": 20.0, "产品列表": ["苯磺酸氨氯地平片"]}, {"终端名称": "重庆市万州区熊家镇中心卫生院", "区": "万州区", "产品数": 4, "在销产品数量": 3, "累计销售金额": 4935.45, "目标销售金额": 8241.67, "销售费用": 1478.01, "年市场规模": 3000.0, "医院等级": "一级", "完成率": 59.88, "费用率": 3.56, "产品列表": ["氯化钾缓释片", "炎琥宁80mg", "苯磺酸氨氯地平片", "阿法骨化醇片"]}, {"终端名称": "重庆市万州区燕山乡卫生院", "区": "万州区", "产品数": 4, "在销产品数量": 4, "累计销售金额": 19510.92, "目标销售金额": 12182.4, "销售费用": 2288.63, "年市场规模": 1420.0, "医院等级": "其他", "完成率": 160.16, "费用率": 19.13, "产品列表": ["恩替卡韦片", "炎琥宁80mg", "苯磺酸氨氯地平片", "阿法骨化醇片"]}, {"终端名称": "重庆市万州区牌楼街道社区卫生服务中心", "区": "万州区", "产品数": 2, "在销产品数量": 2, "累计销售金额": 405.0, "目标销售金额": 879.9, "销售费用": 0.0, "年市场规模": 100.0, "医院等级": "其他", "完成率": 46.03, "费用率": 0.0, "产品列表": ["恩替卡韦片", "注射用谷胱甘肽"]}, {"终端名称": "重庆市万州区甘宁镇中心卫生院（重庆市万州区甘宁镇计划生育服务站）", "区": "万州区", "产品数": 5, "在销产品数量": 5, "累计销售金额": 10747.72, "目标销售金额": 37050.31, "销售费用": 1539.15, "年市场规模": 30340.0, "医院等级": "其他", "完成率": 29.01, "费用率": 0.18, "产品列表": ["恩替卡韦片", "注射用泮托拉唑钠", "注射用谷胱甘肽", "炎琥宁80mg", "阿法骨化醇片"]}, {"终端名称": "重庆市万州区白土镇中心卫生院", "区": "万州区", "产品数": 6, "在销产品数量": 2, "累计销售金额": 1366.4, "目标销售金额": 26329.2, "销售费用": 5483.75, "年市场规模": 3870.0, "医院等级": "一级", "完成率": 5.19, "费用率": 0.0, "产品列表": ["丙泊酚中/长链脂肪乳注射液", "恩替卡韦片", "盐酸二甲双胍缓释片", "苯磺酸氨氯地平片", "阿卡波糖片", "阿法骨化醇片"]}, {"终端名称": "重庆市万州区白羊镇中心卫生院", "区": "万州区", "产品数": 3, "在销产品数量": 3, "累计销售金额": 144.0, "目标销售金额": 13782.98, "销售费用": 0.0, "年市场规模": 1000.0, "医院等级": "其他", "完成率": 1.04, "费用率": 0.0, "产品列表": ["恩替卡韦片", "注射用谷胱甘肽", "苯磺酸氨氯地平片"]}, {"终端名称": "重庆市万州区百安坝街道移民社区卫生服务中心", "区": "万州区", "产品数": 3, "在销产品数量": 2, "累计销售金额": 0.0, "目标销售金额": 4049.85, "销售费用": 413.27, "年市场规模": 400.0, "医院等级": "二级", "完成率": 0.0, "费用率": 0.0, "产品列表": ["恩替卡韦片", "注射用谷胱甘肽", "苯磺酸氨氯地平片"]}, {"终端名称": "重庆市万州区第一人民医院", "区": "万州区", "产品数": 11, "在销产品数量": 9, "累计销售金额": 37959.4, "目标销售金额": 247279.46, "销售费用": 33998.94, "年市场规模": 70330.0, "医院等级": "二甲", "完成率": 15.35, "费用率": 5.59, "产品列表": ["富马酸替诺福韦二吡呋酯片", "恩替卡韦片", "氯化钾颗粒", "注射用二氯醋酸二异丙胺", "注射用拉氧头孢钠", "炎琥宁80mg", "甲磺酸仑伐替尼胶囊", "硫辛酸注射液", "谷胱甘肽片0.1g", "阿卡波糖片", "阿法骨化醇片"]}, {"终端名称": "重庆市万州区罗田镇卫生院", "区": "万州区", "产品数": 1, "在销产品数量": 1, "累计销售金额": 4236.0, "目标销售金额": 6811.08, "销售费用": 0.0, "年市场规模": 0.0, "医院等级": "一级", "完成率": 62.19, "费用率": 0.0, "产品列表": ["苯磺酸氨氯地平片"]}, {"终端名称": "重庆市万州区走马镇中心卫生院（重庆市万州区走马镇计划生育服务站）", "区": "万州区", "产品数": 4, "在销产品数量": 4, "累计销售金额": 33328.75, "目标销售金额": 14495.11, "销售费用": 3944.7, "年市场规模": 4400.0, "医院等级": "其他", "完成率": 229.93, "费用率": 20.84, "产品列表": ["注射用泮托拉唑钠", "注射用谷胱甘肽", "炎琥宁80mg", "苯磺酸氨氯地平片"]}, {"终端名称": "重庆市万州区郭村镇卫生院", "区": "万州区", "产品数": 2, "在销产品数量": 2, "累计销售金额": 405.0, "目标销售金额": 4725.85, "销售费用": 1048.07, "年市场规模": 0.0, "医院等级": "其他", "完成率": 8.57, "费用率": 0.0, "产品列表": ["恩替卡韦片", "苯磺酸氨氯地平片"]}, {"终端名称": "重庆市万州区钟鼓楼街道社区卫生服务中心", "区": "万州区", "产品数": 1, "在销产品数量": 1, "累计销售金额": 3115.0, "目标销售金额": 0.0, "销售费用": 0.0, "年市场规模": 0.0, "医院等级": "其他", "完成率": 0.0, "费用率": 0.0, "产品列表": ["苯磺酸氨氯地平片"]}, {"终端名称": "重庆市万州区铁峰乡卫生院", "区": "万州区", "产品数": 4, "在销产品数量": 4, "累计销售金额": 17687.0, "目标销售金额": 14810.82, "销售费用": 3102.71, "年市场规模": 980.0, "医院等级": "其他", "完成率": 119.42, "费用率": 19.96, "产品列表": ["恩替卡韦片", "注射用谷胱甘肽", "炎琥宁80mg", "苯磺酸氨氯地平片"]}, {"终端名称": "重庆市万州区长坪乡卫生院", "区": "万州区", "产品数": 1, "在销产品数量": 1, "累计销售金额": 7536.0, "目标销售金额": 8722.39, "销售费用": 2075.01, "年市场规模": 0.0, "医院等级": "其他", "完成率": 86.4, "费用率": 20.0, "产品列表": ["苯磺酸氨氯地平片"]}, {"终端名称": "重庆市万州区长岭镇卫生院", "区": "万州区", "产品数": 3, "在销产品数量": 2, "累计销售金额": 6129.0, "目标销售金额": 2435.82, "销售费用": 782.83, "年市场规模": 0.0, "医院等级": "其他", "完成率": 251.62, "费用率": 0.0, "产品列表": ["恩替卡韦片", "氯化钾缓释片", "注射用泮托拉唑钠"]}, {"终端名称": "重庆市万州区长滩镇卫生院", "区": "万州区", "产品数": 4, "在销产品数量": 2, "累计销售金额": 1810.5, "目标销售金额": 12751.41, "销售费用": 880.61, "年市场规模": 800.0, "医院等级": "其他", "完成率": 14.2, "费用率": 0.0, "产品列表": ["炎琥宁80mg", "盐酸二甲双胍缓释片", "苯磺酸氨氯地平片", "阿卡波糖片"]}, {"终端名称": "重庆市万州区陈家坝街道社区卫生服务中心", "区": "万州区", "产品数": 1, "在销产品数量": 1, "累计销售金额": 0.0, "目标销售金额": 13.66, "销售费用": 0.0, "年市场规模": 0.0, "医院等级": "其他", "完成率": 0.0, "费用率": 0.0, "产品列表": ["氯化钾颗粒"]}, {"终端名称": "重庆市万州区高峰街道社区卫生服务中心", "区": "万州区", "产品数": 2, "在销产品数量": 2, "累计销售金额": 23104.0, "目标销售金额": 25363.56, "销售费用": 6033.86, "年市场规模": 0.0, "医院等级": "其他", "完成率": 91.09, "费用率": 16.69, "产品列表": ["苯磺酸氨氯地平片", "阿卡波糖片"]}, {"终端名称": "重庆市万州区高梁镇中心卫生院（重庆市万州区高梁镇计划生育服务站）", "区": "万州区", "产品数": 2, "在销产品数量": 2, "累计销售金额": 14315.0, "目标销售金额": 25628.76, "销售费用": 0.0, "年市场规模": 0.0, "医院等级": "一级", "完成率": 55.86, "费用率": 0.0, "产品列表": ["注射用泮托拉唑钠", "苯磺酸氨氯地平片"]}, {"终端名称": "重庆市万州区高笋塘街道社区卫生服务中心", "区": "万州区", "产品数": 3, "在销产品数量": 3, "累计销售金额": 1009.0, "目标销售金额": 1659.44, "销售费用": 82.94, "年市场规模": 150.0, "医院等级": "其他", "完成率": 60.8, "费用率": 5.05, "产品列表": ["注射用泮托拉唑钠", "注射用谷胱甘肽", "雷贝拉唑钠肠溶片"]}, {"终端名称": "重庆市万州区黄柏乡卫生院（重庆市万州区黄柏乡计划生育服务站）", "区": "万州区", "产品数": 5, "在销产品数量": 4, "累计销售金额": 6649.96, "目标销售金额": 13298.78, "销售费用": 552.96, "年市场规模": 1800.0, "医院等级": "其他", "完成率": 50.0, "费用率": 6.27, "产品列表": ["注射用拉氧头孢钠", "注射用泮托拉唑钠", "盐酸克林霉素胶囊", "苯磺酸氨氯地平片", "阿法骨化醇片"]}, {"终端名称": "重庆市万州区龙沙镇中心卫生院（重庆市万州区龙沙镇计划生育服务站）", "区": "万州区", "产品数": 5, "在销产品数量": 3, "累计销售金额": 5005.58, "目标销售金额": 23007.51, "销售费用": 4042.0, "年市场规模": 14875.0, "医院等级": "其他", "完成率": 21.76, "费用率": 1.95, "产品列表": ["恩替卡韦片", "氯化钾缓释片", "注射用谷胱甘肽", "炎琥宁80mg", "阿法骨化醇片"]}, {"终端名称": "重庆市万州区龙都街道社区卫生服务中心", "区": "万州区", "产品数": 1, "在销产品数量": 1, "累计销售金额": 832.0, "目标销售金额": 2292.65, "销售费用": 0.0, "年市场规模": 500.0, "医院等级": "其他", "完成率": 36.29, "费用率": 0.0, "产品列表": ["注射用谷胱甘肽"]}, {"终端名称": "重庆市万州区龙驹镇中心卫生院（重庆市万州区龙驹镇计划生育服务站）（重庆三峡中心医院龙驹分院）", "区": "万州区", "产品数": 5, "在销产品数量": 3, "累计销售金额": 6173.2, "目标销售金额": 33538.68, "销售费用": 6945.11, "年市场规模": 580.0, "医院等级": "其他", "完成率": 18.41, "费用率": 0.0, "产品列表": ["氯化钾缓释片", "注射用泮托拉唑钠", "注射用谷胱甘肽", "苯磺酸氨氯地平片", "阿卡波糖片"]}, {"终端名称": "重庆市万州社会福利院", "区": "万州区", "产品数": 2, "在销产品数量": 2, "累计销售金额": 0.0, "目标销售金额": 401.02, "销售费用": 0.0, "年市场规模": 70.0, "医院等级": "其他", "完成率": 0.0, "费用率": 0.0, "产品列表": ["注射用谷胱甘肽", "阿法骨化醇片"]}, {"终端名称": "重庆市万州荣军优抚医院（重庆市万州康复辅具技术中心）", "区": "万州区", "产品数": 2, "在销产品数量": 2, "累计销售金额": 22785.32, "目标销售金额": 0.0, "销售费用": 0.0, "年市场规模": 0.0, "医院等级": "一级", "完成率": 0.0, "费用率": 0.0, "产品列表": ["谷胱甘肽片0.1g", "阿法骨化醇片"]}, {"终端名称": "重庆市三峡监狱医院", "区": "万州区", "产品数": 2, "在销产品数量": 2, "累计销售金额": 0.0, "目标销售金额": 2368.44, "销售费用": 0.0, "年市场规模": 0.0, "医院等级": "其他", "完成率": 0.0, "费用率": 0.0, "产品列表": ["恩替卡韦片", "苯磺酸氨氯地平片"]}, {"终端名称": "重庆市忠县中医医院", "区": "忠县", "产品数": 7, "在销产品数量": 7, "累计销售金额": 112630.6, "目标销售金额": 353577.59, "销售费用": 86845.56, "年市场规模": 32500.0, "医院等级": "二甲", "完成率": 31.85, "费用率": 17.93, "产品列表": ["富马酸替诺福韦二吡呋酯片", "恩替卡韦片", "注射用二氯醋酸二异丙胺", "炎琥宁80mg", "甲苯磺酸索拉非尼片", "苯磺酸氨氯地平片", "阿法骨化醇片"]}, {"终端名称": "重庆市忠县人民医院", "区": "忠县", "产品数": 10, "在销产品数量": 10, "累计销售金额": 298784.38, "目标销售金额": 2241221.51, "销售费用": 431271.09, "年市场规模": 92580.0, "医院等级": "三级", "完成率": 13.33, "费用率": 23.01, "产品列表": ["依匹斯汀10mg", "氯化钾颗粒", "注射用二氯醋酸二异丙胺", "注射用谷胱甘肽", "炎琥宁80mg", "甲苯磺酸索拉非尼片", "盐酸度洛西汀肠溶胶囊", "谷胱甘肽片0.1g", "阿卡波糖片", "阿法骨化醇片"]}, {"终端名称": "重庆市忠县忠州街道社区卫生服务中心", "区": "忠县", "产品数": 1, "在销产品数量": 1, "累计销售金额": 0.0, "目标销售金额": 311.48, "销售费用": 0.0, "年市场规模": 0.0, "医院等级": "一级", "完成率": 0.0, "费用率": 0.0, "产品列表": ["苯磺酸氨氯地平片"]}, {"终端名称": "重庆市忠县白公街道社区卫生服务中心", "区": "忠县", "产品数": 2, "在销产品数量": 2, "累计销售金额": 41459.36, "目标销售金额": 17321.95, "销售费用": 851.58, "年市场规模": 12450.0, "医院等级": "其他", "完成率": 239.35, "费用率": 1.27, "产品列表": ["炎琥宁80mg", "阿卡波糖片"]}, {"终端名称": "重庆市梁平区七星镇卫生院", "区": "梁平区", "产品数": 1, "在销产品数量": 1, "累计销售金额": 311.0, "目标销售金额": 2076.55, "销售费用": 0.0, "年市场规模": 0.0, "医院等级": "其他", "完成率": 14.98, "费用率": 0.0, "产品列表": ["苯磺酸氨氯地平片"]}, {"终端名称": "重庆市梁平区中医医院", "区": "梁平区", "产品数": 15, "在销产品数量": 8, "累计销售金额": 60380.25, "目标销售金额": 190434.99, "销售费用": 63826.4, "年市场规模": 46400.0, "医院等级": "二级", "完成率": 31.71, "费用率": 22.14, "产品列表": ["亚叶酸钙注射液", "吲达帕胺片", "氯化钾缓释片", "氯化钾颗粒", "注射用泮托拉唑钠", "注射用艾司奥美拉唑钠", "注射用谷胱甘肽", "盐酸度洛西汀肠溶胶囊", "盐酸舍曲林片", "硫酸异帕米星注射液", "苯磺酸氨氯地平片", "谷胱甘肽片0.1g", "阿卡波糖片", "阿法骨化醇片", "阿立哌唑口崩片"]}, {"终端名称": "重庆市梁平区云龙中心卫生院", "区": "梁平区", "产品数": 2, "在销产品数量": 1, "累计销售金额": 6821.0, "目标销售金额": 3778.58, "销售费用": 0.0, "年市场规模": 0.0, "医院等级": "其他", "完成率": 180.52, "费用率": 0.0, "产品列表": ["恩替卡韦片", "苯磺酸氨氯地平片"]}, {"终端名称": "重庆市梁平区人民医院", "区": "梁平区", "产品数": 8, "在销产品数量": 6, "累计销售金额": 193763.22, "目标销售金额": 849520.25, "销售费用": 297778.09, "年市场规模": 311070.0, "医院等级": "三级", "完成率": 22.81, "费用率": 27.61, "产品列表": ["注射用水溶性维生素", "注射用美罗培南", "甲苯磺酸索拉非尼片", "盐酸度洛西汀肠溶胶囊", "硫代硫酸钠注射液", "谷胱甘肽片0.1g", "阿卡波糖片", "阿法骨化醇片"]}, {"终端名称": "重庆市梁平区仁贤街道社区卫生服务中心", "区": "梁平区", "产品数": 3, "在销产品数量": 2, "累计销售金额": 71400.0, "目标销售金额": 10315.8, "销售费用": 2785.05, "年市场规模": 0.0, "医院等级": "其他", "完成率": 692.14, "费用率": 20.0, "产品列表": ["恩替卡韦片", "琥珀酸美托洛尔缓释片", "苯磺酸氨氯地平片"]}, {"终端名称": "重庆市梁平区双桂街道社区卫生服务中心", "区": "梁平区", "产品数": 3, "在销产品数量": 1, "累计销售金额": 0.0, "目标销售金额": 399.02, "销售费用": 176.03, "年市场规模": 10500.0, "医院等级": "其他", "完成率": 0.0, "费用率": 0.0, "产品列表": ["注射用泮托拉唑钠", "盐酸二甲双胍片", "阿法骨化醇片"]}, {"终端名称": "重庆市梁平区合兴街道社区卫生服务中心", "区": "梁平区", "产品数": 3, "在销产品数量": 3, "累计销售金额": 2569.42, "目标销售金额": 2470.84, "销售费用": 126.16, "年市场规模": 1732.0, "医院等级": "一级", "完成率": 103.99, "费用率": 4.78, "产品列表": ["注射用泮托拉唑钠", "炎琥宁80mg", "苯磺酸氨氯地平片"]}, {"终端名称": "重庆市梁平区回龙镇卫生院", "区": "梁平区", "产品数": 1, "在销产品数量": 1, "累计销售金额": 0.0, "目标销售金额": 2020.15, "销售费用": 0.0, "年市场规模": 0.0, "医院等级": "其他", "完成率": 0.0, "费用率": 0.0, "产品列表": ["注射用克林霉素"]}, {"终端名称": "重庆市梁平区复平镇卫生院", "区": "梁平区", "产品数": 1, "在销产品数量": 1, "累计销售金额": 0.0, "目标销售金额": 150.32, "销售费用": 0.0, "年市场规模": 0.0, "医院等级": "一级", "完成率": 0.0, "费用率": 0.0, "产品列表": ["雷贝拉唑钠肠溶片"]}, {"终端名称": "重庆市梁平区大观镇卫生院", "区": "梁平区", "产品数": 2, "在销产品数量": 2, "累计销售金额": 405.0, "目标销售金额": 463.85, "销售费用": 0.0, "年市场规模": 0.0, "医院等级": "其他", "完成率": 87.31, "费用率": 0.0, "产品列表": ["恩替卡韦片", "苯磺酸氨氯地平片"]}, {"终端名称": "重庆市梁平区安胜镇卫生院", "区": "梁平区", "产品数": 3, "在销产品数量": 0, "累计销售金额": 0.0, "目标销售金额": 8678.67, "销售费用": 3636.18, "年市场规模": 4200.0, "医院等级": "其他", "完成率": 0.0, "费用率": 0.0, "产品列表": ["氯化钾缓释片", "盐酸二甲双胍缓释片", "阿法骨化醇片"]}, {"终端名称": "重庆市梁平区文化镇卫生院", "区": "梁平区", "产品数": 6, "在销产品数量": 2, "累计销售金额": 3164.6, "目标销售金额": 12958.85, "销售费用": 2175.34, "年市场规模": 0.0, "医院等级": "其他", "完成率": 24.42, "费用率": 7.4, "产品列表": ["氯化钾缓释片", "注射用泮托拉唑钠", "炎琥宁80mg", "盐酸二甲双胍缓释片", "苯磺酸氨氯地平片", "阿卡波糖片"]}, {"终端名称": "重庆市梁平区新盛中心卫生院", "区": "梁平区", "产品数": 4, "在销产品数量": 3, "累计销售金额": 2442.0, "目标销售金额": 2100.39, "销售费用": 388.83, "年市场规模": 0.0, "医院等级": "其他", "完成率": 116.26, "费用率": 17.96, "产品列表": ["吲达帕胺片", "注射用泮托拉唑钠", "苯磺酸氨氯地平片", "阿卡波糖片"]}, {"终端名称": "重庆市梁平区明达镇卫生院", "区": "梁平区", "产品数": 4, "在销产品数量": 3, "累计销售金额": 8815.58, "目标销售金额": 8434.36, "销售费用": 2362.66, "年市场规模": 7100.0, "医院等级": "其他", "完成率": 104.52, "费用率": 18.12, "产品列表": ["氯化钾缓释片", "炎琥宁80mg", "苯磺酸氨氯地平片", "阿法骨化醇片"]}, {"终端名称": "重庆市梁平区星桥镇卫生院", "区": "梁平区", "产品数": 4, "在销产品数量": 2, "累计销售金额": 93.0, "目标销售金额": 2348.35, "销售费用": 811.2, "年市场规模": 4500.0, "医院等级": "其他", "完成率": 3.96, "费用率": 0.0, "产品列表": ["氯化钾缓释片", "注射用泮托拉唑钠", "苯磺酸氨氯地平片", "阿法骨化醇片"]}, {"终端名称": "重庆市梁平区曲水镇卫生院", "区": "梁平区", "产品数": 2, "在销产品数量": 2, "累计销售金额": 0.0, "目标销售金额": 3479.02, "销售费用": 0.0, "年市场规模": 3640.0, "医院等级": "其他", "完成率": 0.0, "费用率": 0.0, "产品列表": ["炎琥宁80mg", "苯磺酸氨氯地平片"]}, {"终端名称": "重庆市梁平区柏家中心卫生院", "区": "梁平区", "产品数": 3, "在销产品数量": 3, "累计销售金额": 6230.0, "目标销售金额": 3684.64, "销售费用": 0.0, "年市场规模": 1570.0, "医院等级": "其他", "完成率": 169.08, "费用率": 0.0, "产品列表": ["注射用谷胱甘肽", "苯磺酸氨氯地平片", "阿法骨化醇片"]}, {"终端名称": "重庆市梁平区梁山街道社区卫生服务中心", "区": "梁平区", "产品数": 7, "在销产品数量": 2, "累计销售金额": 198.0, "目标销售金额": 94650.3, "销售费用": 10095.23, "年市场规模": 0.0, "医院等级": "其他", "完成率": 0.21, "费用率": 4.0, "产品列表": ["丙泊酚中/长链脂肪乳注射液", "恩替卡韦片", "氯化钾缓释片", "瑞舒伐他汀钙片", "硫辛酸注射液", "苯磺酸氨氯地平片", "阿卡波糖片"]}, {"终端名称": "重庆市梁平区石安镇卫生院", "区": "梁平区", "产品数": 1, "在销产品数量": 1, "累计销售金额": 527.43, "目标销售金额": 823.73, "销售费用": 72.54, "年市场规模": 400.0, "医院等级": "其他", "完成率": 64.03, "费用率": 7.4, "产品列表": ["炎琥宁80mg"]}, {"终端名称": "重庆市梁平区礼让中心卫生院", "区": "梁平区", "产品数": 4, "在销产品数量": 2, "累计销售金额": 188.0, "目标销售金额": 16295.05, "销售费用": 4138.15, "年市场规模": 540.0, "医院等级": "其他", "完成率": 1.15, "费用率": 20.0, "产品列表": ["氯化钾缓释片", "炎琥宁80mg", "盐酸二甲双胍缓释片", "苯磺酸氨氯地平片"]}, {"终端名称": "重庆市梁平区福禄中心卫生院", "区": "梁平区", "产品数": 7, "在销产品数量": 2, "累计销售金额": 5274.33, "目标销售金额": 32147.45, "销售费用": 3518.72, "年市场规模": 15400.0, "医院等级": "一级", "完成率": 16.41, "费用率": 7.4, "产品列表": ["吲达帕胺片", "注射用谷胱甘肽", "炎琥宁80mg", "瑞舒伐他汀钙片", "盐酸二甲双胍片", "阿卡波糖片", "阿托伐他汀钙片"]}, {"终端名称": "重庆市梁平区竹山镇卫生院（重庆市梁平区竹山镇计划生育服务站）", "区": "梁平区", "产品数": 2, "在销产品数量": 2, "累计销售金额": 1727.43, "目标销售金额": 943.78, "销售费用": 207.48, "年市场规模": 560.0, "医院等级": "其他", "完成率": 183.03, "费用率": 11.58, "产品列表": ["炎琥宁80mg", "苯磺酸氨氯地平片"]}, {"终端名称": "重庆市梁平区第二人民医院", "区": "梁平区", "产品数": 2, "在销产品数量": 2, "累计销售金额": 78.0, "目标销售金额": 14762.33, "销售费用": 0.0, "年市场规模": 300.0, "医院等级": "其他", "完成率": 0.53, "费用率": 0.0, "产品列表": ["注射用谷胱甘肽", "苯磺酸氨氯地平片"]}, {"终端名称": "重庆市梁平区精神卫生中心（重庆市梁平区失能老人护理院）", "区": "梁平区", "产品数": 2, "在销产品数量": 1, "累计销售金额": 0.0, "目标销售金额": 4122.5, "销售费用": 27.65, "年市场规模": 0.0, "医院等级": "二级", "完成率": 0.0, "费用率": 0.0, "产品列表": ["注射用泮托拉唑钠", "盐酸度洛西汀肠溶胶囊"]}, {"终端名称": "重庆市梁平区紫照镇卫生院", "区": "梁平区", "产品数": 1, "在销产品数量": 1, "累计销售金额": 0.0, "目标销售金额": 188.95, "销售费用": 0.0, "年市场规模": 0.0, "医院等级": "其他", "完成率": 0.0, "费用率": 0.0, "产品列表": ["注射用二氯醋酸二异丙胺"]}, {"终端名称": "重庆市梁平区聚奎镇卫生院（重庆市梁平区聚奎镇计划生育服务站）", "区": "梁平区", "产品数": 2, "在销产品数量": 2, "累计销售金额": 37680.0, "目标销售金额": 18773.69, "销售费用": 4234.29, "年市场规模": 10.0, "医院等级": "一级", "完成率": 200.71, "费用率": 20.0, "产品列表": ["注射用谷胱甘肽", "苯磺酸氨氯地平片"]}, {"终端名称": "重庆市梁平区荫平镇卫生院", "区": "梁平区", "产品数": 1, "在销产品数量": 0, "累计销售金额": 0.0, "目标销售金额": 918.25, "销售费用": 43.69, "年市场规模": 0.0, "医院等级": "其他", "完成率": 0.0, "费用率": 0.0, "产品列表": ["阿卡波糖片"]}, {"终端名称": "重庆市梁平区葫芦药房", "区": "梁平区", "产品数": 1, "在销产品数量": 1, "累计销售金额": 0.0, "目标销售金额": 20.77, "销售费用": 0.0, "年市场规模": 0.0, "医院等级": "其他", "完成率": 0.0, "费用率": 0.0, "产品列表": ["苯磺酸氨氯地平片"]}, {"终端名称": "重庆市梁平区虎城中心卫生院", "区": "梁平区", "产品数": 4, "在销产品数量": 4, "累计销售金额": 37018.73, "目标销售金额": 15348.36, "销售费用": 3229.0, "年市场规模": 2800.0, "医院等级": "其他", "完成率": 241.19, "费用率": 17.94, "产品列表": ["恩替卡韦片", "注射用泮托拉唑钠", "炎琥宁80mg", "苯磺酸氨氯地平片"]}, {"终端名称": "重庆市梁平区袁驿中心卫生院", "区": "梁平区", "产品数": 2, "在销产品数量": 1, "累计销售金额": 62.0, "目标销售金额": 11291.36, "销售费用": 522.41, "年市场规模": 0.0, "医院等级": "其他", "完成率": 0.55, "费用率": 0.0, "产品列表": ["苯磺酸氨氯地平片", "阿卡波糖片"]}, {"终端名称": "重庆市梁平区诚德中医医院有限责任公司", "区": "梁平区", "产品数": 1, "在销产品数量": 1, "累计销售金额": 93.0, "目标销售金额": 353.01, "销售费用": 0.0, "年市场规模": 0.0, "医院等级": "其他", "完成率": 26.34, "费用率": 0.0, "产品列表": ["苯磺酸氨氯地平片"]}, {"终端名称": "重庆市梁平区金带镇卫生院", "区": "梁平区", "产品数": 1, "在销产品数量": 1, "累计销售金额": 0.0, "目标销售金额": 677.98, "销售费用": 0.0, "年市场规模": 2700.0, "医院等级": "其他", "完成率": 0.0, "费用率": 0.0, "产品列表": ["阿法骨化醇片"]}, {"终端名称": "重庆市梁平区龙胜乡卫生院", "区": "梁平区", "产品数": 2, "在销产品数量": 2, "累计销售金额": 814.0, "目标销售金额": 3432.02, "销售费用": 0.0, "年市场规模": 0.0, "医院等级": "其他", "完成率": 23.72, "费用率": 0.0, "产品列表": ["苯磺酸氨氯地平片", "阿卡波糖片"]}, {"终端名称": "重庆市梁平区龙门镇卫生院", "区": "梁平区", "产品数": 2, "在销产品数量": 2, "累计销售金额": 0.0, "目标销售金额": 1289.2, "销售费用": 0.0, "年市场规模": 2400.0, "医院等级": "其他", "完成率": 0.0, "费用率": 0.0, "产品列表": ["苯磺酸氨氯地平片", "阿法骨化醇片"]}], "products": [{"药品名称": "丙泊酚中/长链脂肪乳注射液", "产品分类": "商销品", "终端数": 2, "在销终端数": 0, "累计销售金额": 0.0, "目标销售金额": 1607.38, "当前销量": 0.0, "目标销量": 249.6, "销售费用": 382.39, "年市场规模": 0.0, "完成率": 0.0, "费用率": 20.0, "在销终端": "重庆市万州区白土镇中心卫生院|重庆市梁平区梁山街道社区卫生服务中心", "终端列表": ["重庆市万州区白土镇中心卫生院", "重庆市梁平区梁山街道社区卫生服务中心"]}, {"药品名称": "中/长链脂肪乳注射液（C6~24）", "产品分类": "商销品", "终端数": 1, "在销终端数": 0, "累计销售金额": 0.0, "目标销售金额": 13.8, "当前销量": 0.0, "目标销量": 0.48, "销售费用": 18.46, "年市场规模": 0.0, "完成率": 0.0, "费用率": 45.0, "在销终端": "重庆市万州区新田镇中心卫生院（重庆市万州区新田镇计划生育服务站）", "终端列表": ["重庆市万州区新田镇中心卫生院（重庆市万州区新田镇计划生育服务站）"]}, {"药品名称": "亚叶酸钙注射液", "产品分类": "代理品", "终端数": 1, "在销终端数": 1, "累计销售金额": 0.0, "目标销售金额": 11067.96, "当前销量": 0.0, "目标销量": 500.0, "销售费用": 6480.0, "年市场规模": 0.0, "完成率": 0.0, "费用率": 54.0, "在销终端": "重庆市梁平区中医医院", "终端列表": ["重庆市梁平区中医医院"]}, {"药品名称": "依匹斯汀10mg", "产品分类": "品牌品", "终端数": 7, "在销终端数": 7, "累计销售金额": 353639.5, "目标销售金额": 1658108.01, "当前销量": 121860.0, "目标销量": 573336.0, "销售费用": 150273.57, "年市场规模": 0.0, "完成率": 21.33, "费用率": 36.43, "在销终端": "石柱土家族自治县中医院|石柱土家族自治县人民医院|石柱土家族自治县王家乡卫生院|石柱土家族自治县黄水镇中心卫生院|重庆三峡医药高等专科学校附属人民医院|重庆大学附属三峡医院|重庆市忠县人民医院", "终端列表": ["石柱土家族自治县中医院", "石柱土家族自治县人民医院", "石柱土家族自治县王家乡卫生院", "石柱土家族自治县黄水镇中心卫生院", "重庆三峡医药高等专科学校附属人民医院", "重庆大学附属三峡医院", "重庆市忠县人民医院"]}, {"药品名称": "吲达帕胺片", "产品分类": "商销品", "终端数": 10, "在销终端数": 0, "累计销售金额": 0.0, "目标销售金额": 12284.14, "当前销量": 0.0, "目标销量": 166041.6, "销售费用": 0.0, "年市场规模": 0.0, "完成率": 0.0, "费用率": 0.0, "在销终端": "忠县善广乡卫生院|忠县官坝中心卫生院|石柱土家族自治县六塘乡卫生院|重庆三峡医药高等专科学校附属人民医院|重庆市万州区太龙镇中心卫生院|重庆市万州区柱山乡卫生院（重庆市万州区柱山乡计划生育服务站）|重庆市万州区沙河街道社区卫生服务中心|重庆市梁平区中医医院|重庆市梁平区新盛中心卫生院|重庆市梁平区福禄中心卫生院", "终端列表": ["忠县善广乡卫生院", "忠县官坝中心卫生院", "石柱土家族自治县六塘乡卫生院", "重庆三峡医药高等专科学校附属人民医院", "重庆市万州区太龙镇中心卫生院", "重庆市万州区柱山乡卫生院（重庆市万州区柱山乡计划生育服务站）", "重庆市万州区沙河街道社区卫生服务中心", "重庆市梁平区中医医院", "重庆市梁平区新盛中心卫生院", "重庆市梁平区福禄中心卫生院"]}, {"药品名称": "富马酸丙酚替诺福韦片", "产品分类": "商销品", "终端数": 1, "在销终端数": 0, "累计销售金额": 0.0, "目标销售金额": 11624.53, "当前销量": 0.0, "目标销量": 32256.0, "销售费用": 0.0, "年市场规模": 0.0, "完成率": 0.0, "费用率": 0.0, "在销终端": "重庆三峡医药高等专科学校附属人民医院", "终端列表": ["重庆三峡医药高等专科学校附属人民医院"]}, {"药品名称": "富马酸替诺福韦二吡呋酯片", "产品分类": "商销品", "终端数": 6, "在销终端数": 3, "累计销售金额": 4386.0, "目标销售金额": 23818.48, "当前销量": 14400.0, "目标销量": 81804.0, "销售费用": 0.0, "年市场规模": 0.0, "完成率": 18.41, "费用率": 0.0, "在销终端": "忠县金鸡镇卫生院|石柱土家族自治县人民医院|重庆三峡医药高等专科学校附属人民医院|重庆市万州区妇幼保健院|重庆市万州区第一人民医院|重庆市忠县中医医院", "终端列表": ["忠县金鸡镇卫生院", "石柱土家族自治县人民医院", "重庆三峡医药高等专科学校附属人民医院", "重庆市万州区妇幼保健院", "重庆市万州区第一人民医院", "重庆市忠县中医医院"]}, {"药品名称": "恩替卡韦片", "产品分类": "商销品", "终端数": 32, "在销终端数": 25, "累计销售金额": 10542.0, "目标销售金额": 97672.34, "当前销量": 64935.0, "目标销量": 702693.6, "销售费用": 0.0, "年市场规模": 0.0, "完成率": 10.79, "费用率": 0.0, "在销终端": "忠县双桂镇卫生院|忠县永丰镇卫生院|忠县野鹤镇卫生院|忠县黄金镇卫生院（忠县黄金中心卫生院）|石柱土家族自治县妇幼保健院|重庆三峡医药高等专科学校附属中医院|重庆三峡医药高等专科学校附属人民医院|重庆三峡民康医院|重庆市万州区上海医院|重庆市万州区分水镇中心卫生院|重庆市万州区双河口街道社区卫生服务中心|重庆市万州区太白街道社区卫生服务中心|重庆市万州区新乡镇卫生院|重庆市万州区武陵镇中心卫生院|重庆市万州区燕山乡卫生院|重庆市万州区牌楼街道社区卫生服务中心|重庆市万州区甘宁镇中心卫生院（重庆市万州区甘宁镇计划生育服务站）|重庆市万州区白土镇中心卫生院|重庆市万州区白羊镇中心卫生院|重庆市万州区百安坝街道移民社区卫生服务中心|重庆市万州区第一人民医院|重庆市万州区郭村镇卫生院|重庆市万州区铁峰乡卫生院|重庆市万州区长岭镇卫生院|重庆市万州区龙沙镇中心卫生院（重庆市万州区龙沙镇计划生育服务站）|重庆市三峡监狱医院|重庆市忠县中医医院|重庆市梁平区云龙中心卫生院|重庆市梁平区仁贤街道社区卫生服务中心|重庆市梁平区大观镇卫生院|重庆市梁平区梁山街道社区卫生服务中心|重庆市梁平区虎城中心卫生院", "终端列表": ["忠县双桂镇卫生院", "忠县永丰镇卫生院", "忠县野鹤镇卫生院", "忠县黄金镇卫生院（忠县黄金中心卫生院）", "石柱土家族自治县妇幼保健院", "重庆三峡医药高等专科学校附属中医院", "重庆三峡医药高等专科学校附属人民医院", "重庆三峡民康医院", "重庆市万州区上海医院", "重庆市万州区分水镇中心卫生院", "重庆市万州区双河口街道社区卫生服务中心", "重庆市万州区太白街道社区卫生服务中心", "重庆市万州区新乡镇卫生院", "重庆市万州区武陵镇中心卫生院", "重庆市万州区燕山乡卫生院", "重庆市万州区牌楼街道社区卫生服务中心", "重庆市万州区甘宁镇中心卫生院（重庆市万州区甘宁镇计划生育服务站）", "重庆市万州区白土镇中心卫生院", "重庆市万州区白羊镇中心卫生院", "重庆市万州区百安坝街道移民社区卫生服务中心", "重庆市万州区第一人民医院", "重庆市万州区郭村镇卫生院", "重庆市万州区铁峰乡卫生院", "重庆市万州区长岭镇卫生院", "重庆市万州区龙沙镇中心卫生院（重庆市万州区龙沙镇计划生育服务站）", "重庆市三峡监狱医院", "重庆市忠县中医医院", "重庆市梁平区云龙中心卫生院", "重庆市梁平区仁贤街道社区卫生服务中心", "重庆市梁平区大观镇卫生院", "重庆市梁平区梁山街道社区卫生服务中心", "重庆市梁平区虎城中心卫生院"]}, {"药品名称": "氯化钾缓释片", "产品分类": "商销品", "终端数": 23, "在销终端数": 0, "累计销售金额": 0.0, "目标销售金额": 155560.55, "当前销量": 0.0, "目标销量": 664399.2, "销售费用": 74014.07, "年市场规模": 0.0, "完成率": 0.0, "费用率": 40.0, "在销终端": "忠县兴峰乡卫生院|忠县官坝中心卫生院|忠县永丰镇卫生院|忠县石子乡卫生院|忠县石黄镇卫生院|石柱县土家族自治县龙沙镇卫生院|石柱土家族自治县三星乡卫生院|石柱土家族自治县大歇镇卫生院|石柱土家族自治县沙子镇中心卫生院|重庆三峡医药高等专科学校附属人民医院|重庆三峡民康医院|重庆大学附属三峡医院|重庆市万州区熊家镇中心卫生院|重庆市万州区长岭镇卫生院|重庆市万州区龙沙镇中心卫生院（重庆市万州区龙沙镇计划生育服务站）|重庆市万州区龙驹镇中心卫生院（重庆市万州区龙驹镇计划生育服务站）（重庆三峡中心医院龙驹分院）|重庆市梁平区中医医院|重庆市梁平区安胜镇卫生院|重庆市梁平区文化镇卫生院|重庆市梁平区明达镇卫生院|重庆市梁平区星桥镇卫生院|重庆市梁平区梁山街道社区卫生服务中心|重庆市梁平区礼让中心卫生院", "终端列表": ["忠县兴峰乡卫生院", "忠县官坝中心卫生院", "忠县永丰镇卫生院", "忠县石子乡卫生院", "忠县石黄镇卫生院", "石柱县土家族自治县龙沙镇卫生院", "石柱土家族自治县三星乡卫生院", "石柱土家族自治县大歇镇卫生院", "石柱土家族自治县沙子镇中心卫生院", "重庆三峡医药高等专科学校附属人民医院", "重庆三峡民康医院", "重庆大学附属三峡医院", "重庆市万州区熊家镇中心卫生院", "重庆市万州区长岭镇卫生院", "重庆市万州区龙沙镇中心卫生院（重庆市万州区龙沙镇计划生育服务站）", "重庆市万州区龙驹镇中心卫生院（重庆市万州区龙驹镇计划生育服务站）（重庆三峡中心医院龙驹分院）", "重庆市梁平区中医医院", "重庆市梁平区安胜镇卫生院", "重庆市梁平区文化镇卫生院", "重庆市梁平区明达镇卫生院", "重庆市梁平区星桥镇卫生院", "重庆市梁平区梁山街道社区卫生服务中心", "重庆市梁平区礼让中心卫生院"]}, {"药品名称": "氯化钾颗粒", "产品分类": "商销品", "终端数": 12, "在销终端数": 12, "累计销售金额": 0.0, "目标销售金额": 538.26, "当前销量": 0.0, "目标销量": 1970.0, "销售费用": 0.0, "年市场规模": 0.0, "完成率": 0.0, "费用率": 0.0, "在销终端": "忠县永丰镇卫生院|忠县涂井乡卫生院|石柱土家族自治县中医院|石柱土家族自治县临溪镇中心卫生院|石柱土家族自治县人民医院|重庆市万州区分水镇中心卫生院|重庆市万州区妇幼保健院|重庆市万州区沙河街道社区卫生服务中心|重庆市万州区第一人民医院|重庆市万州区陈家坝街道社区卫生服务中心|重庆市忠县人民医院|重庆市梁平区中医医院", "终端列表": ["忠县永丰镇卫生院", "忠县涂井乡卫生院", "石柱土家族自治县中医院", "石柱土家族自治县临溪镇中心卫生院", "石柱土家族自治县人民医院", "重庆市万州区分水镇中心卫生院", "重庆市万州区妇幼保健院", "重庆市万州区沙河街道社区卫生服务中心", "重庆市万州区第一人民医院", "重庆市万州区陈家坝街道社区卫生服务中心", "重庆市忠县人民医院", "重庆市梁平区中医医院"]}, {"药品名称": "注射用二氯醋酸二异丙胺", "产品分类": "商销品", "终端数": 8, "在销终端数": 8, "累计销售金额": 93877.0, "目标销售金额": 158909.97, "当前销量": 4680.0, "目标销量": 25230.0, "销售费用": 0.0, "年市场规模": 0.0, "完成率": 59.08, "费用率": 0.0, "在销终端": "忠县汝溪中心卫生院|忠县白石中心卫生院|石柱土家族自治县中医院|石柱土家族自治县人民医院|重庆市万州区第一人民医院|重庆市忠县中医医院|重庆市忠县人民医院|重庆市梁平区紫照镇卫生院", "终端列表": ["忠县汝溪中心卫生院", "忠县白石中心卫生院", "石柱土家族自治县中医院", "石柱土家族自治县人民医院", "重庆市万州区第一人民医院", "重庆市忠县中医医院", "重庆市忠县人民医院", "重庆市梁平区紫照镇卫生院"]}, {"药品名称": "注射用伏立康唑", "产品分类": "商销品", "终端数": 1, "在销终端数": 0, "累计销售金额": 0.0, "目标销售金额": 20425.57, "当前销量": 0.0, "目标销量": 691.2, "销售费用": 12147.84, "年市场规模": 0.0, "完成率": 0.0, "费用率": 50.0, "在销终端": "重庆三峡医药高等专科学校附属人民医院", "终端列表": ["重庆三峡医药高等专科学校附属人民医院"]}, {"药品名称": "注射用克林霉素", "产品分类": "商销品", "终端数": 1, "在销终端数": 1, "累计销售金额": 0.0, "目标销售金额": 2020.15, "当前销量": 0.0, "目标销量": 1300.0, "销售费用": 0.0, "年市场规模": 0.0, "完成率": 0.0, "费用率": 0.0, "在销终端": "重庆市梁平区回龙镇卫生院", "终端列表": ["重庆市梁平区回龙镇卫生院"]}, {"药品名称": "注射用培美曲塞二钠", "产品分类": "代理品", "终端数": 1, "在销终端数": 1, "累计销售金额": 0.0, "目标销售金额": 93955.37, "当前销量": 0.0, "目标销量": 1020.0, "销售费用": 50933.7, "年市场规模": 0.0, "完成率": 0.0, "费用率": 50.0, "在销终端": "石柱土家族自治县人民医院", "终端列表": ["石柱土家族自治县人民医院"]}, {"药品名称": "注射用头孢他啶", "产品分类": "商销品", "终端数": 1, "在销终端数": 0, "累计销售金额": 0.0, "目标销售金额": 211895.53, "当前销量": 0.0, "目标销量": 48192.0, "销售费用": 88215.46, "年市场规模": 0.0, "完成率": 0.0, "费用率": 35.0, "在销终端": "重庆三峡医药高等专科学校附属人民医院", "终端列表": ["重庆三峡医药高等专科学校附属人民医院"]}, {"药品名称": "注射用奥美拉唑钠", "产品分类": "商销品", "终端数": 2, "在销终端数": 0, "累计销售金额": 0.0, "目标销售金额": 2914.57, "当前销量": 0.0, "目标销量": 3466.8, "销售费用": 1040.04, "年市场规模": 0.0, "完成率": 0.0, "费用率": 30.0, "在销终端": "忠县官坝中心卫生院|重庆市万州区沙河街道社区卫生服务中心", "终端列表": ["忠县官坝中心卫生院", "重庆市万州区沙河街道社区卫生服务中心"]}, {"药品名称": "注射用拉氧头孢钠", "产品分类": "商销品", "终端数": 5, "在销终端数": 5, "累计销售金额": 153072.0, "目标销售金额": 191914.57, "当前销量": 19800.0, "目标销量": 29310.0, "销售费用": 0.0, "年市场规模": 0.0, "完成率": 79.76, "费用率": 0.0, "在销终端": "重庆三峡医药高等专科学校附属人民医院|重庆大学附属三峡医院|重庆市万州区武陵镇中心卫生院|重庆市万州区第一人民医院|重庆市万州区黄柏乡卫生院（重庆市万州区黄柏乡计划生育服务站）", "终端列表": ["重庆三峡医药高等专科学校附属人民医院", "重庆大学附属三峡医院", "重庆市万州区武陵镇中心卫生院", "重庆市万州区第一人民医院", "重庆市万州区黄柏乡卫生院（重庆市万州区黄柏乡计划生育服务站）"]}, {"药品名称": "注射用水溶性维生素", "产品分类": "商销品", "终端数": 5, "在销终端数": 5, "累计销售金额": 49773.0, "目标销售金额": 51336.96, "当前销量": 8445.0, "目标销量": 24780.0, "销售费用": 0.0, "年市场规模": 0.0, "完成率": 96.95, "费用率": 0.0, "在销终端": "忠县复兴镇卫生院|石柱土家族自治县中医院|重庆大学附属三峡医院|重庆市万州区妇幼保健院|重庆市梁平区人民医院", "终端列表": ["忠县复兴镇卫生院", "石柱土家族自治县中医院", "重庆大学附属三峡医院", "重庆市万州区妇幼保健院", "重庆市梁平区人民医院"]}, {"药品名称": "注射用泮托拉唑钠", "产品分类": "商销品", "终端数": 33, "在销终端数": 24, "累计销售金额": 53855.0, "目标销售金额": 57690.86, "当前销量": 41640.0, "目标销量": 38123.2, "销售费用": 12727.15, "年市场规模": 0.0, "完成率": 93.35, "费用率": 20.0, "在销终端": "忠县任家镇卫生院|忠县永丰镇卫生院|忠县涂井乡卫生院|忠县磨子土家族乡卫生院|石柱县土家族自治县龙沙镇卫生院|石柱土家族自治县中医院|重庆三峡医药高等专科学校附属中医院|重庆三峡医药高等专科学校附属人民医院|重庆市万州区余家镇中心卫生院|重庆市万州区分水镇中心卫生院|重庆市万州区后山镇卫生院|重庆市万州区响水镇中心卫生院|重庆市万州区弹子镇卫生院（重庆市万州区弹子镇计划生育服务站）|重庆市万州区恒合土家族乡卫生院|重庆市万州区李河镇卫生院|重庆市万州区梨树乡卫生院|重庆市万州区武陵镇中心卫生院|重庆市万州区沙河街道社区卫生服务中心|重庆市万州区甘宁镇中心卫生院（重庆市万州区甘宁镇计划生育服务站）|重庆市万州区走马镇中心卫生院（重庆市万州区走马镇计划生育服务站）|重庆市万州区长岭镇卫生院|重庆市万州区高梁镇中心卫生院（重庆市万州区高梁镇计划生育服务站）|重庆市万州区高笋塘街道社区卫生服务中心|重庆市万州区黄柏乡卫生院（重庆市万州区黄柏乡计划生育服务站）|重庆市万州区龙驹镇中心卫生院（重庆市万州区龙驹镇计划生育服务站）（重庆三峡中心医院龙驹分院）|重庆市梁平区中医医院|重庆市梁平区双桂街道社区卫生服务中心|重庆市梁平区合兴街道社区卫生服务中心|重庆市梁平区文化镇卫生院|重庆市梁平区新盛中心卫生院|重庆市梁平区星桥镇卫生院|重庆市梁平区精神卫生中心（重庆市梁平区失能老人护理院）|重庆市梁平区虎城中心卫生院", "终端列表": ["忠县任家镇卫生院", "忠县永丰镇卫生院", "忠县涂井乡卫生院", "忠县磨子土家族乡卫生院", "石柱县土家族自治县龙沙镇卫生院", "石柱土家族自治县中医院", "重庆三峡医药高等专科学校附属中医院", "重庆三峡医药高等专科学校附属人民医院", "重庆市万州区余家镇中心卫生院", "重庆市万州区分水镇中心卫生院", "重庆市万州区后山镇卫生院", "重庆市万州区响水镇中心卫生院", "重庆市万州区弹子镇卫生院（重庆市万州区弹子镇计划生育服务站）", "重庆市万州区恒合土家族乡卫生院", "重庆市万州区李河镇卫生院", "重庆市万州区梨树乡卫生院", "重庆市万州区武陵镇中心卫生院", "重庆市万州区沙河街道社区卫生服务中心", "重庆市万州区甘宁镇中心卫生院（重庆市万州区甘宁镇计划生育服务站）", "重庆市万州区走马镇中心卫生院（重庆市万州区走马镇计划生育服务站）", "重庆市万州区长岭镇卫生院", "重庆市万州区高梁镇中心卫生院（重庆市万州区高梁镇计划生育服务站）", "重庆市万州区高笋塘街道社区卫生服务中心", "重庆市万州区黄柏乡卫生院（重庆市万州区黄柏乡计划生育服务站）", "重庆市万州区龙驹镇中心卫生院（重庆市万州区龙驹镇计划生育服务站）（重庆三峡中心医院龙驹分院）", "重庆市梁平区中医医院", "重庆市梁平区双桂街道社区卫生服务中心", "重庆市梁平区合兴街道社区卫生服务中心", "重庆市梁平区文化镇卫生院", "重庆市梁平区新盛中心卫生院", "重庆市梁平区星桥镇卫生院", "重庆市梁平区精神卫生中心（重庆市梁平区失能老人护理院）", "重庆市梁平区虎城中心卫生院"]}, {"药品名称": "注射用美罗培南", "产品分类": "商销品", "终端数": 2, "在销终端数": 0, "累计销售金额": 0.0, "目标销售金额": 158945.56, "当前销量": 0.0, "目标销量": 20329.2, "销售费用": 85077.7, "年市场规模": 0.0, "完成率": 0.0, "费用率": 45.0, "在销终端": "重庆三峡医药高等专科学校附属中医院|重庆市梁平区人民医院", "终端列表": ["重庆三峡医药高等专科学校附属中医院", "重庆市梁平区人民医院"]}, {"药品名称": "注射用艾司奥美拉唑钠", "产品分类": "商销品", "终端数": 6, "在销终端数": 0, "累计销售金额": 0.0, "目标销售金额": 330365.95, "当前销量": 0.0, "目标销量": 130987.2, "销售费用": 196480.8, "年市场规模": 0.0, "完成率": 0.0, "费用率": 50.0, "在销终端": "石柱土家族自治县人民医院|重庆三峡医药高等专科学校附属中医院|重庆三峡医药高等专科学校附属人民医院|重庆市万州区周家坝街道社区卫生服务中心|重庆市万州区普子乡卫生院|重庆市梁平区中医医院", "终端列表": ["石柱土家族自治县人民医院", "重庆三峡医药高等专科学校附属中医院", "重庆三峡医药高等专科学校附属人民医院", "重庆市万州区周家坝街道社区卫生服务中心", "重庆市万州区普子乡卫生院", "重庆市梁平区中医医院"]}, {"药品名称": "注射用谷胱甘肽", "产品分类": "品牌品", "终端数": 43, "在销终端数": 43, "累计销售金额": 143757.9, "目标销售金额": 373519.56, "当前销量": 17480.0, "目标销量": 65064.72, "销售费用": 0.0, "年市场规模": 61863.0, "完成率": 38.49, "费用率": 0.0, "在销终端": "忠县东溪中心卫生院|忠县复兴镇卫生院|忠县妇幼保健院|忠县磨子土家族乡卫生院|忠县黄金镇卫生院（忠县黄金中心卫生院）|石柱土家族自治县下路街道社区卫生服务中心|石柱土家族自治县中医院|石柱土家族自治县中益乡卫生院|石柱土家族自治县人民医院|石柱土家族自治县南宾街道社区卫生服务中心|石柱土家族自治县悦崃镇中心卫生院|石柱土家族自治县枫木镇卫生院|石柱土家族自治县王家乡卫生院|石柱土家族自治县黄水镇中心卫生院|石柱土家族自治县龙潭乡卫生院|重庆万州欣欣医院|重庆三峡医药高等专科学校附属中医院|重庆三峡医药高等专科学校附属人民医院|重庆市万州区九池街道社区卫生服务中心(九池分院)|重庆市万州区分水镇中心卫生院|重庆市万州区双河口街道社区卫生服务中心|重庆市万州区周家坝街道社区卫生服务中心|重庆市万州区天城街道社区卫生服务中心|重庆市万州区太龙镇中心卫生院|重庆市万州区妇幼保健院|重庆市万州区新田镇中心卫生院（重庆市万州区新田镇计划生育服务站）|重庆市万州区牌楼街道社区卫生服务中心|重庆市万州区甘宁镇中心卫生院（重庆市万州区甘宁镇计划生育服务站）|重庆市万州区白羊镇中心卫生院|重庆市万州区百安坝街道移民社区卫生服务中心|重庆市万州区走马镇中心卫生院（重庆市万州区走马镇计划生育服务站）|重庆市万州区铁峰乡卫生院|重庆市万州区高笋塘街道社区卫生服务中心|重庆市万州区龙沙镇中心卫生院（重庆市万州区龙沙镇计划生育服务站）|重庆市万州区龙都街道社区卫生服务中心|重庆市万州区龙驹镇中心卫生院（重庆市万州区龙驹镇计划生育服务站）（重庆三峡中心医院龙驹分院）|重庆市万州社会福利院|重庆市忠县人民医院|重庆市梁平区中医医院|重庆市梁平区柏家中心卫生院|重庆市梁平区福禄中心卫生院|重庆市梁平区第二人民医院|重庆市梁平区聚奎镇卫生院（重庆市梁平区聚奎镇计划生育服务站）", "终端列表": ["忠县东溪中心卫生院", "忠县复兴镇卫生院", "忠县妇幼保健院", "忠县磨子土家族乡卫生院", "忠县黄金镇卫生院（忠县黄金中心卫生院）", "石柱土家族自治县下路街道社区卫生服务中心", "石柱土家族自治县中医院", "石柱土家族自治县中益乡卫生院", "石柱土家族自治县人民医院", "石柱土家族自治县南宾街道社区卫生服务中心", "石柱土家族自治县悦崃镇中心卫生院", "石柱土家族自治县枫木镇卫生院", "石柱土家族自治县王家乡卫生院", "石柱土家族自治县黄水镇中心卫生院", "石柱土家族自治县龙潭乡卫生院", "重庆万州欣欣医院", "重庆三峡医药高等专科学校附属中医院", "重庆三峡医药高等专科学校附属人民医院", "重庆市万州区九池街道社区卫生服务中心(九池分院)", "重庆市万州区分水镇中心卫生院", "重庆市万州区双河口街道社区卫生服务中心", "重庆市万州区周家坝街道社区卫生服务中心", "重庆市万州区天城街道社区卫生服务中心", "重庆市万州区太龙镇中心卫生院", "重庆市万州区妇幼保健院", "重庆市万州区新田镇中心卫生院（重庆市万州区新田镇计划生育服务站）", "重庆市万州区牌楼街道社区卫生服务中心", "重庆市万州区甘宁镇中心卫生院（重庆市万州区甘宁镇计划生育服务站）", "重庆市万州区白羊镇中心卫生院", "重庆市万州区百安坝街道移民社区卫生服务中心", "重庆市万州区走马镇中心卫生院（重庆市万州区走马镇计划生育服务站）", "重庆市万州区铁峰乡卫生院", "重庆市万州区高笋塘街道社区卫生服务中心", "重庆市万州区龙沙镇中心卫生院（重庆市万州区龙沙镇计划生育服务站）", "重庆市万州区龙都街道社区卫生服务中心", "重庆市万州区龙驹镇中心卫生院（重庆市万州区龙驹镇计划生育服务站）（重庆三峡中心医院龙驹分院）", "重庆市万州社会福利院", "重庆市忠县人民医院", "重庆市梁平区中医医院", "重庆市梁平区柏家中心卫生院", "重庆市梁平区福禄中心卫生院", "重庆市梁平区第二人民医院", "重庆市梁平区聚奎镇卫生院（重庆市梁平区聚奎镇计划生育服务站）"]}, {"药品名称": "炎琥宁80mg", "产品分类": "品牌品", "终端数": 55, "在销终端数": 55, "累计销售金额": 167466.77, "目标销售金额": 797044.12, "当前销量": 51930.0, "目标销量": 222550.0, "销售费用": 169930.69, "年市场规模": 476962.0, "完成率": 21.01, "费用率": 11.41, "在销终端": "忠县复兴镇卫生院|忠县妇幼保健院|忠县官坝中心卫生院|忠县新生街道卫生院|忠县新立中心卫生院|忠县永丰镇卫生院|忠县石子乡卫生院|忠县石宝中心卫生院|忠县花桥镇卫生院|忠县金声乡卫生院|忠县金鸡镇卫生院|忠县马灌中心卫生院|忠县黄金镇卫生院（忠县黄金中心卫生院）|石柱土家族自治县下路街道社区卫生服务中心|石柱土家族自治县中医院|石柱土家族自治县中益乡卫生院|石柱土家族自治县人民医院|石柱土家族自治县六塘乡卫生院|石柱土家族自治县妇幼保健院|石柱土家族自治县黄水镇中心卫生院|重庆万州安宇医院|重庆三峡医药高等专科学校附属中医院|重庆三峡民康医院|重庆市万州区九池街道社区卫生服务中心(九池分院)|重庆市万州区五桥街道社区卫生服务中心|重庆市万州区分水镇中心卫生院|重庆市万州区双河口街道社区卫生服务中心|重庆市万州区后山镇卫生院|重庆市万州区太白街道社区卫生服务中心|重庆市万州区太龙镇中心卫生院|重庆市万州区妇幼保健院|重庆市万州区弹子镇卫生院（重庆市万州区弹子镇计划生育服务站）|重庆市万州区新乡镇卫生院|重庆市万州区梨树乡卫生院|重庆市万州区沙河街道社区卫生服务中心|重庆市万州区熊家镇中心卫生院|重庆市万州区燕山乡卫生院|重庆市万州区甘宁镇中心卫生院（重庆市万州区甘宁镇计划生育服务站）|重庆市万州区第一人民医院|重庆市万州区走马镇中心卫生院（重庆市万州区走马镇计划生育服务站）|重庆市万州区铁峰乡卫生院|重庆市万州区长滩镇卫生院|重庆市万州区龙沙镇中心卫生院（重庆市万州区龙沙镇计划生育服务站）|重庆市忠县中医医院|重庆市忠县人民医院|重庆市忠县白公街道社区卫生服务中心|重庆市梁平区合兴街道社区卫生服务中心|重庆市梁平区文化镇卫生院|重庆市梁平区明达镇卫生院|重庆市梁平区曲水镇卫生院|重庆市梁平区石安镇卫生院|重庆市梁平区礼让中心卫生院|重庆市梁平区福禄中心卫生院|重庆市梁平区竹山镇卫生院（重庆市梁平区竹山镇计划生育服务站）|重庆市梁平区虎城中心卫生院", "终端列表": ["忠县复兴镇卫生院", "忠县妇幼保健院", "忠县官坝中心卫生院", "忠县新生街道卫生院", "忠县新立中心卫生院", "忠县永丰镇卫生院", "忠县石子乡卫生院", "忠县石宝中心卫生院", "忠县花桥镇卫生院", "忠县金声乡卫生院", "忠县金鸡镇卫生院", "忠县马灌中心卫生院", "忠县黄金镇卫生院（忠县黄金中心卫生院）", "石柱土家族自治县下路街道社区卫生服务中心", "石柱土家族自治县中医院", "石柱土家族自治县中益乡卫生院", "石柱土家族自治县人民医院", "石柱土家族自治县六塘乡卫生院", "石柱土家族自治县妇幼保健院", "石柱土家族自治县黄水镇中心卫生院", "重庆万州安宇医院", "重庆三峡医药高等专科学校附属中医院", "重庆三峡民康医院", "重庆市万州区九池街道社区卫生服务中心(九池分院)", "重庆市万州区五桥街道社区卫生服务中心", "重庆市万州区分水镇中心卫生院", "重庆市万州区双河口街道社区卫生服务中心", "重庆市万州区后山镇卫生院", "重庆市万州区太白街道社区卫生服务中心", "重庆市万州区太龙镇中心卫生院", "重庆市万州区妇幼保健院", "重庆市万州区弹子镇卫生院（重庆市万州区弹子镇计划生育服务站）", "重庆市万州区新乡镇卫生院", "重庆市万州区梨树乡卫生院", "重庆市万州区沙河街道社区卫生服务中心", "重庆市万州区熊家镇中心卫生院", "重庆市万州区燕山乡卫生院", "重庆市万州区甘宁镇中心卫生院（重庆市万州区甘宁镇计划生育服务站）", "重庆市万州区第一人民医院", "重庆市万州区走马镇中心卫生院（重庆市万州区走马镇计划生育服务站）", "重庆市万州区铁峰乡卫生院", "重庆市万州区长滩镇卫生院", "重庆市万州区龙沙镇中心卫生院（重庆市万州区龙沙镇计划生育服务站）", "重庆市忠县中医医院", "重庆市忠县人民医院", "重庆市忠县白公街道社区卫生服务中心", "重庆市梁平区合兴街道社区卫生服务中心", "重庆市梁平区文化镇卫生院", "重庆市梁平区明达镇卫生院", "重庆市梁平区曲水镇卫生院", "重庆市梁平区石安镇卫生院", "重庆市梁平区礼让中心卫生院", "重庆市梁平区福禄中心卫生院", "重庆市梁平区竹山镇卫生院（重庆市梁平区竹山镇计划生育服务站）", "重庆市梁平区虎城中心卫生院"]}, {"药品名称": "琥珀酸美托洛尔缓释片", "产品分类": "商销品", "终端数": 7, "在销终端数": 0, "累计销售金额": 0.0, "目标销售金额": 166721.36, "当前销量": 0.0, "目标销量": 459762.0, "销售费用": 79324.27, "年市场规模": 0.0, "完成率": 0.0, "费用率": 40.0, "在销终端": "忠县官坝中心卫生院|忠县石子乡卫生院|忠县石黄镇卫生院|重庆三峡医药高等专科学校附属人民医院|重庆市万州区太白街道社区卫生服务中心|重庆市万州区太龙镇中心卫生院|重庆市梁平区仁贤街道社区卫生服务中心", "终端列表": ["忠县官坝中心卫生院", "忠县石子乡卫生院", "忠县石黄镇卫生院", "重庆三峡医药高等专科学校附属人民医院", "重庆市万州区太白街道社区卫生服务中心", "重庆市万州区太龙镇中心卫生院", "重庆市梁平区仁贤街道社区卫生服务中心"]}, {"药品名称": "瑞舒伐他汀钙片", "产品分类": "商销品", "终端数": 6, "在销终端数": 0, "累计销售金额": 0.0, "目标销售金额": 89924.48, "当前销量": 0.0, "目标销量": 552303.6, "销售费用": 21392.56, "年市场规模": 0.0, "完成率": 0.0, "费用率": 20.0, "在销终端": "石柱土家族自治县王场镇卫生院|重庆三峡医药高等专科学校附属人民医院|重庆市万州区上海医院|重庆市万州区余家镇中心卫生院|重庆市梁平区梁山街道社区卫生服务中心|重庆市梁平区福禄中心卫生院", "终端列表": ["石柱土家族自治县王场镇卫生院", "重庆三峡医药高等专科学校附属人民医院", "重庆市万州区上海医院", "重庆市万州区余家镇中心卫生院", "重庆市梁平区梁山街道社区卫生服务中心", "重庆市梁平区福禄中心卫生院"]}, {"药品名称": "甲磺酸仑伐替尼胶囊", "产品分类": "代理品", "终端数": 1, "在销终端数": 0, "累计销售金额": 0.0, "目标销售金额": 14154.99, "当前销量": 0.0, "目标销量": 1382.4, "销售费用": 7673.5, "年市场规模": 0.0, "完成率": 0.0, "费用率": 50.0, "在销终端": "重庆市万州区第一人民医院", "终端列表": ["重庆市万州区第一人民医院"]}, {"药品名称": "甲苯磺酸索拉非尼片", "产品分类": "代理品", "终端数": 5, "在销终端数": 5, "累计销售金额": 7761.6, "目标销售金额": 1663679.92, "当前销量": 1680.0, "目标销量": 222688.8, "销售费用": 450944.82, "年市场规模": 0.0, "完成率": 0.47, "费用率": 25.0, "在销终端": "石柱土家族自治县人民医院|重庆大学附属三峡医院|重庆市忠县中医医院|重庆市忠县人民医院|重庆市梁平区人民医院", "终端列表": ["石柱土家族自治县人民医院", "重庆大学附属三峡医院", "重庆市忠县中医医院", "重庆市忠县人民医院", "重庆市梁平区人民医院"]}, {"药品名称": "盐酸二甲双胍片", "产品分类": "商销品", "终端数": 8, "在销终端数": 0, "累计销售金额": 0.0, "目标销售金额": 23696.65, "当前销量": 0.0, "目标销量": 320301.6, "销售费用": 11274.62, "年市场规模": 0.0, "完成率": 0.0, "费用率": 40.0, "在销终端": "忠县东溪中心卫生院|忠县官坝中心卫生院|忠县野鹤镇卫生院|忠县金鸡镇卫生院|重庆三峡医药高等专科学校附属人民医院|重庆市万州区新田镇中心卫生院（重庆市万州区新田镇计划生育服务站）|重庆市梁平区双桂街道社区卫生服务中心|重庆市梁平区福禄中心卫生院", "终端列表": ["忠县东溪中心卫生院", "忠县官坝中心卫生院", "忠县野鹤镇卫生院", "忠县金鸡镇卫生院", "重庆三峡医药高等专科学校附属人民医院", "重庆市万州区新田镇中心卫生院（重庆市万州区新田镇计划生育服务站）", "重庆市梁平区双桂街道社区卫生服务中心", "重庆市梁平区福禄中心卫生院"]}, {"药品名称": "盐酸二甲双胍缓释片", "产品分类": "商销品", "终端数": 20, "在销终端数": 0, "累计销售金额": 0.0, "目标销售金额": 695967.52, "当前销量": 0.0, "目标销量": 7075513.2, "销售费用": 289742.27, "年市场规模": 0.0, "完成率": 0.0, "费用率": 35.0, "在销终端": "忠县东溪中心卫生院|忠县任家镇卫生院|忠县官坝中心卫生院|忠县永丰镇卫生院|忠县洋渡镇卫生院|忠县石子乡卫生院|忠县石宝中心卫生院|忠县金鸡镇卫生院|忠县马灌中心卫生院|重庆三峡医药高等专科学校附属中医院|重庆三峡医药高等专科学校附属人民医院|重庆大学附属三峡医院|重庆市万州区九池街道社区卫生服务中心(九池分院)|重庆市万州区天城街道社区卫生服务中心|重庆市万州区弹子镇卫生院（重庆市万州区弹子镇计划生育服务站）|重庆市万州区白土镇中心卫生院|重庆市万州区长滩镇卫生院|重庆市梁平区安胜镇卫生院|重庆市梁平区文化镇卫生院|重庆市梁平区礼让中心卫生院", "终端列表": ["忠县东溪中心卫生院", "忠县任家镇卫生院", "忠县官坝中心卫生院", "忠县永丰镇卫生院", "忠县洋渡镇卫生院", "忠县石子乡卫生院", "忠县石宝中心卫生院", "忠县金鸡镇卫生院", "忠县马灌中心卫生院", "重庆三峡医药高等专科学校附属中医院", "重庆三峡医药高等专科学校附属人民医院", "重庆大学附属三峡医院", "重庆市万州区九池街道社区卫生服务中心(九池分院)", "重庆市万州区天城街道社区卫生服务中心", "重庆市万州区弹子镇卫生院（重庆市万州区弹子镇计划生育服务站）", "重庆市万州区白土镇中心卫生院", "重庆市万州区长滩镇卫生院", "重庆市梁平区安胜镇卫生院", "重庆市梁平区文化镇卫生院", "重庆市梁平区礼让中心卫生院"]}, {"药品名称": "盐酸克林霉素胶囊", "产品分类": "商销品", "终端数": 2, "在销终端数": 0, "累计销售金额": 0.0, "目标销售金额": 2662.88, "当前销量": 0.0, "目标销量": 12182.4, "销售费用": 0.0, "年市场规模": 0.0, "完成率": 0.0, "费用率": 0.0, "在销终端": "重庆三峡医药高等专科学校附属人民医院|重庆市万州区黄柏乡卫生院（重庆市万州区黄柏乡计划生育服务站）", "终端列表": ["重庆三峡医药高等专科学校附属人民医院", "重庆市万州区黄柏乡卫生院（重庆市万州区黄柏乡计划生育服务站）"]}, {"药品名称": "盐酸度洛西汀肠溶胶囊", "产品分类": "品牌品", "终端数": 11, "在销终端数": 10, "累计销售金额": 46928.64, "目标销售金额": 144005.89, "当前销量": 116160.0, "目标销量": 356114.8, "销售费用": 0.0, "年市场规模": 0.0, "完成率": 32.59, "费用率": 0.0, "在销终端": "忠县官坝中心卫生院|石柱土家族自治县中医院|石柱土家族自治县人民医院|重庆三峡医药高等专科学校附属人民医院|重庆三峡民康医院|重庆大学附属三峡医院|重庆市万州区上海医院|重庆市忠县人民医院|重庆市梁平区中医医院|重庆市梁平区人民医院|重庆市梁平区精神卫生中心（重庆市梁平区失能老人护理院）", "终端列表": ["忠县官坝中心卫生院", "石柱土家族自治县中医院", "石柱土家族自治县人民医院", "重庆三峡医药高等专科学校附属人民医院", "重庆三峡民康医院", "重庆大学附属三峡医院", "重庆市万州区上海医院", "重庆市忠县人民医院", "重庆市梁平区中医医院", "重庆市梁平区人民医院", "重庆市梁平区精神卫生中心（重庆市梁平区失能老人护理院）"]}, {"药品名称": "盐酸舍曲林片", "产品分类": "品牌品", "终端数": 1, "在销终端数": 0, "累计销售金额": 0.0, "目标销售金额": 654.39, "当前销量": 0.0, "目标销量": 1069.2, "销售费用": 311.35, "年市场规模": 0.0, "完成率": 0.0, "费用率": 40.0, "在销终端": "重庆市梁平区中医医院", "终端列表": ["重庆市梁平区中医医院"]}, {"药品名称": "硫代硫酸钠注射液", "产品分类": "代理品", "终端数": 2, "在销终端数": 2, "累计销售金额": 0.0, "目标销售金额": 0.0, "当前销量": 0.0, "目标销量": 0.0, "销售费用": 0.0, "年市场规模": 0.0, "完成率": 0.0, "费用率": 50.0, "在销终端": "重庆三峡医药高等专科学校附属医院|重庆市梁平区人民医院", "终端列表": ["重庆三峡医药高等专科学校附属医院", "重庆市梁平区人民医院"]}, {"药品名称": "硫辛酸注射液", "产品分类": "商销品", "终端数": 4, "在销终端数": 0, "累计销售金额": 0.0, "目标销售金额": 46160.58, "当前销量": 0.0, "目标销量": 9045.6, "销售费用": 24708.06, "年市场规模": 0.0, "完成率": 0.0, "费用率": 45.0, "在销终端": "石柱土家族自治县人民医院|重庆三峡医药高等专科学校附属人民医院|重庆市万州区第一人民医院|重庆市梁平区梁山街道社区卫生服务中心", "终端列表": ["石柱土家族自治县人民医院", "重庆三峡医药高等专科学校附属人民医院", "重庆市万州区第一人民医院", "重庆市梁平区梁山街道社区卫生服务中心"]}, {"药品名称": "硫酸异帕米星注射液", "产品分类": "品牌品", "终端数": 2, "在销终端数": 2, "累计销售金额": 38970.0, "目标销售金额": 218214.16, "当前销量": 750.0, "目标销量": 4200.0, "销售费用": 85469.4, "年市场规模": 80350.0, "完成率": 17.86, "费用率": 36.5, "在销终端": "重庆三峡医药高等专科学校附属人民医院|重庆市梁平区中医医院", "终端列表": ["重庆三峡医药高等专科学校附属人民医院", "重庆市梁平区中医医院"]}, {"药品名称": "硫酸氢氯吡格雷片", "产品分类": "商销品", "终端数": 1, "在销终端数": 0, "累计销售金额": 0.0, "目标销售金额": 772941.04, "当前销量": 0.0, "目标销量": 995193.6, "销售费用": 459696.51, "年市场规模": 0.0, "完成率": 0.0, "费用率": 50.0, "在销终端": "重庆三峡医药高等专科学校附属人民医院", "终端列表": ["重庆三峡医药高等专科学校附属人民医院"]}, {"药品名称": "腺苷钴胺", "产品分类": "商销品", "终端数": 1, "在销终端数": 1, "累计销售金额": 163.0, "目标销售金额": 0.0, "当前销量": 30.0, "目标销量": 0.0, "销售费用": 0.0, "年市场规模": 0.0, "完成率": 0.0, "费用率": 0.0, "在销终端": "石柱土家族自治县中医院", "终端列表": ["石柱土家族自治县中医院"]}, {"药品名称": "苯磺酸氨氯地平片", "产品分类": "商销品", "终端数": 100, "在销终端数": 94, "累计销售金额": 794419.0, "目标销售金额": 860476.15, "当前销量": 3225348.0, "目标销量": 11602584.8, "销售费用": 155634.22, "年市场规模": 0.0, "完成率": 92.32, "费用率": 20.0, "在销终端": "忠县双桂镇卫生院|忠县新立中心卫生院|忠县永丰镇卫生院|忠县白石中心卫生院|忠县石宝中心卫生院|忠县石黄镇卫生院|忠县马灌中心卫生院|石柱县土家族自治县龙沙镇卫生院|石柱土家族自治县万安街道社区卫生服务中心|石柱土家族自治县万朝镇卫生院|石柱土家族自治县三星乡卫生院|石柱土家族自治县三河镇卫生院|石柱土家族自治县三益乡卫生院|石柱土家族自治县下路街道社区卫生服务中心|石柱土家族自治县中益乡卫生院|石柱土家族自治县临溪镇中心卫生院|石柱土家族自治县人民医院|石柱土家族自治县六塘乡卫生院|石柱土家族自治县南宾街道社区卫生服务中心|石柱土家族自治县大歇镇卫生院|石柱土家族自治县悦崃镇中心卫生院|石柱土家族自治县新乐乡卫生院|石柱土家族自治县枫木镇卫生院|石柱土家族自治县桥头镇卫生院|石柱土家族自治县沙子镇中心卫生院|石柱土家族自治县河嘴乡卫生院|石柱土家族自治县沿溪镇卫生院|石柱土家族自治县洗新乡卫生院|石柱土家族自治县王场镇卫生院|石柱土家族自治县王家乡卫生院|石柱土家族自治县石家乡卫生院|石柱土家族自治县西沱镇中心卫生院|石柱土家族自治县金铃乡卫生院|石柱土家族自治县马武镇中心卫生院|石柱土家族自治县鱼池镇卫生院|石柱土家族自治县黄水镇中心卫生院|石柱土家族自治县黄鹤镇卫生院|石柱土家族自治县黎场乡卫生院|重庆三峡医药高等专科学校附属中医院|重庆三峡医药高等专科学校附属人民医院|重庆市万州区上海医院|重庆市万州区五桥街道社区卫生服务中心|重庆市万州区分水镇中心卫生院|重庆市万州区后山镇卫生院|重庆市万州区周家坝街道社区卫生服务中心|重庆市万州区地宝土家族乡卫生院|重庆市万州区大周镇卫生院|重庆市万州区天城街道社区卫生服务中心|重庆市万州区太白街道社区卫生服务中心|重庆市万州区太龙镇中心卫生院|重庆市万州区孙家镇卫生院|重庆市万州区小周镇卫生院|重庆市万州区弹子镇卫生院（重庆市万州区弹子镇计划生育服务站）|重庆市万州区恒合土家族乡卫生院|重庆市万州区新乡镇卫生院|重庆市万州区梨树乡卫生院|重庆市万州区溪口乡卫生院|重庆市万州区瀼渡镇卫生院|重庆市万州区熊家镇中心卫生院|重庆市万州区燕山乡卫生院|重庆市万州区白土镇中心卫生院|重庆市万州区白羊镇中心卫生院|重庆市万州区百安坝街道移民社区卫生服务中心|重庆市万州区罗田镇卫生院|重庆市万州区走马镇中心卫生院（重庆市万州区走马镇计划生育服务站）|重庆市万州区郭村镇卫生院|重庆市万州区钟鼓楼街道社区卫生服务中心|重庆市万州区铁峰乡卫生院|重庆市万州区长坪乡卫生院|重庆市万州区长滩镇卫生院|重庆市万州区高峰街道社区卫生服务中心|重庆市万州区高梁镇中心卫生院（重庆市万州区高梁镇计划生育服务站）|重庆市万州区黄柏乡卫生院（重庆市万州区黄柏乡计划生育服务站）|重庆市万州区龙驹镇中心卫生院（重庆市万州区龙驹镇计划生育服务站）（重庆三峡中心医院龙驹分院）|重庆市三峡监狱医院|重庆市忠县中医医院|重庆市忠县忠州街道社区卫生服务中心|重庆市梁平区七星镇卫生院|重庆市梁平区中医医院|重庆市梁平区云龙中心卫生院|重庆市梁平区仁贤街道社区卫生服务中心|重庆市梁平区合兴街道社区卫生服务中心|重庆市梁平区大观镇卫生院|重庆市梁平区文化镇卫生院|重庆市梁平区新盛中心卫生院|重庆市梁平区明达镇卫生院|重庆市梁平区星桥镇卫生院|重庆市梁平区曲水镇卫生院|重庆市梁平区柏家中心卫生院|重庆市梁平区梁山街道社区卫生服务中心|重庆市梁平区礼让中心卫生院|重庆市梁平区竹山镇卫生院（重庆市梁平区竹山镇计划生育服务站）|重庆市梁平区第二人民医院|重庆市梁平区聚奎镇卫生院（重庆市梁平区聚奎镇计划生育服务站）|重庆市梁平区葫芦药房|重庆市梁平区虎城中心卫生院|重庆市梁平区袁驿中心卫生院|重庆市梁平区诚德中医医院有限责任公司|重庆市梁平区龙胜乡卫生院|重庆市梁平区龙门镇卫生院", "终端列表": ["忠县双桂镇卫生院", "忠县新立中心卫生院", "忠县永丰镇卫生院", "忠县白石中心卫生院", "忠县石宝中心卫生院", "忠县石黄镇卫生院", "忠县马灌中心卫生院", "石柱县土家族自治县龙沙镇卫生院", "石柱土家族自治县万安街道社区卫生服务中心", "石柱土家族自治县万朝镇卫生院", "石柱土家族自治县三星乡卫生院", "石柱土家族自治县三河镇卫生院", "石柱土家族自治县三益乡卫生院", "石柱土家族自治县下路街道社区卫生服务中心", "石柱土家族自治县中益乡卫生院", "石柱土家族自治县临溪镇中心卫生院", "石柱土家族自治县人民医院", "石柱土家族自治县六塘乡卫生院", "石柱土家族自治县南宾街道社区卫生服务中心", "石柱土家族自治县大歇镇卫生院", "石柱土家族自治县悦崃镇中心卫生院", "石柱土家族自治县新乐乡卫生院", "石柱土家族自治县枫木镇卫生院", "石柱土家族自治县桥头镇卫生院", "石柱土家族自治县沙子镇中心卫生院", "石柱土家族自治县河嘴乡卫生院", "石柱土家族自治县沿溪镇卫生院", "石柱土家族自治县洗新乡卫生院", "石柱土家族自治县王场镇卫生院", "石柱土家族自治县王家乡卫生院", "石柱土家族自治县石家乡卫生院", "石柱土家族自治县西沱镇中心卫生院", "石柱土家族自治县金铃乡卫生院", "石柱土家族自治县马武镇中心卫生院", "石柱土家族自治县鱼池镇卫生院", "石柱土家族自治县黄水镇中心卫生院", "石柱土家族自治县黄鹤镇卫生院", "石柱土家族自治县黎场乡卫生院", "重庆三峡医药高等专科学校附属中医院", "重庆三峡医药高等专科学校附属人民医院", "重庆市万州区上海医院", "重庆市万州区五桥街道社区卫生服务中心", "重庆市万州区分水镇中心卫生院", "重庆市万州区后山镇卫生院", "重庆市万州区周家坝街道社区卫生服务中心", "重庆市万州区地宝土家族乡卫生院", "重庆市万州区大周镇卫生院", "重庆市万州区天城街道社区卫生服务中心", "重庆市万州区太白街道社区卫生服务中心", "重庆市万州区太龙镇中心卫生院", "重庆市万州区孙家镇卫生院", "重庆市万州区小周镇卫生院", "重庆市万州区弹子镇卫生院（重庆市万州区弹子镇计划生育服务站）", "重庆市万州区恒合土家族乡卫生院", "重庆市万州区新乡镇卫生院", "重庆市万州区梨树乡卫生院", "重庆市万州区溪口乡卫生院", "重庆市万州区瀼渡镇卫生院", "重庆市万州区熊家镇中心卫生院", "重庆市万州区燕山乡卫生院", "重庆市万州区白土镇中心卫生院", "重庆市万州区白羊镇中心卫生院", "重庆市万州区百安坝街道移民社区卫生服务中心", "重庆市万州区罗田镇卫生院", "重庆市万州区走马镇中心卫生院（重庆市万州区走马镇计划生育服务站）", "重庆市万州区郭村镇卫生院", "重庆市万州区钟鼓楼街道社区卫生服务中心", "重庆市万州区铁峰乡卫生院", "重庆市万州区长坪乡卫生院", "重庆市万州区长滩镇卫生院", "重庆市万州区高峰街道社区卫生服务中心", "重庆市万州区高梁镇中心卫生院（重庆市万州区高梁镇计划生育服务站）", "重庆市万州区黄柏乡卫生院（重庆市万州区黄柏乡计划生育服务站）", "重庆市万州区龙驹镇中心卫生院（重庆市万州区龙驹镇计划生育服务站）（重庆三峡中心医院龙驹分院）", "重庆市三峡监狱医院", "重庆市忠县中医医院", "重庆市忠县忠州街道社区卫生服务中心", "重庆市梁平区七星镇卫生院", "重庆市梁平区中医医院", "重庆市梁平区云龙中心卫生院", "重庆市梁平区仁贤街道社区卫生服务中心", "重庆市梁平区合兴街道社区卫生服务中心", "重庆市梁平区大观镇卫生院", "重庆市梁平区文化镇卫生院", "重庆市梁平区新盛中心卫生院", "重庆市梁平区明达镇卫生院", "重庆市梁平区星桥镇卫生院", "重庆市梁平区曲水镇卫生院", "重庆市梁平区柏家中心卫生院", "重庆市梁平区梁山街道社区卫生服务中心", "重庆市梁平区礼让中心卫生院", "重庆市梁平区竹山镇卫生院（重庆市梁平区竹山镇计划生育服务站）", "重庆市梁平区第二人民医院", "重庆市梁平区聚奎镇卫生院（重庆市梁平区聚奎镇计划生育服务站）", "重庆市梁平区葫芦药房", "重庆市梁平区虎城中心卫生院", "重庆市梁平区袁驿中心卫生院", "重庆市梁平区诚德中医医院有限责任公司", "重庆市梁平区龙胜乡卫生院", "重庆市梁平区龙门镇卫生院"]}, {"药品名称": "谷胱甘肽片0.1g", "产品分类": "品牌品", "终端数": 17, "在销终端数": 17, "累计销售金额": 537332.65, "目标销售金额": 3834645.76, "当前销量": 419580.0, "目标销量": 3036960.0, "销售费用": 1342020.94, "年市场规模": 0.0, "完成率": 14.01, "费用率": 28.25, "在销终端": "忠县妇幼保健院|忠县石宝中心卫生院|忠县磨子土家族乡卫生院|石柱土家族自治县万安街道社区卫生服务中心|石柱土家族自治县中医院|石柱土家族自治县人民医院|石柱土家族自治县西沱镇中心卫生院|石柱土家族自治县马武镇中心卫生院|石柱土家族自治县黄鹤镇卫生院|重庆三峡医药高等专科学校附属中医院|重庆三峡医药高等专科学校附属人民医院|重庆大学附属三峡医院|重庆市万州区第一人民医院|重庆市万州荣军优抚医院（重庆市万州康复辅具技术中心）|重庆市忠县人民医院|重庆市梁平区中医医院|重庆市梁平区人民医院", "终端列表": ["忠县妇幼保健院", "忠县石宝中心卫生院", "忠县磨子土家族乡卫生院", "石柱土家族自治县万安街道社区卫生服务中心", "石柱土家族自治县中医院", "石柱土家族自治县人民医院", "石柱土家族自治县西沱镇中心卫生院", "石柱土家族自治县马武镇中心卫生院", "石柱土家族自治县黄鹤镇卫生院", "重庆三峡医药高等专科学校附属中医院", "重庆三峡医药高等专科学校附属人民医院", "重庆大学附属三峡医院", "重庆市万州区第一人民医院", "重庆市万州荣军优抚医院（重庆市万州康复辅具技术中心）", "重庆市忠县人民医院", "重庆市梁平区中医医院", "重庆市梁平区人民医院"]}, {"药品名称": "阿卡波糖片", "产品分类": "商销品", "终端数": 24, "在销终端数": 11, "累计销售金额": 84891.0, "目标销售金额": 335368.41, "当前销量": 644100.0, "目标销量": 2629610.4, "销售费用": 15592.4, "年市场规模": 0.0, "完成率": 25.31, "费用率": 4.0, "在销终端": "忠县妇幼保健院|忠县永丰镇卫生院|忠县野鹤镇卫生院|重庆市万州区上海医院|重庆市万州区九池街道社区卫生服务中心(九池分院)|重庆市万州区弹子镇卫生院（重庆市万州区弹子镇计划生育服务站）|重庆市万州区新田镇中心卫生院（重庆市万州区新田镇计划生育服务站）|重庆市万州区柱山乡卫生院（重庆市万州区柱山乡计划生育服务站）|重庆市万州区梨树乡卫生院|重庆市万州区沙河街道社区卫生服务中心|重庆市万州区白土镇中心卫生院|重庆市万州区第一人民医院|重庆市万州区长滩镇卫生院|重庆市万州区高峰街道社区卫生服务中心|重庆市万州区龙驹镇中心卫生院（重庆市万州区龙驹镇计划生育服务站）（重庆三峡中心医院龙驹分院）|重庆市忠县人民医院|重庆市忠县白公街道社区卫生服务中心|重庆市梁平区中医医院|重庆市梁平区人民医院|重庆市梁平区文化镇卫生院|重庆市梁平区梁山街道社区卫生服务中心|重庆市梁平区福禄中心卫生院|重庆市梁平区荫平镇卫生院|重庆市梁平区袁驿中心卫生院", "终端列表": ["忠县妇幼保健院", "忠县永丰镇卫生院", "忠县野鹤镇卫生院", "重庆市万州区上海医院", "重庆市万州区九池街道社区卫生服务中心(九池分院)", "重庆市万州区弹子镇卫生院（重庆市万州区弹子镇计划生育服务站）", "重庆市万州区新田镇中心卫生院（重庆市万州区新田镇计划生育服务站）", "重庆市万州区柱山乡卫生院（重庆市万州区柱山乡计划生育服务站）", "重庆市万州区梨树乡卫生院", "重庆市万州区沙河街道社区卫生服务中心", "重庆市万州区白土镇中心卫生院", "重庆市万州区第一人民医院", "重庆市万州区长滩镇卫生院", "重庆市万州区高峰街道社区卫生服务中心", "重庆市万州区龙驹镇中心卫生院（重庆市万州区龙驹镇计划生育服务站）（重庆三峡中心医院龙驹分院）", "重庆市忠县人民医院", "重庆市忠县白公街道社区卫生服务中心", "重庆市梁平区中医医院", "重庆市梁平区人民医院", "重庆市梁平区文化镇卫生院", "重庆市梁平区梁山街道社区卫生服务中心", "重庆市梁平区福禄中心卫生院", "重庆市梁平区荫平镇卫生院", "重庆市梁平区袁驿中心卫生院"]}, {"药品名称": "阿托伐他汀钙片", "产品分类": "商销品", "终端数": 6, "在销终端数": 0, "累计销售金额": 0.0, "目标销售金额": 1048152.75, "当前销量": 0.0, "目标销量": 8432126.4, "销售费用": 561037.55, "年市场规模": 0.0, "完成率": 0.0, "费用率": 45.0, "在销终端": "忠县任家镇卫生院|石柱土家族自治县王场镇卫生院|重庆三峡医药高等专科学校附属中医院|重庆三峡医药高等专科学校附属人民医院|重庆大学附属三峡医院|重庆市梁平区福禄中心卫生院", "终端列表": ["忠县任家镇卫生院", "石柱土家族自治县王场镇卫生院", "重庆三峡医药高等专科学校附属中医院", "重庆三峡医药高等专科学校附属人民医院", "重庆大学附属三峡医院", "重庆市梁平区福禄中心卫生院"]}, {"药品名称": "阿法骨化醇片", "产品分类": "品牌品", "终端数": 57, "在销终端数": 47, "累计销售金额": 237958.42, "目标销售金额": 697823.17, "当前销量": 417960.0, "目标销量": 1245001.2, "销售费用": 164168.21, "年市场规模": 1278090.0, "完成率": 34.1, "费用率": 29.0, "在销终端": "忠县东溪中心卫生院|忠县复兴镇卫生院|忠县新生街道卫生院|忠县新立中心卫生院|忠县磨子土家族乡卫生院|忠县野鹤镇卫生院|石柱土家族自治县三星乡卫生院|石柱土家族自治县三河镇卫生院|石柱土家族自治县三益乡卫生院|石柱土家族自治县中医院|石柱土家族自治县中益乡卫生院|石柱土家族自治县临溪镇中心卫生院|石柱土家族自治县人民医院|石柱土家族自治县南宾街道社区卫生服务中心|石柱土家族自治县大歇镇卫生院|石柱土家族自治县妇幼保健院|石柱土家族自治县悦崃镇中心卫生院|石柱土家族自治县枫木镇卫生院|石柱土家族自治县桥头镇卫生院|石柱土家族自治县沙子镇中心卫生院|石柱土家族自治县王场镇卫生院|石柱土家族自治县石家乡卫生院|石柱土家族自治县黄水镇中心卫生院|石柱土家族自治县黄鹤镇卫生院|石柱土家族自治县黎场乡卫生院|石柱土家族自治县龙潭乡卫生院|重庆万州安宇医院|重庆三峡医药高等专科学校附属中医院|重庆三峡医药高等专科学校附属人民医院|重庆大学附属三峡医院|重庆市万州区分水镇中心卫生院|重庆市万州区双河口街道社区卫生服务中心|重庆市万州区后山镇卫生院|重庆市万州区天城街道社区卫生服务中心|重庆市万州区孙家镇卫生院|重庆市万州区武陵镇中心卫生院|重庆市万州区沙河街道社区卫生服务中心|重庆市万州区熊家镇中心卫生院|重庆市万州区燕山乡卫生院|重庆市万州区甘宁镇中心卫生院（重庆市万州区甘宁镇计划生育服务站）|重庆市万州区白土镇中心卫生院|重庆市万州区第一人民医院|重庆市万州区黄柏乡卫生院（重庆市万州区黄柏乡计划生育服务站）|重庆市万州区龙沙镇中心卫生院（重庆市万州区龙沙镇计划生育服务站）|重庆市万州社会福利院|重庆市万州荣军优抚医院（重庆市万州康复辅具技术中心）|重庆市忠县中医医院|重庆市忠县人民医院|重庆市梁平区中医医院|重庆市梁平区人民医院|重庆市梁平区双桂街道社区卫生服务中心|重庆市梁平区安胜镇卫生院|重庆市梁平区明达镇卫生院|重庆市梁平区星桥镇卫生院|重庆市梁平区柏家中心卫生院|重庆市梁平区金带镇卫生院|重庆市梁平区龙门镇卫生院", "终端列表": ["忠县东溪中心卫生院", "忠县复兴镇卫生院", "忠县新生街道卫生院", "忠县新立中心卫生院", "忠县磨子土家族乡卫生院", "忠县野鹤镇卫生院", "石柱土家族自治县三星乡卫生院", "石柱土家族自治县三河镇卫生院", "石柱土家族自治县三益乡卫生院", "石柱土家族自治县中医院", "石柱土家族自治县中益乡卫生院", "石柱土家族自治县临溪镇中心卫生院", "石柱土家族自治县人民医院", "石柱土家族自治县南宾街道社区卫生服务中心", "石柱土家族自治县大歇镇卫生院", "石柱土家族自治县妇幼保健院", "石柱土家族自治县悦崃镇中心卫生院", "石柱土家族自治县枫木镇卫生院", "石柱土家族自治县桥头镇卫生院", "石柱土家族自治县沙子镇中心卫生院", "石柱土家族自治县王场镇卫生院", "石柱土家族自治县石家乡卫生院", "石柱土家族自治县黄水镇中心卫生院", "石柱土家族自治县黄鹤镇卫生院", "石柱土家族自治县黎场乡卫生院", "石柱土家族自治县龙潭乡卫生院", "重庆万州安宇医院", "重庆三峡医药高等专科学校附属中医院", "重庆三峡医药高等专科学校附属人民医院", "重庆大学附属三峡医院", "重庆市万州区分水镇中心卫生院", "重庆市万州区双河口街道社区卫生服务中心", "重庆市万州区后山镇卫生院", "重庆市万州区天城街道社区卫生服务中心", "重庆市万州区孙家镇卫生院", "重庆市万州区武陵镇中心卫生院", "重庆市万州区沙河街道社区卫生服务中心", "重庆市万州区熊家镇中心卫生院", "重庆市万州区燕山乡卫生院", "重庆市万州区甘宁镇中心卫生院（重庆市万州区甘宁镇计划生育服务站）", "重庆市万州区白土镇中心卫生院", "重庆市万州区第一人民医院", "重庆市万州区黄柏乡卫生院（重庆市万州区黄柏乡计划生育服务站）", "重庆市万州区龙沙镇中心卫生院（重庆市万州区龙沙镇计划生育服务站）", "重庆市万州社会福利院", "重庆市万州荣军优抚医院（重庆市万州康复辅具技术中心）", "重庆市忠县中医医院", "重庆市忠县人民医院", "重庆市梁平区中医医院", "重庆市梁平区人民医院", "重庆市梁平区双桂街道社区卫生服务中心", "重庆市梁平区安胜镇卫生院", "重庆市梁平区明达镇卫生院", "重庆市梁平区星桥镇卫生院", "重庆市梁平区柏家中心卫生院", "重庆市梁平区金带镇卫生院", "重庆市梁平区龙门镇卫生院"]}, {"药品名称": "阿立哌唑口崩片", "产品分类": "品牌品", "终端数": 2, "在销终端数": 0, "累计销售金额": 0.0, "目标销售金额": 2814.29, "当前销量": 0.0, "目标销量": 8594.4, "销售费用": 1171.63, "年市场规模": 0.0, "完成率": 0.0, "费用率": 35.0, "在销终端": "重庆大学附属三峡医院|重庆市梁平区中医医院", "终端列表": ["重庆大学附属三峡医院", "重庆市梁平区中医医院"]}, {"药品名称": "阿魏酸钠", "产品分类": "商销品", "终端数": 2, "在销终端数": 2, "累计销售金额": 5454.0, "目标销售金额": 551818.37, "当前销量": 450.0, "目标销量": 69500.0, "销售费用": 0.0, "年市场规模": 0.0, "完成率": 0.99, "费用率": 0.0, "在销终端": "石柱土家族自治县中医院|重庆大学附属三峡医院", "终端列表": ["石柱土家族自治县中医院", "重庆大学附属三峡医院"]}, {"药品名称": "雷贝拉唑钠肠溶片", "产品分类": "商销品", "终端数": 4, "在销终端数": 4, "累计销售金额": 1127.0, "目标销售金额": 2194.65, "当前销量": 4500.0, "目标销量": 8760.0, "销售费用": 0.0, "年市场规模": 0.0, "完成率": 51.35, "费用率": 0.0, "在销终端": "石柱土家族自治县三星乡卫生院|石柱土家族自治县下路街道社区卫生服务中心|重庆市万州区高笋塘街道社区卫生服务中心|重庆市梁平区复平镇卫生院", "终端列表": ["石柱土家族自治县三星乡卫生院", "石柱土家族自治县下路街道社区卫生服务中心", "重庆市万州区高笋塘街道社区卫生服务中心", "重庆市梁平区复平镇卫生院"]}]}, "万州区": {"stats": {"total_terminals": 62, "active_terminals": 50, "active_products": 15, "total_sales": 1243217.29, "total_target": 9422624.33, "total_fee": 3037024.96, "completion_rate": 13.19, "fee_rate": 17.31}, "by_type": {"品牌品": {"sales": 713536.29, "target": 4599787.88, "completion": 15.51}, "商销品": {"sales": 506725.0, "target": 4797475.15, "completion": 10.56}, "代理品": {"sales": 0.0, "target": 25361.3, "completion": 0.0}}, "terminals": [{"终端名称": "重庆万州安宇医院", "区": "万州区", "产品数": 2, "在销产品数量": 1, "累计销售金额": 0.0, "目标销售金额": 2686.06, "销售费用": 0.0, "年市场规模": 5940.0, "医院等级": "一级", "完成率": 0.0, "费用率": 0.0, "产品列表": ["炎琥宁80mg", "阿法骨化醇片"]}, {"终端名称": "重庆万州欣欣医院", "区": "万州区", "产品数": 1, "在销产品数量": 1, "累计销售金额": 0.0, "目标销售金额": 286.84, "销售费用": 0.0, "年市场规模": 50.0, "医院等级": "其他", "完成率": 0.0, "费用率": 0.0, "产品列表": ["注射用谷胱甘肽"]}, {"终端名称": "重庆三峡医药高等专科学校附属中医院", "区": "万州区", "产品数": 11, "在销产品数量": 7, "累计销售金额": 97143.46, "目标销售金额": 262718.94, "销售费用": 59480.8, "年市场规模": 116400.0, "医院等级": "三级", "完成率": 36.98, "费用率": 8.82, "产品列表": ["恩替卡韦片", "注射用泮托拉唑钠", "注射用美罗培南", "注射用艾司奥美拉唑钠", "注射用谷胱甘肽", "炎琥宁80mg", "盐酸二甲双胍缓释片", "苯磺酸氨氯地平片", "谷胱甘肽片0.1g", "阿托伐他汀钙片", "阿法骨化醇片"]}, {"终端名称": "重庆三峡医药高等专科学校附属人民医院", "区": "万州区", "产品数": 25, "在销产品数量": 7, "累计销售金额": 163550.16, "目标销售金额": 3472213.73, "销售费用": 1344106.63, "年市场规模": 120000.0, "医院等级": "三级", "完成率": 4.71, "费用率": 25.05, "产品列表": ["依匹斯汀10mg", "吲达帕胺片", "富马酸丙酚替诺福韦片", "富马酸替诺福韦二吡呋酯片", "恩替卡韦片", "氯化钾缓释片", "注射用伏立康唑", "注射用头孢他啶", "注射用拉氧头孢钠", "注射用泮托拉唑钠", "注射用艾司奥美拉唑钠", "注射用谷胱甘肽", "琥珀酸美托洛尔缓释片", "瑞舒伐他汀钙片", "盐酸二甲双胍片", "盐酸二甲双胍缓释片", "盐酸克林霉素胶囊", "盐酸度洛西汀肠溶胶囊", "硫辛酸注射液", "硫酸异帕米星注射液", "硫酸氢氯吡格雷片", "苯磺酸氨氯地平片", "谷胱甘肽片0.1g", "阿托伐他汀钙片", "阿法骨化醇片"]}, {"终端名称": "重庆三峡医药高等专科学校附属医院", "区": "万州区", "产品数": 1, "在销产品数量": 1, "累计销售金额": 0.0, "目标销售金额": 0.0, "销售费用": 0.0, "年市场规模": 0.0, "医院等级": "二甲", "完成率": 0.0, "费用率": 0.0, "产品列表": ["硫代硫酸钠注射液"]}, {"终端名称": "重庆大学附属三峡医院", "区": "万州区", "产品数": 13, "在销产品数量": 9, "累计销售金额": 591949.79, "目标销售金额": 4562899.67, "销售费用": 1447721.63, "年市场规模": 320070.0, "医院等级": "二级", "完成率": 12.97, "费用率": 20.32, "产品列表": ["依匹斯汀10mg", "氯化钾缓释片", "注射用拉氧头孢钠", "注射用水溶性维生素", "甲苯磺酸索拉非尼片", "盐酸二甲双胍缓释片", "盐酸度洛西汀肠溶胶囊", "谷胱甘肽片0.1g", "阿卡波糖片", "阿托伐他汀钙片", "阿法骨化醇片", "阿立哌唑口崩片", "阿魏酸钠"]}, {"终端名称": "重庆市万州区上海医院", "区": "万州区", "产品数": 5, "在销产品数量": 4, "累计销售金额": 43728.0, "目标销售金额": 98270.18, "销售费用": 11622.53, "年市场规模": 0.0, "医院等级": "二级", "完成率": 44.5, "费用率": 14.34, "产品列表": ["恩替卡韦片", "瑞舒伐他汀钙片", "盐酸度洛西汀肠溶胶囊", "苯磺酸氨氯地平片", "阿卡波糖片"]}, {"终端名称": "重庆市万州区九池街道社区卫生服务中心(九池分院)", "区": "万州区", "产品数": 4, "在销产品数量": 2, "累计销售金额": 1095.72, "目标销售金额": 26732.9, "销售费用": 7346.3, "年市场规模": 1790.0, "医院等级": "其他", "完成率": 4.1, "费用率": 1.78, "产品列表": ["注射用谷胱甘肽", "炎琥宁80mg", "盐酸二甲双胍缓释片", "阿卡波糖片"]}, {"终端名称": "重庆市万州区五桥街道社区卫生服务中心", "区": "万州区", "产品数": 2, "在销产品数量": 2, "累计销售金额": 19631.15, "目标销售金额": 1576.72, "销售费用": 337.53, "年市场规模": 1220.0, "医院等级": "一级", "完成率": 1245.06, "费用率": 19.49, "产品列表": ["炎琥宁80mg", "苯磺酸氨氯地平片"]}, {"终端名称": "重庆市万州区余家镇中心卫生院", "区": "万州区", "产品数": 2, "在销产品数量": 1, "累计销售金额": 5211.0, "目标销售金额": 12210.36, "销售费用": 2904.78, "年市场规模": 0.0, "医院等级": "其他", "完成率": 42.68, "费用率": 20.0, "产品列表": ["注射用泮托拉唑钠", "瑞舒伐他汀钙片"]}, {"终端名称": "重庆市万州区分水镇中心卫生院", "区": "万州区", "产品数": 7, "在销产品数量": 6, "累计销售金额": 32213.29, "目标销售金额": 42994.75, "销售费用": 10072.97, "年市场规模": 19600.0, "医院等级": "一级", "完成率": 74.92, "费用率": 18.82, "产品列表": ["恩替卡韦片", "氯化钾颗粒", "注射用泮托拉唑钠", "注射用谷胱甘肽", "炎琥宁80mg", "苯磺酸氨氯地平片", "阿法骨化醇片"]}, {"终端名称": "重庆市万州区双河口街道社区卫生服务中心", "区": "万州区", "产品数": 4, "在销产品数量": 3, "累计销售金额": 15072.7, "目标销售金额": 41253.0, "销售费用": 2602.05, "年市场规模": 15796.0, "医院等级": "其他", "完成率": 36.54, "费用率": 6.99, "产品列表": ["恩替卡韦片", "注射用谷胱甘肽", "炎琥宁80mg", "阿法骨化醇片"]}, {"终端名称": "重庆市万州区后山镇卫生院", "区": "万州区", "产品数": 4, "在销产品数量": 2, "累计销售金额": 1869.0, "目标销售金额": 8227.0, "销售费用": 1.3, "年市场规模": 2592.0, "医院等级": "其他", "完成率": 22.72, "费用率": 0.0, "产品列表": ["注射用泮托拉唑钠", "炎琥宁80mg", "苯磺酸氨氯地平片", "阿法骨化醇片"]}, {"终端名称": "重庆市万州区周家坝街道社区卫生服务中心", "区": "万州区", "产品数": 3, "在销产品数量": 2, "累计销售金额": 416.0, "目标销售金额": 4146.32, "销售费用": 93.6, "年市场规模": 80.0, "医院等级": "其他", "完成率": 10.03, "费用率": 0.0, "产品列表": ["注射用艾司奥美拉唑钠", "注射用谷胱甘肽", "苯磺酸氨氯地平片"]}, {"终端名称": "重庆市万州区响水镇中心卫生院", "区": "万州区", "产品数": 1, "在销产品数量": 1, "累计销售金额": 1020.0, "目标销售金额": 3626.41, "销售费用": 862.7, "年市场规模": 0.0, "医院等级": "其他", "完成率": 28.13, "费用率": 20.0, "产品列表": ["注射用泮托拉唑钠"]}, {"终端名称": "重庆市万州区地宝土家族乡卫生院", "区": "万州区", "产品数": 1, "在销产品数量": 1, "累计销售金额": 311.0, "目标销售金额": 311.48, "销售费用": 0.0, "年市场规模": 0.0, "医院等级": "一级", "完成率": 99.85, "费用率": 0.0, "产品列表": ["苯磺酸氨氯地平片"]}, {"终端名称": "重庆市万州区大周镇卫生院", "区": "万州区", "产品数": 1, "在销产品数量": 1, "累计销售金额": 0.0, "目标销售金额": 11960.92, "销售费用": 2845.44, "年市场规模": 0.0, "医院等级": "其他", "完成率": 0.0, "费用率": 0.0, "产品列表": ["苯磺酸氨氯地平片"]}, {"终端名称": "重庆市万州区天城街道社区卫生服务中心", "区": "万州区", "产品数": 4, "在销产品数量": 1, "累计销售金额": 2375.1, "目标销售金额": 59391.47, "销售费用": 19712.16, "年市场规模": 400.0, "医院等级": "其他", "完成率": 4.0, "费用率": 0.0, "产品列表": ["注射用谷胱甘肽", "盐酸二甲双胍缓释片", "苯磺酸氨氯地平片", "阿法骨化醇片"]}, {"终端名称": "重庆市万州区太白街道社区卫生服务中心", "区": "万州区", "产品数": 4, "在销产品数量": 2, "累计销售金额": 0.0, "目标销售金额": 39862.95, "销售费用": 10175.87, "年市场规模": 6000.0, "医院等级": "其他", "完成率": 0.0, "费用率": 0.0, "产品列表": ["恩替卡韦片", "炎琥宁80mg", "琥珀酸美托洛尔缓释片", "苯磺酸氨氯地平片"]}, {"终端名称": "重庆市万州区太龙镇中心卫生院", "区": "万州区", "产品数": 5, "在销产品数量": 3, "累计销售金额": 263.72, "目标销售金额": 15830.9, "销售费用": 284.97, "年市场规模": 320.0, "医院等级": "一级", "完成率": 1.67, "费用率": 7.4, "产品列表": ["吲达帕胺片", "注射用谷胱甘肽", "炎琥宁80mg", "琥珀酸美托洛尔缓释片", "苯磺酸氨氯地平片"]}, {"终端名称": "重庆市万州区妇幼保健院", "区": "万州区", "产品数": 5, "在销产品数量": 4, "累计销售金额": 2496.0, "目标销售金额": 86734.18, "销售费用": 22794.39, "年市场规模": 24030.0, "医院等级": "三级", "完成率": 2.88, "费用率": 0.0, "产品列表": ["富马酸替诺福韦二吡呋酯片", "氯化钾颗粒", "注射用水溶性维生素", "注射用谷胱甘肽", "炎琥宁80mg"]}, {"终端名称": "重庆市万州区孙家镇卫生院", "区": "万州区", "产品数": 2, "在销产品数量": 2, "累计销售金额": 85.4, "目标销售金额": 6085.12, "销售费用": 1447.62, "年市场规模": 0.0, "医院等级": "其他", "完成率": 1.4, "费用率": 0.0, "产品列表": ["苯磺酸氨氯地平片", "阿法骨化醇片"]}, {"终端名称": "重庆市万州区小周镇卫生院", "区": "万州区", "产品数": 1, "在销产品数量": 1, "累计销售金额": 1869.0, "目标销售金额": 207.65, "销售费用": 0.0, "年市场规模": 0.0, "医院等级": "一级", "完成率": 900.05, "费用率": 0.0, "产品列表": ["苯磺酸氨氯地平片"]}, {"终端名称": "重庆市万州区弹子镇卫生院（重庆市万州区弹子镇计划生育服务站）", "区": "万州区", "产品数": 5, "在销产品数量": 2, "累计销售金额": 0.0, "目标销售金额": 16319.29, "销售费用": 4500.79, "年市场规模": 500.0, "医院等级": "其他", "完成率": 0.0, "费用率": 0.0, "产品列表": ["注射用泮托拉唑钠", "炎琥宁80mg", "盐酸二甲双胍缓释片", "苯磺酸氨氯地平片", "阿卡波糖片"]}, {"终端名称": "重庆市万州区恒合土家族乡卫生院", "区": "万州区", "产品数": 2, "在销产品数量": 2, "累计销售金额": 1816.0, "目标销售金额": 103.83, "销售费用": 0.0, "年市场规模": 0.0, "医院等级": "其他", "完成率": 1749.06, "费用率": 0.0, "产品列表": ["注射用泮托拉唑钠", "苯磺酸氨氯地平片"]}, {"终端名称": "重庆市万州区新乡镇卫生院", "区": "万州区", "产品数": 3, "在销产品数量": 3, "累计销售金额": 568.43, "目标销售金额": 4507.29, "销售费用": 331.17, "年市场规模": 1780.0, "医院等级": "其他", "完成率": 12.61, "费用率": 6.87, "产品列表": ["恩替卡韦片", "炎琥宁80mg", "苯磺酸氨氯地平片"]}, {"终端名称": "重庆市万州区新田镇中心卫生院（重庆市万州区新田镇计划生育服务站）", "区": "万州区", "产品数": 4, "在销产品数量": 1, "累计销售金额": 4160.0, "目标销售金额": 24860.45, "销售费用": 4688.47, "年市场规模": 950.0, "医院等级": "其他", "完成率": 16.73, "费用率": 0.0, "产品列表": ["中/长链脂肪乳注射液（C6~24）", "注射用谷胱甘肽", "盐酸二甲双胍片", "阿卡波糖片"]}, {"终端名称": "重庆市万州区普子乡卫生院", "区": "万州区", "产品数": 1, "在销产品数量": 0, "累计销售金额": 0.0, "目标销售金额": 236.07, "销售费用": 140.4, "年市场规模": 0.0, "医院等级": "其他", "完成率": 0.0, "费用率": 0.0, "产品列表": ["注射用艾司奥美拉唑钠"]}, {"终端名称": "重庆市万州区李河镇卫生院", "区": "万州区", "产品数": 1, "在销产品数量": 1, "累计销售金额": 681.0, "目标销售金额": 0.0, "销售费用": 0.0, "年市场规模": 0.0, "医院等级": "一级", "完成率": 0.0, "费用率": 0.0, "产品列表": ["注射用泮托拉唑钠"]}, {"终端名称": "重庆市万州区柱山乡卫生院（重庆市万州区柱山乡计划生育服务站）", "区": "万州区", "产品数": 2, "在销产品数量": 0, "累计销售金额": 0.0, "目标销售金额": 2767.23, "销售费用": 64.08, "年市场规模": 0.0, "医院等级": "其他", "完成率": 0.0, "费用率": 0.0, "产品列表": ["吲达帕胺片", "阿卡波糖片"]}, {"终端名称": "重庆市万州区梨树乡卫生院", "区": "万州区", "产品数": 4, "在销产品数量": 3, "累计销售金额": 1294.72, "目标销售金额": 10248.88, "销售费用": 1929.57, "年市场规模": 640.0, "医院等级": "一级", "完成率": 12.63, "费用率": 5.48, "产品列表": ["注射用泮托拉唑钠", "炎琥宁80mg", "苯磺酸氨氯地平片", "阿卡波糖片"]}, {"终端名称": "重庆市万州区武陵镇中心卫生院", "区": "万州区", "产品数": 4, "在销产品数量": 4, "累计销售金额": 1530.0, "目标销售金额": 38420.27, "销售费用": 2596.75, "年市场规模": 2100.0, "医院等级": "其他", "完成率": 3.98, "费用率": 20.0, "产品列表": ["恩替卡韦片", "注射用拉氧头孢钠", "注射用泮托拉唑钠", "阿法骨化醇片"]}, {"终端名称": "重庆市万州区沙河街道社区卫生服务中心", "区": "万州区", "产品数": 7, "在销产品数量": 5, "累计销售金额": 4740.45, "目标销售金额": 11689.0, "销售费用": 1021.65, "年市场规模": 3650.0, "医院等级": "一级", "完成率": 40.55, "费用率": 3.71, "产品列表": ["吲达帕胺片", "氯化钾颗粒", "注射用奥美拉唑钠", "注射用泮托拉唑钠", "炎琥宁80mg", "阿卡波糖片", "阿法骨化醇片"]}, {"终端名称": "重庆市万州区溪口乡卫生院", "区": "万州区", "产品数": 1, "在销产品数量": 1, "累计销售金额": 9797.0, "目标销售金额": 7196.49, "销售费用": 1712.01, "年市场规模": 0.0, "医院等级": "其他", "完成率": 136.14, "费用率": 20.0, "产品列表": ["苯磺酸氨氯地平片"]}, {"终端名称": "重庆市万州区瀼渡镇卫生院", "区": "万州区", "产品数": 1, "在销产品数量": 1, "累计销售金额": 9139.0, "目标销售金额": 3927.17, "销售费用": 934.25, "年市场规模": 0.0, "医院等级": "其他", "完成率": 232.71, "费用率": 20.0, "产品列表": ["苯磺酸氨氯地平片"]}, {"终端名称": "重庆市万州区熊家镇中心卫生院", "区": "万州区", "产品数": 4, "在销产品数量": 3, "累计销售金额": 4935.45, "目标销售金额": 8241.67, "销售费用": 1478.01, "年市场规模": 3000.0, "医院等级": "一级", "完成率": 59.88, "费用率": 3.56, "产品列表": ["氯化钾缓释片", "炎琥宁80mg", "苯磺酸氨氯地平片", "阿法骨化醇片"]}, {"终端名称": "重庆市万州区燕山乡卫生院", "区": "万州区", "产品数": 4, "在销产品数量": 4, "累计销售金额": 19510.92, "目标销售金额": 12182.4, "销售费用": 2288.63, "年市场规模": 1420.0, "医院等级": "其他", "完成率": 160.16, "费用率": 19.13, "产品列表": ["恩替卡韦片", "炎琥宁80mg", "苯磺酸氨氯地平片", "阿法骨化醇片"]}, {"终端名称": "重庆市万州区牌楼街道社区卫生服务中心", "区": "万州区", "产品数": 2, "在销产品数量": 2, "累计销售金额": 405.0, "目标销售金额": 879.9, "销售费用": 0.0, "年市场规模": 100.0, "医院等级": "其他", "完成率": 46.03, "费用率": 0.0, "产品列表": ["恩替卡韦片", "注射用谷胱甘肽"]}, {"终端名称": "重庆市万州区甘宁镇中心卫生院（重庆市万州区甘宁镇计划生育服务站）", "区": "万州区", "产品数": 5, "在销产品数量": 5, "累计销售金额": 10747.72, "目标销售金额": 37050.31, "销售费用": 1539.15, "年市场规模": 30340.0, "医院等级": "其他", "完成率": 29.01, "费用率": 0.18, "产品列表": ["恩替卡韦片", "注射用泮托拉唑钠", "注射用谷胱甘肽", "炎琥宁80mg", "阿法骨化醇片"]}, {"终端名称": "重庆市万州区白土镇中心卫生院", "区": "万州区", "产品数": 6, "在销产品数量": 2, "累计销售金额": 1366.4, "目标销售金额": 26329.2, "销售费用": 5483.75, "年市场规模": 3870.0, "医院等级": "一级", "完成率": 5.19, "费用率": 0.0, "产品列表": ["丙泊酚中/长链脂肪乳注射液", "恩替卡韦片", "盐酸二甲双胍缓释片", "苯磺酸氨氯地平片", "阿卡波糖片", "阿法骨化醇片"]}, {"终端名称": "重庆市万州区白羊镇中心卫生院", "区": "万州区", "产品数": 3, "在销产品数量": 3, "累计销售金额": 144.0, "目标销售金额": 13782.98, "销售费用": 0.0, "年市场规模": 1000.0, "医院等级": "其他", "完成率": 1.04, "费用率": 0.0, "产品列表": ["恩替卡韦片", "注射用谷胱甘肽", "苯磺酸氨氯地平片"]}, {"终端名称": "重庆市万州区百安坝街道移民社区卫生服务中心", "区": "万州区", "产品数": 3, "在销产品数量": 2, "累计销售金额": 0.0, "目标销售金额": 4049.85, "销售费用": 413.27, "年市场规模": 400.0, "医院等级": "二级", "完成率": 0.0, "费用率": 0.0, "产品列表": ["恩替卡韦片", "注射用谷胱甘肽", "苯磺酸氨氯地平片"]}, {"终端名称": "重庆市万州区第一人民医院", "区": "万州区", "产品数": 11, "在销产品数量": 9, "累计销售金额": 37959.4, "目标销售金额": 247279.46, "销售费用": 33998.94, "年市场规模": 70330.0, "医院等级": "二甲", "完成率": 15.35, "费用率": 5.59, "产品列表": ["富马酸替诺福韦二吡呋酯片", "恩替卡韦片", "氯化钾颗粒", "注射用二氯醋酸二异丙胺", "注射用拉氧头孢钠", "炎琥宁80mg", "甲磺酸仑伐替尼胶囊", "硫辛酸注射液", "谷胱甘肽片0.1g", "阿卡波糖片", "阿法骨化醇片"]}, {"终端名称": "重庆市万州区罗田镇卫生院", "区": "万州区", "产品数": 1, "在销产品数量": 1, "累计销售金额": 4236.0, "目标销售金额": 6811.08, "销售费用": 0.0, "年市场规模": 0.0, "医院等级": "一级", "完成率": 62.19, "费用率": 0.0, "产品列表": ["苯磺酸氨氯地平片"]}, {"终端名称": "重庆市万州区走马镇中心卫生院（重庆市万州区走马镇计划生育服务站）", "区": "万州区", "产品数": 4, "在销产品数量": 4, "累计销售金额": 33328.75, "目标销售金额": 14495.11, "销售费用": 3944.7, "年市场规模": 4400.0, "医院等级": "其他", "完成率": 229.93, "费用率": 20.84, "产品列表": ["注射用泮托拉唑钠", "注射用谷胱甘肽", "炎琥宁80mg", "苯磺酸氨氯地平片"]}, {"终端名称": "重庆市万州区郭村镇卫生院", "区": "万州区", "产品数": 2, "在销产品数量": 2, "累计销售金额": 405.0, "目标销售金额": 4725.85, "销售费用": 1048.07, "年市场规模": 0.0, "医院等级": "其他", "完成率": 8.57, "费用率": 0.0, "产品列表": ["恩替卡韦片", "苯磺酸氨氯地平片"]}, {"终端名称": "重庆市万州区钟鼓楼街道社区卫生服务中心", "区": "万州区", "产品数": 1, "在销产品数量": 1, "累计销售金额": 3115.0, "目标销售金额": 0.0, "销售费用": 0.0, "年市场规模": 0.0, "医院等级": "其他", "完成率": 0.0, "费用率": 0.0, "产品列表": ["苯磺酸氨氯地平片"]}, {"终端名称": "重庆市万州区铁峰乡卫生院", "区": "万州区", "产品数": 4, "在销产品数量": 4, "累计销售金额": 17687.0, "目标销售金额": 14810.82, "销售费用": 3102.71, "年市场规模": 980.0, "医院等级": "其他", "完成率": 119.42, "费用率": 19.96, "产品列表": ["恩替卡韦片", "注射用谷胱甘肽", "炎琥宁80mg", "苯磺酸氨氯地平片"]}, {"终端名称": "重庆市万州区长坪乡卫生院", "区": "万州区", "产品数": 1, "在销产品数量": 1, "累计销售金额": 7536.0, "目标销售金额": 8722.39, "销售费用": 2075.01, "年市场规模": 0.0, "医院等级": "其他", "完成率": 86.4, "费用率": 20.0, "产品列表": ["苯磺酸氨氯地平片"]}, {"终端名称": "重庆市万州区长岭镇卫生院", "区": "万州区", "产品数": 3, "在销产品数量": 2, "累计销售金额": 6129.0, "目标销售金额": 2435.82, "销售费用": 782.83, "年市场规模": 0.0, "医院等级": "其他", "完成率": 251.62, "费用率": 0.0, "产品列表": ["恩替卡韦片", "氯化钾缓释片", "注射用泮托拉唑钠"]}, {"终端名称": "重庆市万州区长滩镇卫生院", "区": "万州区", "产品数": 4, "在销产品数量": 2, "累计销售金额": 1810.5, "目标销售金额": 12751.41, "销售费用": 880.61, "年市场规模": 800.0, "医院等级": "其他", "完成率": 14.2, "费用率": 0.0, "产品列表": ["炎琥宁80mg", "盐酸二甲双胍缓释片", "苯磺酸氨氯地平片", "阿卡波糖片"]}, {"终端名称": "重庆市万州区陈家坝街道社区卫生服务中心", "区": "万州区", "产品数": 1, "在销产品数量": 1, "累计销售金额": 0.0, "目标销售金额": 13.66, "销售费用": 0.0, "年市场规模": 0.0, "医院等级": "其他", "完成率": 0.0, "费用率": 0.0, "产品列表": ["氯化钾颗粒"]}, {"终端名称": "重庆市万州区高峰街道社区卫生服务中心", "区": "万州区", "产品数": 2, "在销产品数量": 2, "累计销售金额": 23104.0, "目标销售金额": 25363.56, "销售费用": 6033.86, "年市场规模": 0.0, "医院等级": "其他", "完成率": 91.09, "费用率": 16.69, "产品列表": ["苯磺酸氨氯地平片", "阿卡波糖片"]}, {"终端名称": "重庆市万州区高梁镇中心卫生院（重庆市万州区高梁镇计划生育服务站）", "区": "万州区", "产品数": 2, "在销产品数量": 2, "累计销售金额": 14315.0, "目标销售金额": 25628.76, "销售费用": 0.0, "年市场规模": 0.0, "医院等级": "一级", "完成率": 55.86, "费用率": 0.0, "产品列表": ["注射用泮托拉唑钠", "苯磺酸氨氯地平片"]}, {"终端名称": "重庆市万州区高笋塘街道社区卫生服务中心", "区": "万州区", "产品数": 3, "在销产品数量": 3, "累计销售金额": 1009.0, "目标销售金额": 1659.44, "销售费用": 82.94, "年市场规模": 150.0, "医院等级": "其他", "完成率": 60.8, "费用率": 5.05, "产品列表": ["注射用泮托拉唑钠", "注射用谷胱甘肽", "雷贝拉唑钠肠溶片"]}, {"终端名称": "重庆市万州区黄柏乡卫生院（重庆市万州区黄柏乡计划生育服务站）", "区": "万州区", "产品数": 5, "在销产品数量": 4, "累计销售金额": 6649.96, "目标销售金额": 13298.78, "销售费用": 552.96, "年市场规模": 1800.0, "医院等级": "其他", "完成率": 50.0, "费用率": 6.27, "产品列表": ["注射用拉氧头孢钠", "注射用泮托拉唑钠", "盐酸克林霉素胶囊", "苯磺酸氨氯地平片", "阿法骨化醇片"]}, {"终端名称": "重庆市万州区龙沙镇中心卫生院（重庆市万州区龙沙镇计划生育服务站）", "区": "万州区", "产品数": 5, "在销产品数量": 3, "累计销售金额": 5005.58, "目标销售金额": 23007.51, "销售费用": 4042.0, "年市场规模": 14875.0, "医院等级": "其他", "完成率": 21.76, "费用率": 1.95, "产品列表": ["恩替卡韦片", "氯化钾缓释片", "注射用谷胱甘肽", "炎琥宁80mg", "阿法骨化醇片"]}, {"终端名称": "重庆市万州区龙都街道社区卫生服务中心", "区": "万州区", "产品数": 1, "在销产品数量": 1, "累计销售金额": 832.0, "目标销售金额": 2292.65, "销售费用": 0.0, "年市场规模": 500.0, "医院等级": "其他", "完成率": 36.29, "费用率": 0.0, "产品列表": ["注射用谷胱甘肽"]}, {"终端名称": "重庆市万州区龙驹镇中心卫生院（重庆市万州区龙驹镇计划生育服务站）（重庆三峡中心医院龙驹分院）", "区": "万州区", "产品数": 5, "在销产品数量": 3, "累计销售金额": 6173.2, "目标销售金额": 33538.68, "销售费用": 6945.11, "年市场规模": 580.0, "医院等级": "其他", "完成率": 18.41, "费用率": 0.0, "产品列表": ["氯化钾缓释片", "注射用泮托拉唑钠", "注射用谷胱甘肽", "苯磺酸氨氯地平片", "阿卡波糖片"]}, {"终端名称": "重庆市万州社会福利院", "区": "万州区", "产品数": 2, "在销产品数量": 2, "累计销售金额": 0.0, "目标销售金额": 401.02, "销售费用": 0.0, "年市场规模": 70.0, "医院等级": "其他", "完成率": 0.0, "费用率": 0.0, "产品列表": ["注射用谷胱甘肽", "阿法骨化醇片"]}, {"终端名称": "重庆市万州荣军优抚医院（重庆市万州康复辅具技术中心）", "区": "万州区", "产品数": 2, "在销产品数量": 2, "累计销售金额": 22785.32, "目标销售金额": 0.0, "销售费用": 0.0, "年市场规模": 0.0, "医院等级": "一级", "完成率": 0.0, "费用率": 0.0, "产品列表": ["谷胱甘肽片0.1g", "阿法骨化醇片"]}, {"终端名称": "重庆市三峡监狱医院", "区": "万州区", "产品数": 2, "在销产品数量": 2, "累计销售金额": 0.0, "目标销售金额": 2368.44, "销售费用": 0.0, "年市场规模": 0.0, "医院等级": "其他", "完成率": 0.0, "费用率": 0.0, "产品列表": ["恩替卡韦片", "苯磺酸氨氯地平片"]}], "products": [{"药品名称": "丙泊酚中/长链脂肪乳注射液", "产品分类": "商销品", "终端数": 1, "在销终端数": 0, "累计销售金额": 0.0, "目标销售金额": 1236.45, "当前销量": 0.0, "目标销量": 192.0, "销售费用": 294.14, "年市场规模": 0.0, "完成率": 0.0, "费用率": 20.0, "在销终端": "重庆市万州区白土镇中心卫生院", "终端列表": ["重庆市万州区白土镇中心卫生院"]}, {"药品名称": "中/长链脂肪乳注射液（C6~24）", "产品分类": "商销品", "终端数": 1, "在销终端数": 0, "累计销售金额": 0.0, "目标销售金额": 13.8, "当前销量": 0.0, "目标销量": 0.48, "销售费用": 18.46, "年市场规模": 0.0, "完成率": 0.0, "费用率": 45.0, "在销终端": "重庆市万州区新田镇中心卫生院（重庆市万州区新田镇计划生育服务站）", "终端列表": ["重庆市万州区新田镇中心卫生院（重庆市万州区新田镇计划生育服务站）"]}, {"药品名称": "依匹斯汀10mg", "产品分类": "品牌品", "终端数": 2, "在销终端数": 2, "累计销售金额": 129836.78, "目标销售金额": 749615.58, "当前销量": 44376.0, "目标销量": 259200.0, "销售费用": 54146.64, "年市场规模": 0.0, "完成率": 17.32, "费用率": 41.5, "在销终端": "重庆三峡医药高等专科学校附属人民医院|重庆大学附属三峡医院", "终端列表": ["重庆三峡医药高等专科学校附属人民医院", "重庆大学附属三峡医院"]}, {"药品名称": "吲达帕胺片", "产品分类": "商销品", "终端数": 4, "在销终端数": 0, "累计销售金额": 0.0, "目标销售金额": 5105.13, "当前销量": 0.0, "目标销量": 69004.8, "销售费用": 0.0, "年市场规模": 0.0, "完成率": 0.0, "费用率": 0.0, "在销终端": "重庆三峡医药高等专科学校附属人民医院|重庆市万州区太龙镇中心卫生院|重庆市万州区柱山乡卫生院（重庆市万州区柱山乡计划生育服务站）|重庆市万州区沙河街道社区卫生服务中心", "终端列表": ["重庆三峡医药高等专科学校附属人民医院", "重庆市万州区太龙镇中心卫生院", "重庆市万州区柱山乡卫生院（重庆市万州区柱山乡计划生育服务站）", "重庆市万州区沙河街道社区卫生服务中心"]}, {"药品名称": "富马酸丙酚替诺福韦片", "产品分类": "商销品", "终端数": 1, "在销终端数": 0, "累计销售金额": 0.0, "目标销售金额": 11624.53, "当前销量": 0.0, "目标销量": 32256.0, "销售费用": 0.0, "年市场规模": 0.0, "完成率": 0.0, "费用率": 0.0, "在销终端": "重庆三峡医药高等专科学校附属人民医院", "终端列表": ["重庆三峡医药高等专科学校附属人民医院"]}, {"药品名称": "富马酸替诺福韦二吡呋酯片", "产品分类": "商销品", "终端数": 3, "在销终端数": 1, "累计销售金额": 2227.0, "目标销售金额": 4679.14, "当前销量": 7650.0, "目标销量": 16070.4, "销售费用": 0.0, "年市场规模": 0.0, "完成率": 47.59, "费用率": 0.0, "在销终端": "重庆三峡医药高等专科学校附属人民医院|重庆市万州区妇幼保健院|重庆市万州区第一人民医院", "终端列表": ["重庆三峡医药高等专科学校附属人民医院", "重庆市万州区妇幼保健院", "重庆市万州区第一人民医院"]}, {"药品名称": "恩替卡韦片", "产品分类": "商销品", "终端数": 20, "在销终端数": 15, "累计销售金额": 5699.0, "目标销售金额": 83307.66, "当前销量": 35100.0, "目标销量": 599348.4, "销售费用": 0.0, "年市场规模": 0.0, "完成率": 6.84, "费用率": 0.0, "在销终端": "重庆三峡医药高等专科学校附属中医院|重庆三峡医药高等专科学校附属人民医院|重庆市万州区上海医院|重庆市万州区分水镇中心卫生院|重庆市万州区双河口街道社区卫生服务中心|重庆市万州区太白街道社区卫生服务中心|重庆市万州区新乡镇卫生院|重庆市万州区武陵镇中心卫生院|重庆市万州区燕山乡卫生院|重庆市万州区牌楼街道社区卫生服务中心|重庆市万州区甘宁镇中心卫生院（重庆市万州区甘宁镇计划生育服务站）|重庆市万州区白土镇中心卫生院|重庆市万州区白羊镇中心卫生院|重庆市万州区百安坝街道移民社区卫生服务中心|重庆市万州区第一人民医院|重庆市万州区郭村镇卫生院|重庆市万州区铁峰乡卫生院|重庆市万州区长岭镇卫生院|重庆市万州区龙沙镇中心卫生院（重庆市万州区龙沙镇计划生育服务站）|重庆市三峡监狱医院", "终端列表": ["重庆三峡医药高等专科学校附属中医院", "重庆三峡医药高等专科学校附属人民医院", "重庆市万州区上海医院", "重庆市万州区分水镇中心卫生院", "重庆市万州区双河口街道社区卫生服务中心", "重庆市万州区太白街道社区卫生服务中心", "重庆市万州区新乡镇卫生院", "重庆市万州区武陵镇中心卫生院", "重庆市万州区燕山乡卫生院", "重庆市万州区牌楼街道社区卫生服务中心", "重庆市万州区甘宁镇中心卫生院（重庆市万州区甘宁镇计划生育服务站）", "重庆市万州区白土镇中心卫生院", "重庆市万州区白羊镇中心卫生院", "重庆市万州区百安坝街道移民社区卫生服务中心", "重庆市万州区第一人民医院", "重庆市万州区郭村镇卫生院", "重庆市万州区铁峰乡卫生院", "重庆市万州区长岭镇卫生院", "重庆市万州区龙沙镇中心卫生院（重庆市万州区龙沙镇计划生育服务站）", "重庆市三峡监狱医院"]}, {"药品名称": "氯化钾缓释片", "产品分类": "商销品", "终端数": 6, "在销终端数": 0, "累计销售金额": 0.0, "目标销售金额": 129943.04, "当前销量": 0.0, "目标销量": 554986.8, "销售费用": 61825.53, "年市场规模": 0.0, "完成率": 0.0, "费用率": 40.0, "在销终端": "重庆三峡医药高等专科学校附属人民医院|重庆大学附属三峡医院|重庆市万州区熊家镇中心卫生院|重庆市万州区长岭镇卫生院|重庆市万州区龙沙镇中心卫生院（重庆市万州区龙沙镇计划生育服务站）|重庆市万州区龙驹镇中心卫生院（重庆市万州区龙驹镇计划生育服务站）（重庆三峡中心医院龙驹分院）", "终端列表": ["重庆三峡医药高等专科学校附属人民医院", "重庆大学附属三峡医院", "重庆市万州区熊家镇中心卫生院", "重庆市万州区长岭镇卫生院", "重庆市万州区龙沙镇中心卫生院（重庆市万州区龙沙镇计划生育服务站）", "重庆市万州区龙驹镇中心卫生院（重庆市万州区龙驹镇计划生育服务站）（重庆三峡中心医院龙驹分院）"]}, {"药品名称": "氯化钾颗粒", "产品分类": "商销品", "终端数": 5, "在销终端数": 5, "累计销售金额": 0.0, "目标销售金额": 234.07, "当前销量": 0.0, "目标销量": 856.67, "销售费用": 0.0, "年市场规模": 0.0, "完成率": 0.0, "费用率": 0.0, "在销终端": "重庆市万州区分水镇中心卫生院|重庆市万州区妇幼保健院|重庆市万州区沙河街道社区卫生服务中心|重庆市万州区第一人民医院|重庆市万州区陈家坝街道社区卫生服务中心", "终端列表": ["重庆市万州区分水镇中心卫生院", "重庆市万州区妇幼保健院", "重庆市万州区沙河街道社区卫生服务中心", "重庆市万州区第一人民医院", "重庆市万州区陈家坝街道社区卫生服务中心"]}, {"药品名称": "注射用二氯醋酸二异丙胺", "产品分类": "商销品", "终端数": 1, "在销终端数": 1, "累计销售金额": 0.0, "目标销售金额": 4093.99, "当前销量": 0.0, "目标销量": 650.0, "销售费用": 0.0, "年市场规模": 0.0, "完成率": 0.0, "费用率": 0.0, "在销终端": "重庆市万州区第一人民医院", "终端列表": ["重庆市万州区第一人民医院"]}, {"药品名称": "注射用伏立康唑", "产品分类": "商销品", "终端数": 1, "在销终端数": 0, "累计销售金额": 0.0, "目标销售金额": 20425.57, "当前销量": 0.0, "目标销量": 691.2, "销售费用": 12147.84, "年市场规模": 0.0, "完成率": 0.0, "费用率": 50.0, "在销终端": "重庆三峡医药高等专科学校附属人民医院", "终端列表": ["重庆三峡医药高等专科学校附属人民医院"]}, {"药品名称": "注射用头孢他啶", "产品分类": "商销品", "终端数": 1, "在销终端数": 0, "累计销售金额": 0.0, "目标销售金额": 211895.53, "当前销量": 0.0, "目标销量": 48192.0, "销售费用": 88215.46, "年市场规模": 0.0, "完成率": 0.0, "费用率": 35.0, "在销终端": "重庆三峡医药高等专科学校附属人民医院", "终端列表": ["重庆三峡医药高等专科学校附属人民医院"]}, {"药品名称": "注射用奥美拉唑钠", "产品分类": "商销品", "终端数": 1, "在销终端数": 0, "累计销售金额": 0.0, "目标销售金额": 936.21, "当前销量": 0.0, "目标销量": 1113.6, "销售费用": 334.08, "年市场规模": 0.0, "完成率": 0.0, "费用率": 30.0, "在销终端": "重庆市万州区沙河街道社区卫生服务中心", "终端列表": ["重庆市万州区沙河街道社区卫生服务中心"]}, {"药品名称": "注射用拉氧头孢钠", "产品分类": "商销品", "终端数": 5, "在销终端数": 5, "累计销售金额": 153072.0, "目标销售金额": 191914.57, "当前销量": 19800.0, "目标销量": 29310.0, "销售费用": 0.0, "年市场规模": 0.0, "完成率": 79.76, "费用率": 0.0, "在销终端": "重庆三峡医药高等专科学校附属人民医院|重庆大学附属三峡医院|重庆市万州区武陵镇中心卫生院|重庆市万州区第一人民医院|重庆市万州区黄柏乡卫生院（重庆市万州区黄柏乡计划生育服务站）", "终端列表": ["重庆三峡医药高等专科学校附属人民医院", "重庆大学附属三峡医院", "重庆市万州区武陵镇中心卫生院", "重庆市万州区第一人民医院", "重庆市万州区黄柏乡卫生院（重庆市万州区黄柏乡计划生育服务站）"]}, {"药品名称": "注射用水溶性维生素", "产品分类": "商销品", "终端数": 2, "在销终端数": 2, "累计销售金额": 44175.0, "目标销售金额": 47649.32, "当前销量": 7500.0, "目标销量": 23000.0, "销售费用": 0.0, "年市场规模": 0.0, "完成率": 92.71, "费用率": 0.0, "在销终端": "重庆大学附属三峡医院|重庆市万州区妇幼保健院", "终端列表": ["重庆大学附属三峡医院", "重庆市万州区妇幼保健院"]}, {"药品名称": "注射用泮托拉唑钠", "产品分类": "商销品", "终端数": 19, "在销终端数": 17, "累计销售金额": 46825.0, "目标销售金额": 47005.93, "当前销量": 36600.0, "目标销量": 31062.4, "销售费用": 10185.26, "年市场规模": 0.0, "完成率": 99.62, "费用率": 20.0, "在销终端": "重庆三峡医药高等专科学校附属中医院|重庆三峡医药高等专科学校附属人民医院|重庆市万州区余家镇中心卫生院|重庆市万州区分水镇中心卫生院|重庆市万州区后山镇卫生院|重庆市万州区响水镇中心卫生院|重庆市万州区弹子镇卫生院（重庆市万州区弹子镇计划生育服务站）|重庆市万州区恒合土家族乡卫生院|重庆市万州区李河镇卫生院|重庆市万州区梨树乡卫生院|重庆市万州区武陵镇中心卫生院|重庆市万州区沙河街道社区卫生服务中心|重庆市万州区甘宁镇中心卫生院（重庆市万州区甘宁镇计划生育服务站）|重庆市万州区走马镇中心卫生院（重庆市万州区走马镇计划生育服务站）|重庆市万州区长岭镇卫生院|重庆市万州区高梁镇中心卫生院（重庆市万州区高梁镇计划生育服务站）|重庆市万州区高笋塘街道社区卫生服务中心|重庆市万州区黄柏乡卫生院（重庆市万州区黄柏乡计划生育服务站）|重庆市万州区龙驹镇中心卫生院（重庆市万州区龙驹镇计划生育服务站）（重庆三峡中心医院龙驹分院）", "终端列表": ["重庆三峡医药高等专科学校附属中医院", "重庆三峡医药高等专科学校附属人民医院", "重庆市万州区余家镇中心卫生院", "重庆市万州区分水镇中心卫生院", "重庆市万州区后山镇卫生院", "重庆市万州区响水镇中心卫生院", "重庆市万州区弹子镇卫生院（重庆市万州区弹子镇计划生育服务站）", "重庆市万州区恒合土家族乡卫生院", "重庆市万州区李河镇卫生院", "重庆市万州区梨树乡卫生院", "重庆市万州区武陵镇中心卫生院", "重庆市万州区沙河街道社区卫生服务中心", "重庆市万州区甘宁镇中心卫生院（重庆市万州区甘宁镇计划生育服务站）", "重庆市万州区走马镇中心卫生院（重庆市万州区走马镇计划生育服务站）", "重庆市万州区长岭镇卫生院", "重庆市万州区高梁镇中心卫生院（重庆市万州区高梁镇计划生育服务站）", "重庆市万州区高笋塘街道社区卫生服务中心", "重庆市万州区黄柏乡卫生院（重庆市万州区黄柏乡计划生育服务站）", "重庆市万州区龙驹镇中心卫生院（重庆市万州区龙驹镇计划生育服务站）（重庆三峡中心医院龙驹分院）"]}, {"药品名称": "注射用美罗培南", "产品分类": "商销品", "终端数": 1, "在销终端数": 0, "累计销售金额": 0.0, "目标销售金额": 8828.75, "当前销量": 0.0, "目标销量": 1129.2, "销售费用": 4725.7, "年市场规模": 0.0, "完成率": 0.0, "费用率": 45.0, "在销终端": "重庆三峡医药高等专科学校附属中医院", "终端列表": ["重庆三峡医药高等专科学校附属中医院"]}, {"药品名称": "注射用艾司奥美拉唑钠", "产品分类": "商销品", "终端数": 4, "在销终端数": 0, "累计销售金额": 0.0, "目标销售金额": 214352.28, "当前销量": 0.0, "目标销量": 84988.8, "销售费用": 127483.2, "年市场规模": 0.0, "完成率": 0.0, "费用率": 50.0, "在销终端": "重庆三峡医药高等专科学校附属中医院|重庆三峡医药高等专科学校附属人民医院|重庆市万州区周家坝街道社区卫生服务中心|重庆市万州区普子乡卫生院", "终端列表": ["重庆三峡医药高等专科学校附属中医院", "重庆三峡医药高等专科学校附属人民医院", "重庆市万州区周家坝街道社区卫生服务中心", "重庆市万州区普子乡卫生院"]}, {"药品名称": "注射用谷胱甘肽", "产品分类": "品牌品", "终端数": 22, "在销终端数": 22, "累计销售金额": 60620.3, "目标销售金额": 124702.16, "当前销量": 7350.0, "目标销量": 21754.68, "销售费用": 0.0, "年市场规模": 20361.0, "完成率": 48.61, "费用率": 0.0, "在销终端": "重庆万州欣欣医院|重庆三峡医药高等专科学校附属中医院|重庆三峡医药高等专科学校附属人民医院|重庆市万州区九池街道社区卫生服务中心(九池分院)|重庆市万州区分水镇中心卫生院|重庆市万州区双河口街道社区卫生服务中心|重庆市万州区周家坝街道社区卫生服务中心|重庆市万州区天城街道社区卫生服务中心|重庆市万州区太龙镇中心卫生院|重庆市万州区妇幼保健院|重庆市万州区新田镇中心卫生院（重庆市万州区新田镇计划生育服务站）|重庆市万州区牌楼街道社区卫生服务中心|重庆市万州区甘宁镇中心卫生院（重庆市万州区甘宁镇计划生育服务站）|重庆市万州区白羊镇中心卫生院|重庆市万州区百安坝街道移民社区卫生服务中心|重庆市万州区走马镇中心卫生院（重庆市万州区走马镇计划生育服务站）|重庆市万州区铁峰乡卫生院|重庆市万州区高笋塘街道社区卫生服务中心|重庆市万州区龙沙镇中心卫生院（重庆市万州区龙沙镇计划生育服务站）|重庆市万州区龙都街道社区卫生服务中心|重庆市万州区龙驹镇中心卫生院（重庆市万州区龙驹镇计划生育服务站）（重庆三峡中心医院龙驹分院）|重庆市万州社会福利院", "终端列表": ["重庆万州欣欣医院", "重庆三峡医药高等专科学校附属中医院", "重庆三峡医药高等专科学校附属人民医院", "重庆市万州区九池街道社区卫生服务中心(九池分院)", "重庆市万州区分水镇中心卫生院", "重庆市万州区双河口街道社区卫生服务中心", "重庆市万州区周家坝街道社区卫生服务中心", "重庆市万州区天城街道社区卫生服务中心", "重庆市万州区太龙镇中心卫生院", "重庆市万州区妇幼保健院", "重庆市万州区新田镇中心卫生院（重庆市万州区新田镇计划生育服务站）", "重庆市万州区牌楼街道社区卫生服务中心", "重庆市万州区甘宁镇中心卫生院（重庆市万州区甘宁镇计划生育服务站）", "重庆市万州区白羊镇中心卫生院", "重庆市万州区百安坝街道移民社区卫生服务中心", "重庆市万州区走马镇中心卫生院（重庆市万州区走马镇计划生育服务站）", "重庆市万州区铁峰乡卫生院", "重庆市万州区高笋塘街道社区卫生服务中心", "重庆市万州区龙沙镇中心卫生院（重庆市万州区龙沙镇计划生育服务站）", "重庆市万州区龙都街道社区卫生服务中心", "重庆市万州区龙驹镇中心卫生院（重庆市万州区龙驹镇计划生育服务站）（重庆三峡中心医院龙驹分院）", "重庆市万州社会福利院"]}, {"药品名称": "炎琥宁80mg", "产品分类": "品牌品", "终端数": 22, "在销终端数": 22, "累计销售金额": 54177.37, "目标销售金额": 259903.35, "当前销量": 17370.0, "目标销量": 72570.0, "销售费用": 59418.1, "年市场规模": 135052.0, "完成率": 20.85, "费用率": 12.34, "在销终端": "重庆万州安宇医院|重庆三峡医药高等专科学校附属中医院|重庆市万州区九池街道社区卫生服务中心(九池分院)|重庆市万州区五桥街道社区卫生服务中心|重庆市万州区分水镇中心卫生院|重庆市万州区双河口街道社区卫生服务中心|重庆市万州区后山镇卫生院|重庆市万州区太白街道社区卫生服务中心|重庆市万州区太龙镇中心卫生院|重庆市万州区妇幼保健院|重庆市万州区弹子镇卫生院（重庆市万州区弹子镇计划生育服务站）|重庆市万州区新乡镇卫生院|重庆市万州区梨树乡卫生院|重庆市万州区沙河街道社区卫生服务中心|重庆市万州区熊家镇中心卫生院|重庆市万州区燕山乡卫生院|重庆市万州区甘宁镇中心卫生院（重庆市万州区甘宁镇计划生育服务站）|重庆市万州区第一人民医院|重庆市万州区走马镇中心卫生院（重庆市万州区走马镇计划生育服务站）|重庆市万州区铁峰乡卫生院|重庆市万州区长滩镇卫生院|重庆市万州区龙沙镇中心卫生院（重庆市万州区龙沙镇计划生育服务站）", "终端列表": ["重庆万州安宇医院", "重庆三峡医药高等专科学校附属中医院", "重庆市万州区九池街道社区卫生服务中心(九池分院)", "重庆市万州区五桥街道社区卫生服务中心", "重庆市万州区分水镇中心卫生院", "重庆市万州区双河口街道社区卫生服务中心", "重庆市万州区后山镇卫生院", "重庆市万州区太白街道社区卫生服务中心", "重庆市万州区太龙镇中心卫生院", "重庆市万州区妇幼保健院", "重庆市万州区弹子镇卫生院（重庆市万州区弹子镇计划生育服务站）", "重庆市万州区新乡镇卫生院", "重庆市万州区梨树乡卫生院", "重庆市万州区沙河街道社区卫生服务中心", "重庆市万州区熊家镇中心卫生院", "重庆市万州区燕山乡卫生院", "重庆市万州区甘宁镇中心卫生院（重庆市万州区甘宁镇计划生育服务站）", "重庆市万州区第一人民医院", "重庆市万州区走马镇中心卫生院（重庆市万州区走马镇计划生育服务站）", "重庆市万州区铁峰乡卫生院", "重庆市万州区长滩镇卫生院", "重庆市万州区龙沙镇中心卫生院（重庆市万州区龙沙镇计划生育服务站）"]}, {"药品名称": "琥珀酸美托洛尔缓释片", "产品分类": "商销品", "终端数": 3, "在销终端数": 0, "累计销售金额": 0.0, "目标销售金额": 160568.77, "当前销量": 0.0, "目标销量": 442795.2, "销售费用": 76396.93, "年市场规模": 0.0, "完成率": 0.0, "费用率": 40.0, "在销终端": "重庆三峡医药高等专科学校附属人民医院|重庆市万州区太白街道社区卫生服务中心|重庆市万州区太龙镇中心卫生院", "终端列表": ["重庆三峡医药高等专科学校附属人民医院", "重庆市万州区太白街道社区卫生服务中心", "重庆市万州区太龙镇中心卫生院"]}, {"药品名称": "瑞舒伐他汀钙片", "产品分类": "商销品", "终端数": 3, "在销终端数": 0, "累计销售金额": 0.0, "目标销售金额": 62959.42, "当前销量": 0.0, "目标销量": 386688.0, "销售费用": 14977.72, "年市场规模": 0.0, "完成率": 0.0, "费用率": 20.0, "在销终端": "重庆三峡医药高等专科学校附属人民医院|重庆市万州区上海医院|重庆市万州区余家镇中心卫生院", "终端列表": ["重庆三峡医药高等专科学校附属人民医院", "重庆市万州区上海医院", "重庆市万州区余家镇中心卫生院"]}, {"药品名称": "甲磺酸仑伐替尼胶囊", "产品分类": "代理品", "终端数": 1, "在销终端数": 0, "累计销售金额": 0.0, "目标销售金额": 14154.99, "当前销量": 0.0, "目标销量": 1382.4, "销售费用": 7673.5, "年市场规模": 0.0, "完成率": 0.0, "费用率": 50.0, "在销终端": "重庆市万州区第一人民医院", "终端列表": ["重庆市万州区第一人民医院"]}, {"药品名称": "甲苯磺酸索拉非尼片", "产品分类": "代理品", "终端数": 1, "在销终端数": 1, "累计销售金额": 0.0, "目标销售金额": 11206.31, "当前销量": 0.0, "目标销量": 1500.0, "销售费用": 3037.5, "年市场规模": 0.0, "完成率": 0.0, "费用率": 25.0, "在销终端": "重庆大学附属三峡医院", "终端列表": ["重庆大学附属三峡医院"]}, {"药品名称": "盐酸二甲双胍片", "产品分类": "商销品", "终端数": 2, "在销终端数": 0, "累计销售金额": 0.0, "目标销售金额": 17181.89, "当前销量": 0.0, "目标销量": 232243.2, "销售费用": 8174.96, "年市场规模": 0.0, "完成率": 0.0, "费用率": 40.0, "在销终端": "重庆三峡医药高等专科学校附属人民医院|重庆市万州区新田镇中心卫生院（重庆市万州区新田镇计划生育服务站）", "终端列表": ["重庆三峡医药高等专科学校附属人民医院", "重庆市万州区新田镇中心卫生院（重庆市万州区新田镇计划生育服务站）"]}, {"药品名称": "盐酸二甲双胍缓释片", "产品分类": "商销品", "终端数": 8, "在销终端数": 0, "累计销售金额": 0.0, "目标销售金额": 610361.99, "当前销量": 0.0, "目标销量": 6205209.6, "销售费用": 254103.33, "年市场规模": 0.0, "完成率": 0.0, "费用率": 35.0, "在销终端": "重庆三峡医药高等专科学校附属中医院|重庆三峡医药高等专科学校附属人民医院|重庆大学附属三峡医院|重庆市万州区九池街道社区卫生服务中心(九池分院)|重庆市万州区天城街道社区卫生服务中心|重庆市万州区弹子镇卫生院（重庆市万州区弹子镇计划生育服务站）|重庆市万州区白土镇中心卫生院|重庆市万州区长滩镇卫生院", "终端列表": ["重庆三峡医药高等专科学校附属中医院", "重庆三峡医药高等专科学校附属人民医院", "重庆大学附属三峡医院", "重庆市万州区九池街道社区卫生服务中心(九池分院)", "重庆市万州区天城街道社区卫生服务中心", "重庆市万州区弹子镇卫生院（重庆市万州区弹子镇计划生育服务站）", "重庆市万州区白土镇中心卫生院", "重庆市万州区长滩镇卫生院"]}, {"药品名称": "盐酸克林霉素胶囊", "产品分类": "商销品", "终端数": 2, "在销终端数": 0, "累计销售金额": 0.0, "目标销售金额": 2662.88, "当前销量": 0.0, "目标销量": 12182.4, "销售费用": 0.0, "年市场规模": 0.0, "完成率": 0.0, "费用率": 0.0, "在销终端": "重庆三峡医药高等专科学校附属人民医院|重庆市万州区黄柏乡卫生院（重庆市万州区黄柏乡计划生育服务站）", "终端列表": ["重庆三峡医药高等专科学校附属人民医院", "重庆市万州区黄柏乡卫生院（重庆市万州区黄柏乡计划生育服务站）"]}, {"药品名称": "盐酸度洛西汀肠溶胶囊", "产品分类": "品牌品", "终端数": 3, "在销终端数": 3, "累计销售金额": 40698.96, "目标销售金额": 122843.69, "当前销量": 100740.0, "目标销量": 303782.4, "销售费用": 0.0, "年市场规模": 0.0, "完成率": 33.13, "费用率": 0.0, "在销终端": "重庆三峡医药高等专科学校附属人民医院|重庆大学附属三峡医院|重庆市万州区上海医院", "终端列表": ["重庆三峡医药高等专科学校附属人民医院", "重庆大学附属三峡医院", "重庆市万州区上海医院"]}, {"药品名称": "硫代硫酸钠注射液", "产品分类": "代理品", "终端数": 1, "在销终端数": 1, "累计销售金额": 0.0, "目标销售金额": 0.0, "当前销量": 0.0, "目标销量": 0.0, "销售费用": 0.0, "年市场规模": 0.0, "完成率": 0.0, "费用率": 50.0, "在销终端": "重庆三峡医药高等专科学校附属医院", "终端列表": ["重庆三峡医药高等专科学校附属医院"]}, {"药品名称": "硫辛酸注射液", "产品分类": "商销品", "终端数": 2, "在销终端数": 0, "累计销售金额": 0.0, "目标销售金额": 17170.9, "当前销量": 0.0, "目标销量": 3364.8, "销售费用": 9190.95, "年市场规模": 0.0, "完成率": 0.0, "费用率": 45.0, "在销终端": "重庆三峡医药高等专科学校附属人民医院|重庆市万州区第一人民医院", "终端列表": ["重庆三峡医药高等专科学校附属人民医院", "重庆市万州区第一人民医院"]}, {"药品名称": "硫酸异帕米星注射液", "产品分类": "品牌品", "终端数": 1, "在销终端数": 1, "累计销售金额": 20784.0, "目标销售金额": 187040.71, "当前销量": 400.0, "目标销量": 3600.0, "销售费用": 70081.2, "年市场规模": 80350.0, "完成率": 11.11, "费用率": 31.5, "在销终端": "重庆三峡医药高等专科学校附属人民医院", "终端列表": ["重庆三峡医药高等专科学校附属人民医院"]}, {"药品名称": "硫酸氢氯吡格雷片", "产品分类": "商销品", "终端数": 1, "在销终端数": 0, "累计销售金额": 0.0, "目标销售金额": 772941.04, "当前销量": 0.0, "目标销量": 995193.6, "销售费用": 459696.51, "年市场规模": 0.0, "完成率": 0.0, "费用率": 50.0, "在销终端": "重庆三峡医药高等专科学校附属人民医院", "终端列表": ["重庆三峡医药高等专科学校附属人民医院"]}, {"药品名称": "苯磺酸氨氯地平片", "产品分类": "商销品", "终端数": 37, "在销终端数": 32, "累计销售金额": 231117.0, "目标销售金额": 410290.24, "当前销量": 1090152.0, "目标销量": 5532317.6, "销售费用": 77523.8, "年市场规模": 0.0, "完成率": 56.33, "费用率": 20.0, "在销终端": "重庆三峡医药高等专科学校附属中医院|重庆三峡医药高等专科学校附属人民医院|重庆市万州区上海医院|重庆市万州区五桥街道社区卫生服务中心|重庆市万州区分水镇中心卫生院|重庆市万州区后山镇卫生院|重庆市万州区周家坝街道社区卫生服务中心|重庆市万州区地宝土家族乡卫生院|重庆市万州区大周镇卫生院|重庆市万州区天城街道社区卫生服务中心|重庆市万州区太白街道社区卫生服务中心|重庆市万州区太龙镇中心卫生院|重庆市万州区孙家镇卫生院|重庆市万州区小周镇卫生院|重庆市万州区弹子镇卫生院（重庆市万州区弹子镇计划生育服务站）|重庆市万州区恒合土家族乡卫生院|重庆市万州区新乡镇卫生院|重庆市万州区梨树乡卫生院|重庆市万州区溪口乡卫生院|重庆市万州区瀼渡镇卫生院|重庆市万州区熊家镇中心卫生院|重庆市万州区燕山乡卫生院|重庆市万州区白土镇中心卫生院|重庆市万州区白羊镇中心卫生院|重庆市万州区百安坝街道移民社区卫生服务中心|重庆市万州区罗田镇卫生院|重庆市万州区走马镇中心卫生院（重庆市万州区走马镇计划生育服务站）|重庆市万州区郭村镇卫生院|重庆市万州区钟鼓楼街道社区卫生服务中心|重庆市万州区铁峰乡卫生院|重庆市万州区长坪乡卫生院|重庆市万州区长滩镇卫生院|重庆市万州区高峰街道社区卫生服务中心|重庆市万州区高梁镇中心卫生院（重庆市万州区高梁镇计划生育服务站）|重庆市万州区黄柏乡卫生院（重庆市万州区黄柏乡计划生育服务站）|重庆市万州区龙驹镇中心卫生院（重庆市万州区龙驹镇计划生育服务站）（重庆三峡中心医院龙驹分院）|重庆市三峡监狱医院", "终端列表": ["重庆三峡医药高等专科学校附属中医院", "重庆三峡医药高等专科学校附属人民医院", "重庆市万州区上海医院", "重庆市万州区五桥街道社区卫生服务中心", "重庆市万州区分水镇中心卫生院", "重庆市万州区后山镇卫生院", "重庆市万州区周家坝街道社区卫生服务中心", "重庆市万州区地宝土家族乡卫生院", "重庆市万州区大周镇卫生院", "重庆市万州区天城街道社区卫生服务中心", "重庆市万州区太白街道社区卫生服务中心", "重庆市万州区太龙镇中心卫生院", "重庆市万州区孙家镇卫生院", "重庆市万州区小周镇卫生院", "重庆市万州区弹子镇卫生院（重庆市万州区弹子镇计划生育服务站）", "重庆市万州区恒合土家族乡卫生院", "重庆市万州区新乡镇卫生院", "重庆市万州区梨树乡卫生院", "重庆市万州区溪口乡卫生院", "重庆市万州区瀼渡镇卫生院", "重庆市万州区熊家镇中心卫生院", "重庆市万州区燕山乡卫生院", "重庆市万州区白土镇中心卫生院", "重庆市万州区白羊镇中心卫生院", "重庆市万州区百安坝街道移民社区卫生服务中心", "重庆市万州区罗田镇卫生院", "重庆市万州区走马镇中心卫生院（重庆市万州区走马镇计划生育服务站）", "重庆市万州区郭村镇卫生院", "重庆市万州区钟鼓楼街道社区卫生服务中心", "重庆市万州区铁峰乡卫生院", "重庆市万州区长坪乡卫生院", "重庆市万州区长滩镇卫生院", "重庆市万州区高峰街道社区卫生服务中心", "重庆市万州区高梁镇中心卫生院（重庆市万州区高梁镇计划生育服务站）", "重庆市万州区黄柏乡卫生院（重庆市万州区黄柏乡计划生育服务站）", "重庆市万州区龙驹镇中心卫生院（重庆市万州区龙驹镇计划生育服务站）（重庆三峡中心医院龙驹分院）", "重庆市三峡监狱医院"]}, {"药品名称": "谷胱甘肽片0.1g", "产品分类": "品牌品", "终端数": 5, "在销终端数": 5, "累计销售金额": 291838.58, "目标销售金额": 2858256.59, "当前销量": 227520.0, "目标销量": 2263680.0, "销售费用": 1016831.96, "年市场规模": 0.0, "完成率": 10.21, "费用率": 29.0, "在销终端": "重庆三峡医药高等专科学校附属中医院|重庆三峡医药高等专科学校附属人民医院|重庆大学附属三峡医院|重庆市万州区第一人民医院|重庆市万州荣军优抚医院（重庆市万州康复辅具技术中心）", "终端列表": ["重庆三峡医药高等专科学校附属中医院", "重庆三峡医药高等专科学校附属人民医院", "重庆大学附属三峡医院", "重庆市万州区第一人民医院", "重庆市万州荣军优抚医院（重庆市万州康复辅具技术中心）"]}, {"药品名称": "阿卡波糖片", "产品分类": "商销品", "终端数": 12, "在销终端数": 5, "累计销售金额": 23272.0, "目标销售金额": 187379.09, "当前销量": 180000.0, "目标销量": 1469232.0, "销售费用": 8915.3, "年市场规模": 0.0, "完成率": 12.42, "费用率": 4.0, "在销终端": "重庆市万州区上海医院|重庆市万州区九池街道社区卫生服务中心(九池分院)|重庆市万州区弹子镇卫生院（重庆市万州区弹子镇计划生育服务站）|重庆市万州区新田镇中心卫生院（重庆市万州区新田镇计划生育服务站）|重庆市万州区柱山乡卫生院（重庆市万州区柱山乡计划生育服务站）|重庆市万州区梨树乡卫生院|重庆市万州区沙河街道社区卫生服务中心|重庆市万州区白土镇中心卫生院|重庆市万州区第一人民医院|重庆市万州区长滩镇卫生院|重庆市万州区高峰街道社区卫生服务中心|重庆市万州区龙驹镇中心卫生院（重庆市万州区龙驹镇计划生育服务站）（重庆三峡中心医院龙驹分院）", "终端列表": ["重庆市万州区上海医院", "重庆市万州区九池街道社区卫生服务中心(九池分院)", "重庆市万州区弹子镇卫生院（重庆市万州区弹子镇计划生育服务站）", "重庆市万州区新田镇中心卫生院（重庆市万州区新田镇计划生育服务站）", "重庆市万州区柱山乡卫生院（重庆市万州区柱山乡计划生育服务站）", "重庆市万州区梨树乡卫生院", "重庆市万州区沙河街道社区卫生服务中心", "重庆市万州区白土镇中心卫生院", "重庆市万州区第一人民医院", "重庆市万州区长滩镇卫生院", "重庆市万州区高峰街道社区卫生服务中心", "重庆市万州区龙驹镇中心卫生院（重庆市万州区龙驹镇计划生育服务站）（重庆三峡中心医院龙驹分院）"]}, {"药品名称": "阿托伐他汀钙片", "产品分类": "商销品", "终端数": 3, "在销终端数": 0, "累计销售金额": 0.0, "目标销售金额": 1040293.22, "当前销量": 0.0, "目标销量": 8368898.4, "销售费用": 556830.63, "年市场规模": 0.0, "完成率": 0.0, "费用率": 45.0, "在销终端": "重庆三峡医药高等专科学校附属中医院|重庆三峡医药高等专科学校附属人民医院|重庆大学附属三峡医院", "终端列表": ["重庆三峡医药高等专科学校附属中医院", "重庆三峡医药高等专科学校附属人民医院", "重庆大学附属三峡医院"]}, {"药品名称": "阿法骨化醇片", "产品分类": "品牌品", "终端数": 20, "在销终端数": 16, "累计销售金额": 115580.29, "目标销售金额": 294943.17, "当前销量": 203010.0, "目标销量": 526214.4, "销售费用": 53762.69, "年市场规模": 542760.0, "完成率": 39.19, "费用率": 28.0, "在销终端": "重庆万州安宇医院|重庆三峡医药高等专科学校附属中医院|重庆三峡医药高等专科学校附属人民医院|重庆大学附属三峡医院|重庆市万州区分水镇中心卫生院|重庆市万州区双河口街道社区卫生服务中心|重庆市万州区后山镇卫生院|重庆市万州区天城街道社区卫生服务中心|重庆市万州区孙家镇卫生院|重庆市万州区武陵镇中心卫生院|重庆市万州区沙河街道社区卫生服务中心|重庆市万州区熊家镇中心卫生院|重庆市万州区燕山乡卫生院|重庆市万州区甘宁镇中心卫生院（重庆市万州区甘宁镇计划生育服务站）|重庆市万州区白土镇中心卫生院|重庆市万州区第一人民医院|重庆市万州区黄柏乡卫生院（重庆市万州区黄柏乡计划生育服务站）|重庆市万州区龙沙镇中心卫生院（重庆市万州区龙沙镇计划生育服务站）|重庆市万州社会福利院|重庆市万州荣军优抚医院（重庆市万州康复辅具技术中心）", "终端列表": ["重庆万州安宇医院", "重庆三峡医药高等专科学校附属中医院", "重庆三峡医药高等专科学校附属人民医院", "重庆大学附属三峡医院", "重庆市万州区分水镇中心卫生院", "重庆市万州区双河口街道社区卫生服务中心", "重庆市万州区后山镇卫生院", "重庆市万州区天城街道社区卫生服务中心", "重庆市万州区孙家镇卫生院", "重庆市万州区武陵镇中心卫生院", "重庆市万州区沙河街道社区卫生服务中心", "重庆市万州区熊家镇中心卫生院", "重庆市万州区燕山乡卫生院", "重庆市万州区甘宁镇中心卫生院（重庆市万州区甘宁镇计划生育服务站）", "重庆市万州区白土镇中心卫生院", "重庆市万州区第一人民医院", "重庆市万州区黄柏乡卫生院（重庆市万州区黄柏乡计划生育服务站）", "重庆市万州区龙沙镇中心卫生院（重庆市万州区龙沙镇计划生育服务站）", "重庆市万州社会福利院", "重庆市万州荣军优抚医院（重庆市万州康复辅具技术中心）"]}, {"药品名称": "阿立哌唑口崩片", "产品分类": "品牌品", "终端数": 1, "在销终端数": 0, "累计销售金额": 0.0, "目标销售金额": 2482.64, "当前销量": 0.0, "目标销量": 7581.6, "销售费用": 1033.56, "年市场规模": 0.0, "完成率": 0.0, "费用率": 35.0, "在销终端": "重庆大学附属三峡医院", "终端列表": ["重庆大学附属三峡医院"]}, {"药品名称": "阿魏酸钠", "产品分类": "商销品", "终端数": 1, "在销终端数": 1, "累计销售金额": 0.0, "目标销售金额": 531968.79, "当前销量": 0.0, "目标销量": 67000.0, "销售费用": 0.0, "年市场规模": 0.0, "完成率": 0.0, "费用率": 0.0, "在销终端": "重庆大学附属三峡医院", "终端列表": ["重庆大学附属三峡医院"]}, {"药品名称": "雷贝拉唑钠肠溶片", "产品分类": "商销品", "终端数": 1, "在销终端数": 1, "累计销售金额": 338.0, "目标销售金额": 450.96, "当前销量": 1350.0, "目标销量": 1800.0, "销售费用": 0.0, "年市场规模": 0.0, "完成率": 74.95, "费用率": 0.0, "在销终端": "重庆市万州区高笋塘街道社区卫生服务中心", "终端列表": ["重庆市万州区高笋塘街道社区卫生服务中心"]}]}, "石柱县": {"stats": {"total_terminals": 34, "active_terminals": 31, "active_products": 13, "total_sales": 604928.87, "total_target": 1972026.5, "total_fee": 505477.31, "completion_rate": 30.68, "fee_rate": 17.85}, "by_type": {"品牌品": {"sales": 275447.87, "target": 1423692.02, "completion": 19.35}, "商销品": {"sales": 329481.0, "target": 447493.96, "completion": 73.63}, "代理品": {"sales": 0.0, "target": 100840.53, "completion": 0.0}}, "terminals": [{"终端名称": "石柱县土家族自治县龙沙镇卫生院", "区": "石柱县", "产品数": 3, "在销产品数量": 2, "累计销售金额": 3667.0, "目标销售金额": 2097.1, "销售费用": 549.62, "年市场规模": 0.0, "医院等级": "其他", "完成率": 174.86, "费用率": 17.52, "产品列表": ["氯化钾缓释片", "注射用泮托拉唑钠", "苯磺酸氨氯地平片"]}, {"终端名称": "石柱土家族自治县万安街道社区卫生服务中心", "区": "石柱县", "产品数": 2, "在销产品数量": 2, "累计销售金额": 35338.54, "目标销售金额": 53064.18, "销售费用": 15218.97, "年市场规模": 0.0, "医院等级": "其他", "完成率": 66.6, "费用率": 20.21, "产品列表": ["苯磺酸氨氯地平片", "谷胱甘肽片0.1g"]}, {"终端名称": "石柱土家族自治县万朝镇卫生院", "区": "石柱县", "产品数": 1, "在销产品数量": 1, "累计销售金额": 685.0, "目标销售金额": 4983.72, "销售费用": 0.0, "年市场规模": 0.0, "医院等级": "其他", "完成率": 13.74, "费用率": 0.0, "产品列表": ["苯磺酸氨氯地平片"]}, {"终端名称": "石柱土家族自治县三星乡卫生院", "区": "石柱县", "产品数": 4, "在销产品数量": 3, "累计销售金额": 16272.0, "目标销售金额": 6259.19, "销售费用": 1452.16, "年市场规模": 0.0, "医院等级": "其他", "完成率": 259.97, "费用率": 19.31, "产品列表": ["氯化钾缓释片", "苯磺酸氨氯地平片", "阿法骨化醇片", "雷贝拉唑钠肠溶片"]}, {"终端名称": "石柱土家族自治县三河镇卫生院", "区": "石柱县", "产品数": 2, "在销产品数量": 2, "累计销售金额": 17130.0, "目标销售金额": 26466.56, "销售费用": 5758.63, "年市场规模": 60.0, "医院等级": "其他", "完成率": 64.72, "费用率": 18.01, "产品列表": ["苯磺酸氨氯地平片", "阿法骨化醇片"]}, {"终端名称": "石柱土家族自治县三益乡卫生院", "区": "石柱县", "产品数": 2, "在销产品数量": 2, "累计销售金额": 2696.6, "目标销售金额": 160.19, "销售费用": 38.11, "年市场规模": 600.0, "医院等级": "其他", "完成率": 1683.37, "费用率": 17.47, "产品列表": ["苯磺酸氨氯地平片", "阿法骨化醇片"]}, {"终端名称": "石柱土家族自治县下路街道社区卫生服务中心", "区": "石柱县", "产品数": 4, "在销产品数量": 4, "累计销售金额": 2730.6, "目标销售金额": 9002.62, "销售费用": 1870.73, "年市场规模": 2800.0, "医院等级": "其他", "完成率": 30.33, "费用率": 24.74, "产品列表": ["注射用谷胱甘肽", "炎琥宁80mg", "苯磺酸氨氯地平片", "雷贝拉唑钠肠溶片"]}, {"终端名称": "石柱土家族自治县中医院", "区": "石柱县", "产品数": 12, "在销产品数量": 11, "累计销售金额": 137768.95, "目标销售金额": 469002.98, "销售费用": 66941.18, "年市场规模": 109600.0, "医院等级": "二级", "完成率": 29.37, "费用率": 13.36, "产品列表": ["依匹斯汀10mg", "氯化钾颗粒", "注射用二氯醋酸二异丙胺", "注射用水溶性维生素", "注射用泮托拉唑钠", "注射用谷胱甘肽", "炎琥宁80mg", "盐酸度洛西汀肠溶胶囊", "腺苷钴胺", "谷胱甘肽片0.1g", "阿法骨化醇片", "阿魏酸钠"]}, {"终端名称": "石柱土家族自治县中益乡卫生院", "区": "石柱县", "产品数": 4, "在销产品数量": 4, "累计销售金额": 5267.86, "目标销售金额": 8257.4, "销售费用": 1108.3, "年市场规模": 5035.0, "医院等级": "其他", "完成率": 63.8, "费用率": 19.31, "产品列表": ["注射用谷胱甘肽", "炎琥宁80mg", "苯磺酸氨氯地平片", "阿法骨化醇片"]}, {"终端名称": "石柱土家族自治县临溪镇中心卫生院", "区": "石柱县", "产品数": 3, "在销产品数量": 3, "累计销售金额": 20445.8, "目标销售金额": 17089.84, "销售费用": 3675.36, "年市场规模": 3900.0, "医院等级": "其他", "完成率": 119.64, "费用率": 19.0, "产品列表": ["氯化钾颗粒", "苯磺酸氨氯地平片", "阿法骨化醇片"]}, {"终端名称": "石柱土家族自治县人民医院", "区": "石柱县", "产品数": 14, "在销产品数量": 11, "累计销售金额": 255249.77, "目标销售金额": 1175397.12, "销售费用": 371058.0, "年市场规模": 215260.0, "医院等级": "二级", "完成率": 21.72, "费用率": 19.47, "产品列表": ["依匹斯汀10mg", "富马酸替诺福韦二吡呋酯片", "氯化钾颗粒", "注射用二氯醋酸二异丙胺", "注射用培美曲塞二钠", "注射用艾司奥美拉唑钠", "注射用谷胱甘肽", "炎琥宁80mg", "甲苯磺酸索拉非尼片", "盐酸度洛西汀肠溶胶囊", "硫辛酸注射液", "苯磺酸氨氯地平片", "谷胱甘肽片0.1g", "阿法骨化醇片"]}, {"终端名称": "石柱土家族自治县六塘乡卫生院", "区": "石柱县", "产品数": 3, "在销产品数量": 2, "累计销售金额": 2785.0, "目标销售金额": 621.04, "销售费用": 110.28, "年市场规模": 2550.0, "医院等级": "其他", "完成率": 448.44, "费用率": 20.0, "产品列表": ["吲达帕胺片", "炎琥宁80mg", "苯磺酸氨氯地平片"]}, {"终端名称": "石柱土家族自治县南宾街道社区卫生服务中心", "区": "石柱县", "产品数": 3, "在销产品数量": 3, "累计销售金额": 40698.0, "目标销售金额": 30452.95, "销售费用": 6985.56, "年市场规模": 13090.0, "医院等级": "一级", "完成率": 133.64, "费用率": 20.0, "产品列表": ["注射用谷胱甘肽", "苯磺酸氨氯地平片", "阿法骨化醇片"]}, {"终端名称": "石柱土家族自治县大歇镇卫生院", "区": "石柱县", "产品数": 3, "在销产品数量": 2, "累计销售金额": 3286.0, "目标销售金额": 1778.02, "销售费用": 566.75, "年市场规模": 0.0, "医院等级": "其他", "完成率": 184.81, "费用率": 20.0, "产品列表": ["氯化钾缓释片", "苯磺酸氨氯地平片", "阿法骨化醇片"]}, {"终端名称": "石柱土家族自治县妇幼保健院", "区": "石柱县", "产品数": 3, "在销产品数量": 3, "累计销售金额": 887.17, "目标销售金额": 971.35, "销售费用": 0.0, "年市场规模": 900.0, "医院等级": "一级", "完成率": 91.33, "费用率": 0.0, "产品列表": ["恩替卡韦片", "炎琥宁80mg", "阿法骨化醇片"]}, {"终端名称": "石柱土家族自治县悦崃镇中心卫生院", "区": "石柱县", "产品数": 3, "在销产品数量": 3, "累计销售金额": 8568.0, "目标销售金额": 8672.33, "销售费用": 1449.14, "年市场规模": 2070.0, "医院等级": "其他", "完成率": 98.8, "费用率": 20.0, "产品列表": ["注射用谷胱甘肽", "苯磺酸氨氯地平片", "阿法骨化醇片"]}, {"终端名称": "石柱土家族自治县新乐乡卫生院", "区": "石柱县", "产品数": 1, "在销产品数量": 1, "累计销售金额": 377.0, "目标销售金额": 39.87, "销售费用": 9.48, "年市场规模": 0.0, "医院等级": "其他", "完成率": 945.58, "费用率": 20.0, "产品列表": ["苯磺酸氨氯地平片"]}, {"终端名称": "石柱土家族自治县枫木镇卫生院", "区": "石柱县", "产品数": 3, "在销产品数量": 3, "累计销售金额": 1368.2, "目标销售金额": 4879.95, "销售费用": 0.0, "年市场规模": 1520.0, "医院等级": "其他", "完成率": 28.04, "费用率": 0.0, "产品列表": ["注射用谷胱甘肽", "苯磺酸氨氯地平片", "阿法骨化醇片"]}, {"终端名称": "石柱土家族自治县桥头镇卫生院", "区": "石柱县", "产品数": 2, "在销产品数量": 2, "累计销售金额": 5427.6, "目标销售金额": 7181.73, "销售费用": 1647.05, "年市场规模": 600.0, "医院等级": "其他", "完成率": 75.58, "费用率": 18.74, "产品列表": ["苯磺酸氨氯地平片", "阿法骨化醇片"]}, {"终端名称": "石柱土家族自治县沙子镇中心卫生院", "区": "石柱县", "产品数": 3, "在销产品数量": 2, "累计销售金额": 2234.4, "目标销售金额": 6044.91, "销售费用": 287.55, "年市场规模": 150.0, "医院等级": "其他", "完成率": 36.96, "费用率": 0.0, "产品列表": ["氯化钾缓释片", "苯磺酸氨氯地平片", "阿法骨化醇片"]}, {"终端名称": "石柱土家族自治县河嘴乡卫生院", "区": "石柱县", "产品数": 1, "在销产品数量": 1, "累计销售金额": 1651.0, "目标销售金额": 5639.91, "销售费用": 0.0, "年市场规模": 0.0, "医院等级": "其他", "完成率": 29.27, "费用率": 0.0, "产品列表": ["苯磺酸氨氯地平片"]}, {"终端名称": "石柱土家族自治县沿溪镇卫生院", "区": "石柱县", "产品数": 1, "在销产品数量": 1, "累计销售金额": 6846.0, "目标销售金额": 7613.16, "销售费用": 1811.13, "年市场规模": 0.0, "医院等级": "其他", "完成率": 89.92, "费用率": 20.0, "产品列表": ["苯磺酸氨氯地平片"]}, {"终端名称": "石柱土家族自治县洗新乡卫生院", "区": "石柱县", "产品数": 1, "在销产品数量": 1, "累计销售金额": 0.0, "目标销售金额": 186.89, "销售费用": 0.0, "年市场规模": 0.0, "医院等级": "其他", "完成率": 0.0, "费用率": 0.0, "产品列表": ["苯磺酸氨氯地平片"]}, {"终端名称": "石柱土家族自治县王场镇卫生院", "区": "石柱县", "产品数": 4, "在销产品数量": 2, "累计销售金额": 1557.0, "目标销售金额": 5667.81, "销售费用": 232.32, "年市场规模": 1500.0, "医院等级": "其他", "完成率": 27.47, "费用率": 0.0, "产品列表": ["瑞舒伐他汀钙片", "苯磺酸氨氯地平片", "阿托伐他汀钙片", "阿法骨化醇片"]}, {"终端名称": "石柱土家族自治县王家乡卫生院", "区": "石柱县", "产品数": 3, "在销产品数量": 3, "累计销售金额": 251.72, "目标销售金额": 2378.57, "销售费用": 0.0, "年市场规模": 10.0, "医院等级": "其他", "完成率": 10.58, "费用率": 0.0, "产品列表": ["依匹斯汀10mg", "注射用谷胱甘肽", "苯磺酸氨氯地平片"]}, {"终端名称": "石柱土家族自治县石家乡卫生院", "区": "石柱县", "产品数": 2, "在销产品数量": 2, "累计销售金额": 10194.6, "目标销售金额": 3025.83, "销售费用": 719.83, "年市场规模": 0.0, "医院等级": "其他", "完成率": 336.92, "费用率": 19.33, "产品列表": ["苯磺酸氨氯地平片", "阿法骨化醇片"]}, {"终端名称": "石柱土家族自治县西沱镇中心卫生院", "区": "石柱县", "产品数": 2, "在销产品数量": 2, "累计销售金额": 14506.62, "目标销售金额": 70833.67, "销售费用": 22041.52, "年市场规模": 0.0, "医院等级": "其他", "完成率": 20.48, "费用率": 21.53, "产品列表": ["苯磺酸氨氯地平片", "谷胱甘肽片0.1g"]}, {"终端名称": "石柱土家族自治县金铃乡卫生院", "区": "石柱县", "产品数": 1, "在销产品数量": 1, "累计销售金额": 0.0, "目标销售金额": 20.77, "销售费用": 0.0, "年市场规模": 0.0, "医院等级": "其他", "完成率": 0.0, "费用率": 0.0, "产品列表": ["苯磺酸氨氯地平片"]}, {"终端名称": "石柱土家族自治县马武镇中心卫生院", "区": "石柱县", "产品数": 2, "在销产品数量": 2, "累计销售金额": 1976.0, "目标销售金额": 1334.92, "销售费用": 317.57, "年市场规模": 0.0, "医院等级": "其他", "完成率": 148.02, "费用率": 20.0, "产品列表": ["苯磺酸氨氯地平片", "谷胱甘肽片0.1g"]}, {"终端名称": "石柱土家族自治县鱼池镇卫生院", "区": "石柱县", "产品数": 1, "在销产品数量": 1, "累计销售金额": 125.0, "目标销售金额": 6520.36, "销售费用": 0.0, "年市场规模": 0.0, "医院等级": "其他", "完成率": 1.92, "费用率": 0.0, "产品列表": ["苯磺酸氨氯地平片"]}, {"终端名称": "石柱土家族自治县黄水镇中心卫生院", "区": "石柱县", "产品数": 5, "在销产品数量": 5, "累计销售金额": 712.04, "目标销售金额": 28673.69, "销售费用": 72.54, "年市场规模": 52900.0, "医院等级": "其他", "完成率": 2.48, "费用率": 7.4, "产品列表": ["依匹斯汀10mg", "注射用谷胱甘肽", "炎琥宁80mg", "苯磺酸氨氯地平片", "阿法骨化醇片"]}, {"终端名称": "石柱土家族自治县黄鹤镇卫生院", "区": "石柱县", "产品数": 3, "在销产品数量": 3, "累计销售金额": 2797.4, "目标销售金额": 2999.96, "销售费用": 521.66, "年市场规模": 3900.0, "医院等级": "其他", "完成率": 93.25, "费用率": 16.34, "产品列表": ["苯磺酸氨氯地平片", "谷胱甘肽片0.1g", "阿法骨化醇片"]}, {"终端名称": "石柱土家族自治县黎场乡卫生院", "区": "石柱县", "产品数": 2, "在销产品数量": 2, "累计销售金额": 1428.0, "目标销售金额": 4345.8, "销售费用": 1033.84, "年市场规模": 0.0, "医院等级": "其他", "完成率": 32.86, "费用率": 20.0, "产品列表": ["苯磺酸氨氯地平片", "阿法骨化醇片"]}, {"终端名称": "石柱土家族自治县龙潭乡卫生院", "区": "石柱县", "产品数": 2, "在销产品数量": 2, "累计销售金额": 0.0, "目标销售金额": 362.13, "销售费用": 0.0, "年市场规模": 45.0, "医院等级": "其他", "完成率": 0.0, "费用率": 0.0, "产品列表": ["注射用谷胱甘肽", "阿法骨化醇片"]}], "products": [{"药品名称": "依匹斯汀10mg", "产品分类": "品牌品", "终端数": 4, "在销终端数": 4, "累计销售金额": 69587.72, "目标销售金额": 264725.35, "当前销量": 23484.0, "目标销量": 91536.0, "销售费用": 29814.48, "年市场规模": 0.0, "完成率": 26.29, "费用率": 32.25, "在销终端": "石柱土家族自治县中医院|石柱土家族自治县人民医院|石柱土家族自治县王家乡卫生院|石柱土家族自治县黄水镇中心卫生院", "终端列表": ["石柱土家族自治县中医院", "石柱土家族自治县人民医院", "石柱土家族自治县王家乡卫生院", "石柱土家族自治县黄水镇中心卫生院"]}, {"药品名称": "吲达帕胺片", "产品分类": "商销品", "终端数": 1, "在销终端数": 0, "累计销售金额": 0.0, "目标销售金额": 14.2, "当前销量": 0.0, "目标销量": 192.0, "销售费用": 0.0, "年市场规模": 0.0, "完成率": 0.0, "费用率": 0.0, "在销终端": "石柱土家族自治县六塘乡卫生院", "终端列表": ["石柱土家族自治县六塘乡卫生院"]}, {"药品名称": "富马酸替诺福韦二吡呋酯片", "产品分类": "商销品", "终端数": 1, "在销终端数": 0, "累计销售金额": 0.0, "目标销售金额": 17441.96, "当前销量": 0.0, "目标销量": 59904.0, "销售费用": 0.0, "年市场规模": 0.0, "完成率": 0.0, "费用率": 0.0, "在销终端": "石柱土家族自治县人民医院", "终端列表": ["石柱土家族自治县人民医院"]}, {"药品名称": "恩替卡韦片", "产品分类": "商销品", "终端数": 1, "在销终端数": 1, "累计销售金额": 0.0, "目标销售金额": 25.02, "当前销量": 0.0, "目标销量": 180.0, "销售费用": 0.0, "年市场规模": 0.0, "完成率": 0.0, "费用率": 0.0, "在销终端": "石柱土家族自治县妇幼保健院", "终端列表": ["石柱土家族自治县妇幼保健院"]}, {"药品名称": "氯化钾缓释片", "产品分类": "商销品", "终端数": 4, "在销终端数": 0, "累计销售金额": 0.0, "目标销售金额": 1732.99, "当前销量": 0.0, "目标销量": 7401.6, "销售费用": 824.54, "年市场规模": 0.0, "完成率": 0.0, "费用率": 40.0, "在销终端": "石柱县土家族自治县龙沙镇卫生院|石柱土家族自治县三星乡卫生院|石柱土家族自治县大歇镇卫生院|石柱土家族自治县沙子镇中心卫生院", "终端列表": ["石柱县土家族自治县龙沙镇卫生院", "石柱土家族自治县三星乡卫生院", "石柱土家族自治县大歇镇卫生院", "石柱土家族自治县沙子镇中心卫生院"]}, {"药品名称": "氯化钾颗粒", "产品分类": "商销品", "终端数": 3, "在销终端数": 3, "累计销售金额": 0.0, "目标销售金额": 59.2, "当前销量": 0.0, "目标销量": 216.67, "销售费用": 0.0, "年市场规模": 0.0, "完成率": 0.0, "费用率": 0.0, "在销终端": "石柱土家族自治县中医院|石柱土家族自治县临溪镇中心卫生院|石柱土家族自治县人民医院", "终端列表": ["石柱土家族自治县中医院", "石柱土家族自治县临溪镇中心卫生院", "石柱土家族自治县人民医院"]}, {"药品名称": "注射用二氯醋酸二异丙胺", "产品分类": "商销品", "终端数": 2, "在销终端数": 2, "累计销售金额": 62528.0, "目标销售金额": 41569.79, "当前销量": 3150.0, "目标销量": 6600.0, "销售费用": 0.0, "年市场规模": 0.0, "完成率": 150.42, "费用率": 0.0, "在销终端": "石柱土家族自治县中医院|石柱土家族自治县人民医院", "终端列表": ["石柱土家族自治县中医院", "石柱土家族自治县人民医院"]}, {"药品名称": "注射用培美曲塞二钠", "产品分类": "代理品", "终端数": 1, "在销终端数": 1, "累计销售金额": 0.0, "目标销售金额": 93955.37, "当前销量": 0.0, "目标销量": 1020.0, "销售费用": 50933.7, "年市场规模": 0.0, "完成率": 0.0, "费用率": 50.0, "在销终端": "石柱土家族自治县人民医院", "终端列表": ["石柱土家族自治县人民医院"]}, {"药品名称": "注射用水溶性维生素", "产品分类": "商销品", "终端数": 1, "在销终端数": 1, "累计销售金额": 2916.0, "目标销售金额": 932.27, "当前销量": 495.0, "目标销量": 450.0, "销售费用": 0.0, "年市场规模": 0.0, "完成率": 312.79, "费用率": 0.0, "在销终端": "石柱土家族自治县中医院", "终端列表": ["石柱土家族自治县中医院"]}, {"药品名称": "注射用泮托拉唑钠", "产品分类": "商销品", "终端数": 2, "在销终端数": 2, "累计销售金额": 2724.0, "目标销售金额": 0.0, "当前销量": 1800.0, "目标销量": 0.0, "销售费用": 0.0, "年市场规模": 0.0, "完成率": 0.0, "费用率": 0.0, "在销终端": "石柱县土家族自治县龙沙镇卫生院|石柱土家族自治县中医院", "终端列表": ["石柱县土家族自治县龙沙镇卫生院", "石柱土家族自治县中医院"]}, {"药品名称": "注射用艾司奥美拉唑钠", "产品分类": "商销品", "终端数": 1, "在销终端数": 0, "累计销售金额": 0.0, "目标销售金额": 97291.43, "当前销量": 0.0, "目标销量": 38575.2, "销售费用": 57862.8, "年市场规模": 0.0, "完成率": 0.0, "费用率": 50.0, "在销终端": "石柱土家族自治县人民医院", "终端列表": ["石柱土家族自治县人民医院"]}, {"药品名称": "注射用谷胱甘肽", "产品分类": "品牌品", "终端数": 10, "在销终端数": 10, "累计销售金额": 40950.0, "目标销售金额": 139733.2, "当前销量": 5000.0, "目标销量": 24279.96, "销售费用": 0.0, "年市场规模": 24190.0, "完成率": 29.31, "费用率": 0.0, "在销终端": "石柱土家族自治县下路街道社区卫生服务中心|石柱土家族自治县中医院|石柱土家族自治县中益乡卫生院|石柱土家族自治县人民医院|石柱土家族自治县南宾街道社区卫生服务中心|石柱土家族自治县悦崃镇中心卫生院|石柱土家族自治县枫木镇卫生院|石柱土家族自治县王家乡卫生院|石柱土家族自治县黄水镇中心卫生院|石柱土家族自治县龙潭乡卫生院", "终端列表": ["石柱土家族自治县下路街道社区卫生服务中心", "石柱土家族自治县中医院", "石柱土家族自治县中益乡卫生院", "石柱土家族自治县人民医院", "石柱土家族自治县南宾街道社区卫生服务中心", "石柱土家族自治县悦崃镇中心卫生院", "石柱土家族自治县枫木镇卫生院", "石柱土家族自治县王家乡卫生院", "石柱土家族自治县黄水镇中心卫生院", "石柱土家族自治县龙潭乡卫生院"]}, {"药品名称": "炎琥宁80mg", "产品分类": "品牌品", "终端数": 7, "在销终端数": 7, "累计销售金额": 76297.59, "目标销售金额": 400796.26, "当前销量": 21060.0, "目标销量": 111910.0, "销售费用": 98819.3, "年市场规模": 136190.0, "完成率": 19.04, "费用率": 21.4, "在销终端": "石柱土家族自治县下路街道社区卫生服务中心|石柱土家族自治县中医院|石柱土家族自治县中益乡卫生院|石柱土家族自治县人民医院|石柱土家族自治县六塘乡卫生院|石柱土家族自治县妇幼保健院|石柱土家族自治县黄水镇中心卫生院", "终端列表": ["石柱土家族自治县下路街道社区卫生服务中心", "石柱土家族自治县中医院", "石柱土家族自治县中益乡卫生院", "石柱土家族自治县人民医院", "石柱土家族自治县六塘乡卫生院", "石柱土家族自治县妇幼保健院", "石柱土家族自治县黄水镇中心卫生院"]}, {"药品名称": "瑞舒伐他汀钙片", "产品分类": "商销品", "终端数": 1, "在销终端数": 0, "累计销售金额": 0.0, "目标销售金额": 57.64, "当前销量": 0.0, "目标销量": 354.0, "销售费用": 13.71, "年市场规模": 0.0, "完成率": 0.0, "费用率": 20.0, "在销终端": "石柱土家族自治县王场镇卫生院", "终端列表": ["石柱土家族自治县王场镇卫生院"]}, {"药品名称": "甲苯磺酸索拉非尼片", "产品分类": "代理品", "终端数": 1, "在销终端数": 1, "累计销售金额": 0.0, "目标销售金额": 6885.16, "当前销量": 0.0, "目标销量": 921.6, "销售费用": 1866.24, "年市场规模": 0.0, "完成率": 0.0, "费用率": 25.0, "在销终端": "石柱土家族自治县人民医院", "终端列表": ["石柱土家族自治县人民医院"]}, {"药品名称": "盐酸度洛西汀肠溶胶囊", "产品分类": "品牌品", "终端数": 2, "在销终端数": 1, "累计销售金额": 3636.0, "目标销售金额": 8423.08, "当前销量": 9000.0, "目标销量": 20829.6, "销售费用": 0.0, "年市场规模": 0.0, "完成率": 43.17, "费用率": 0.0, "在销终端": "石柱土家族自治县中医院|石柱土家族自治县人民医院", "终端列表": ["石柱土家族自治县中医院", "石柱土家族自治县人民医院"]}, {"药品名称": "硫辛酸注射液", "产品分类": "商销品", "终端数": 1, "在销终端数": 0, "累计销售金额": 0.0, "目标销售金额": 28438.54, "当前销量": 0.0, "目标销量": 5572.8, "销售费用": 15222.1, "年市场规模": 0.0, "完成率": 0.0, "费用率": 45.0, "在销终端": "石柱土家族自治县人民医院", "终端列表": ["石柱土家族自治县人民医院"]}, {"药品名称": "腺苷钴胺", "产品分类": "商销品", "终端数": 1, "在销终端数": 1, "累计销售金额": 163.0, "目标销售金额": 0.0, "当前销量": 30.0, "目标销量": 0.0, "销售费用": 0.0, "年市场规模": 0.0, "完成率": 0.0, "费用率": 0.0, "在销终端": "石柱土家族自治县中医院", "终端列表": ["石柱土家族自治县中医院"]}, {"药品名称": "苯磺酸氨氯地平片", "产品分类": "商销品", "终端数": 31, "在销终端数": 31, "累计销售金额": 254907.0, "目标销售金额": 238079.54, "当前销量": 872676.0, "目标销量": 3210243.6, "销售费用": 48646.93, "年市场规模": 0.0, "完成率": 107.07, "费用率": 20.0, "在销终端": "石柱县土家族自治县龙沙镇卫生院|石柱土家族自治县万安街道社区卫生服务中心|石柱土家族自治县万朝镇卫生院|石柱土家族自治县三星乡卫生院|石柱土家族自治县三河镇卫生院|石柱土家族自治县三益乡卫生院|石柱土家族自治县下路街道社区卫生服务中心|石柱土家族自治县中益乡卫生院|石柱土家族自治县临溪镇中心卫生院|石柱土家族自治县人民医院|石柱土家族自治县六塘乡卫生院|石柱土家族自治县南宾街道社区卫生服务中心|石柱土家族自治县大歇镇卫生院|石柱土家族自治县悦崃镇中心卫生院|石柱土家族自治县新乐乡卫生院|石柱土家族自治县枫木镇卫生院|石柱土家族自治县桥头镇卫生院|石柱土家族自治县沙子镇中心卫生院|石柱土家族自治县河嘴乡卫生院|石柱土家族自治县沿溪镇卫生院|石柱土家族自治县洗新乡卫生院|石柱土家族自治县王场镇卫生院|石柱土家族自治县王家乡卫生院|石柱土家族自治县石家乡卫生院|石柱土家族自治县西沱镇中心卫生院|石柱土家族自治县金铃乡卫生院|石柱土家族自治县马武镇中心卫生院|石柱土家族自治县鱼池镇卫生院|石柱土家族自治县黄水镇中心卫生院|石柱土家族自治县黄鹤镇卫生院|石柱土家族自治县黎场乡卫生院", "终端列表": ["石柱县土家族自治县龙沙镇卫生院", "石柱土家族自治县万安街道社区卫生服务中心", "石柱土家族自治县万朝镇卫生院", "石柱土家族自治县三星乡卫生院", "石柱土家族自治县三河镇卫生院", "石柱土家族自治县三益乡卫生院", "石柱土家族自治县下路街道社区卫生服务中心", "石柱土家族自治县中益乡卫生院", "石柱土家族自治县临溪镇中心卫生院", "石柱土家族自治县人民医院", "石柱土家族自治县六塘乡卫生院", "石柱土家族自治县南宾街道社区卫生服务中心", "石柱土家族自治县大歇镇卫生院", "石柱土家族自治县悦崃镇中心卫生院", "石柱土家族自治县新乐乡卫生院", "石柱土家族自治县枫木镇卫生院", "石柱土家族自治县桥头镇卫生院", "石柱土家族自治县沙子镇中心卫生院", "石柱土家族自治县河嘴乡卫生院", "石柱土家族自治县沿溪镇卫生院", "石柱土家族自治县洗新乡卫生院", "石柱土家族自治县王场镇卫生院", "石柱土家族自治县王家乡卫生院", "石柱土家族自治县石家乡卫生院", "石柱土家族自治县西沱镇中心卫生院", "石柱土家族自治县金铃乡卫生院", "石柱土家族自治县马武镇中心卫生院", "石柱土家族自治县鱼池镇卫生院", "石柱土家族自治县黄水镇中心卫生院", "石柱土家族自治县黄鹤镇卫生院", "石柱土家族自治县黎场乡卫生院"]}, {"药品名称": "谷胱甘肽片0.1g", "产品分类": "品牌品", "终端数": 6, "在销终端数": 6, "累计销售金额": 58246.37, "目标销售金额": 474557.87, "当前销量": 46080.0, "目标销量": 375840.0, "销售费用": 158052.75, "年市场规模": 0.0, "完成率": 12.27, "费用率": 28.0, "在销终端": "石柱土家族自治县万安街道社区卫生服务中心|石柱土家族自治县中医院|石柱土家族自治县人民医院|石柱土家族自治县西沱镇中心卫生院|石柱土家族自治县马武镇中心卫生院|石柱土家族自治县黄鹤镇卫生院", "终端列表": ["石柱土家族自治县万安街道社区卫生服务中心", "石柱土家族自治县中医院", "石柱土家族自治县人民医院", "石柱土家族自治县西沱镇中心卫生院", "石柱土家族自治县马武镇中心卫生院", "石柱土家族自治县黄鹤镇卫生院"]}, {"药品名称": "阿托伐他汀钙片", "产品分类": "商销品", "终端数": 1, "在销终端数": 0, "累计销售金额": 0.0, "目标销售金额": 408.42, "当前销量": 0.0, "目标销量": 3285.6, "销售费用": 218.61, "年市场规模": 0.0, "完成率": 0.0, "费用率": 45.0, "在销终端": "石柱土家族自治县王场镇卫生院", "终端列表": ["石柱土家族自治县王场镇卫生院"]}, {"药品名称": "阿法骨化醇片", "产品分类": "品牌品", "终端数": 20, "在销终端数": 20, "累计销售金额": 26730.18, "目标销售金额": 135456.26, "当前销量": 46950.0, "目标销量": 241670.4, "销售费用": 43202.16, "年市场规模": 256110.0, "完成率": 19.73, "费用率": 30.0, "在销终端": "石柱土家族自治县三星乡卫生院|石柱土家族自治县三河镇卫生院|石柱土家族自治县三益乡卫生院|石柱土家族自治县中医院|石柱土家族自治县中益乡卫生院|石柱土家族自治县临溪镇中心卫生院|石柱土家族自治县人民医院|石柱土家族自治县南宾街道社区卫生服务中心|石柱土家族自治县大歇镇卫生院|石柱土家族自治县妇幼保健院|石柱土家族自治县悦崃镇中心卫生院|石柱土家族自治县枫木镇卫生院|石柱土家族自治县桥头镇卫生院|石柱土家族自治县沙子镇中心卫生院|石柱土家族自治县王场镇卫生院|石柱土家族自治县石家乡卫生院|石柱土家族自治县黄水镇中心卫生院|石柱土家族自治县黄鹤镇卫生院|石柱土家族自治县黎场乡卫生院|石柱土家族自治县龙潭乡卫生院", "终端列表": ["石柱土家族自治县三星乡卫生院", "石柱土家族自治县三河镇卫生院", "石柱土家族自治县三益乡卫生院", "石柱土家族自治县中医院", "石柱土家族自治县中益乡卫生院", "石柱土家族自治县临溪镇中心卫生院", "石柱土家族自治县人民医院", "石柱土家族自治县南宾街道社区卫生服务中心", "石柱土家族自治县大歇镇卫生院", "石柱土家族自治县妇幼保健院", "石柱土家族自治县悦崃镇中心卫生院", "石柱土家族自治县枫木镇卫生院", "石柱土家族自治县桥头镇卫生院", "石柱土家族自治县沙子镇中心卫生院", "石柱土家族自治县王场镇卫生院", "石柱土家族自治县石家乡卫生院", "石柱土家族自治县黄水镇中心卫生院", "石柱土家族自治县黄鹤镇卫生院", "石柱土家族自治县黎场乡卫生院", "石柱土家族自治县龙潭乡卫生院"]}, {"药品名称": "阿魏酸钠", "产品分类": "商销品", "终端数": 1, "在销终端数": 1, "累计销售金额": 5454.0, "目标销售金额": 19849.58, "当前销量": 450.0, "目标销量": 2500.0, "销售费用": 0.0, "年市场规模": 0.0, "完成率": 27.48, "费用率": 0.0, "在销终端": "石柱土家族自治县中医院", "终端列表": ["石柱土家族自治县中医院"]}, {"药品名称": "雷贝拉唑钠肠溶片", "产品分类": "商销品", "终端数": 2, "在销终端数": 2, "累计销售金额": 789.0, "目标销售金额": 1593.38, "当前销量": 3150.0, "目标销量": 6360.0, "销售费用": 0.0, "年市场规模": 0.0, "完成率": 49.52, "费用率": 0.0, "在销终端": "石柱土家族自治县三星乡卫生院|石柱土家族自治县下路街道社区卫生服务中心", "终端列表": ["石柱土家族自治县三星乡卫生院", "石柱土家族自治县下路街道社区卫生服务中心"]}]}, "梁平区": {"stats": {"total_terminals": 34, "active_terminals": 23, "active_products": 11, "total_sales": 440056.0, "total_target": 1319353.36, "total_fee": 400155.1, "completion_rate": 33.35, "fee_rate": 22.36}, "by_type": {"品牌品": {"sales": 257828.0, "target": 811101.15, "completion": 31.79}, "商销品": {"sales": 181788.0, "target": 486569.35, "completion": 37.36}, "代理品": {"sales": 0.0, "target": 20535.05, "completion": 0.0}}, "terminals": [{"终端名称": "重庆市梁平区七星镇卫生院", "区": "梁平区", "产品数": 1, "在销产品数量": 1, "累计销售金额": 311.0, "目标销售金额": 2076.55, "销售费用": 0.0, "年市场规模": 0.0, "医院等级": "其他", "完成率": 14.98, "费用率": 0.0, "产品列表": ["苯磺酸氨氯地平片"]}, {"终端名称": "重庆市梁平区中医医院", "区": "梁平区", "产品数": 15, "在销产品数量": 8, "累计销售金额": 60380.25, "目标销售金额": 190434.99, "销售费用": 63826.4, "年市场规模": 46400.0, "医院等级": "二级", "完成率": 31.71, "费用率": 22.14, "产品列表": ["亚叶酸钙注射液", "吲达帕胺片", "氯化钾缓释片", "氯化钾颗粒", "注射用泮托拉唑钠", "注射用艾司奥美拉唑钠", "注射用谷胱甘肽", "盐酸度洛西汀肠溶胶囊", "盐酸舍曲林片", "硫酸异帕米星注射液", "苯磺酸氨氯地平片", "谷胱甘肽片0.1g", "阿卡波糖片", "阿法骨化醇片", "阿立哌唑口崩片"]}, {"终端名称": "重庆市梁平区云龙中心卫生院", "区": "梁平区", "产品数": 2, "在销产品数量": 1, "累计销售金额": 6821.0, "目标销售金额": 3778.58, "销售费用": 0.0, "年市场规模": 0.0, "医院等级": "其他", "完成率": 180.52, "费用率": 0.0, "产品列表": ["恩替卡韦片", "苯磺酸氨氯地平片"]}, {"终端名称": "重庆市梁平区人民医院", "区": "梁平区", "产品数": 8, "在销产品数量": 6, "累计销售金额": 193763.22, "目标销售金额": 849520.25, "销售费用": 297778.09, "年市场规模": 311070.0, "医院等级": "三级", "完成率": 22.81, "费用率": 27.61, "产品列表": ["注射用水溶性维生素", "注射用美罗培南", "甲苯磺酸索拉非尼片", "盐酸度洛西汀肠溶胶囊", "硫代硫酸钠注射液", "谷胱甘肽片0.1g", "阿卡波糖片", "阿法骨化醇片"]}, {"终端名称": "重庆市梁平区仁贤街道社区卫生服务中心", "区": "梁平区", "产品数": 3, "在销产品数量": 2, "累计销售金额": 71400.0, "目标销售金额": 10315.8, "销售费用": 2785.05, "年市场规模": 0.0, "医院等级": "其他", "完成率": 692.14, "费用率": 20.0, "产品列表": ["恩替卡韦片", "琥珀酸美托洛尔缓释片", "苯磺酸氨氯地平片"]}, {"终端名称": "重庆市梁平区双桂街道社区卫生服务中心", "区": "梁平区", "产品数": 3, "在销产品数量": 1, "累计销售金额": 0.0, "目标销售金额": 399.02, "销售费用": 176.03, "年市场规模": 10500.0, "医院等级": "其他", "完成率": 0.0, "费用率": 0.0, "产品列表": ["注射用泮托拉唑钠", "盐酸二甲双胍片", "阿法骨化醇片"]}, {"终端名称": "重庆市梁平区合兴街道社区卫生服务中心", "区": "梁平区", "产品数": 3, "在销产品数量": 3, "累计销售金额": 2569.42, "目标销售金额": 2470.84, "销售费用": 126.16, "年市场规模": 1732.0, "医院等级": "一级", "完成率": 103.99, "费用率": 4.78, "产品列表": ["注射用泮托拉唑钠", "炎琥宁80mg", "苯磺酸氨氯地平片"]}, {"终端名称": "重庆市梁平区回龙镇卫生院", "区": "梁平区", "产品数": 1, "在销产品数量": 1, "累计销售金额": 0.0, "目标销售金额": 2020.15, "销售费用": 0.0, "年市场规模": 0.0, "医院等级": "其他", "完成率": 0.0, "费用率": 0.0, "产品列表": ["注射用克林霉素"]}, {"终端名称": "重庆市梁平区复平镇卫生院", "区": "梁平区", "产品数": 1, "在销产品数量": 1, "累计销售金额": 0.0, "目标销售金额": 150.32, "销售费用": 0.0, "年市场规模": 0.0, "医院等级": "一级", "完成率": 0.0, "费用率": 0.0, "产品列表": ["雷贝拉唑钠肠溶片"]}, {"终端名称": "重庆市梁平区大观镇卫生院", "区": "梁平区", "产品数": 2, "在销产品数量": 2, "累计销售金额": 405.0, "目标销售金额": 463.85, "销售费用": 0.0, "年市场规模": 0.0, "医院等级": "其他", "完成率": 87.31, "费用率": 0.0, "产品列表": ["恩替卡韦片", "苯磺酸氨氯地平片"]}, {"终端名称": "重庆市梁平区安胜镇卫生院", "区": "梁平区", "产品数": 3, "在销产品数量": 0, "累计销售金额": 0.0, "目标销售金额": 8678.67, "销售费用": 3636.18, "年市场规模": 4200.0, "医院等级": "其他", "完成率": 0.0, "费用率": 0.0, "产品列表": ["氯化钾缓释片", "盐酸二甲双胍缓释片", "阿法骨化醇片"]}, {"终端名称": "重庆市梁平区文化镇卫生院", "区": "梁平区", "产品数": 6, "在销产品数量": 2, "累计销售金额": 3164.6, "目标销售金额": 12958.85, "销售费用": 2175.34, "年市场规模": 0.0, "医院等级": "其他", "完成率": 24.42, "费用率": 7.4, "产品列表": ["氯化钾缓释片", "注射用泮托拉唑钠", "炎琥宁80mg", "盐酸二甲双胍缓释片", "苯磺酸氨氯地平片", "阿卡波糖片"]}, {"终端名称": "重庆市梁平区新盛中心卫生院", "区": "梁平区", "产品数": 4, "在销产品数量": 3, "累计销售金额": 2442.0, "目标销售金额": 2100.39, "销售费用": 388.83, "年市场规模": 0.0, "医院等级": "其他", "完成率": 116.26, "费用率": 17.96, "产品列表": ["吲达帕胺片", "注射用泮托拉唑钠", "苯磺酸氨氯地平片", "阿卡波糖片"]}, {"终端名称": "重庆市梁平区明达镇卫生院", "区": "梁平区", "产品数": 4, "在销产品数量": 3, "累计销售金额": 8815.58, "目标销售金额": 8434.36, "销售费用": 2362.66, "年市场规模": 7100.0, "医院等级": "其他", "完成率": 104.52, "费用率": 18.12, "产品列表": ["氯化钾缓释片", "炎琥宁80mg", "苯磺酸氨氯地平片", "阿法骨化醇片"]}, {"终端名称": "重庆市梁平区星桥镇卫生院", "区": "梁平区", "产品数": 4, "在销产品数量": 2, "累计销售金额": 93.0, "目标销售金额": 2348.35, "销售费用": 811.2, "年市场规模": 4500.0, "医院等级": "其他", "完成率": 3.96, "费用率": 0.0, "产品列表": ["氯化钾缓释片", "注射用泮托拉唑钠", "苯磺酸氨氯地平片", "阿法骨化醇片"]}, {"终端名称": "重庆市梁平区曲水镇卫生院", "区": "梁平区", "产品数": 2, "在销产品数量": 2, "累计销售金额": 0.0, "目标销售金额": 3479.02, "销售费用": 0.0, "年市场规模": 3640.0, "医院等级": "其他", "完成率": 0.0, "费用率": 0.0, "产品列表": ["炎琥宁80mg", "苯磺酸氨氯地平片"]}, {"终端名称": "重庆市梁平区柏家中心卫生院", "区": "梁平区", "产品数": 3, "在销产品数量": 3, "累计销售金额": 6230.0, "目标销售金额": 3684.64, "销售费用": 0.0, "年市场规模": 1570.0, "医院等级": "其他", "完成率": 169.08, "费用率": 0.0, "产品列表": ["注射用谷胱甘肽", "苯磺酸氨氯地平片", "阿法骨化醇片"]}, {"终端名称": "重庆市梁平区梁山街道社区卫生服务中心", "区": "梁平区", "产品数": 7, "在销产品数量": 2, "累计销售金额": 198.0, "目标销售金额": 94650.3, "销售费用": 10095.23, "年市场规模": 0.0, "医院等级": "其他", "完成率": 0.21, "费用率": 4.0, "产品列表": ["丙泊酚中/长链脂肪乳注射液", "恩替卡韦片", "氯化钾缓释片", "瑞舒伐他汀钙片", "硫辛酸注射液", "苯磺酸氨氯地平片", "阿卡波糖片"]}, {"终端名称": "重庆市梁平区石安镇卫生院", "区": "梁平区", "产品数": 1, "在销产品数量": 1, "累计销售金额": 527.43, "目标销售金额": 823.73, "销售费用": 72.54, "年市场规模": 400.0, "医院等级": "其他", "完成率": 64.03, "费用率": 7.4, "产品列表": ["炎琥宁80mg"]}, {"终端名称": "重庆市梁平区礼让中心卫生院", "区": "梁平区", "产品数": 4, "在销产品数量": 2, "累计销售金额": 188.0, "目标销售金额": 16295.05, "销售费用": 4138.15, "年市场规模": 540.0, "医院等级": "其他", "完成率": 1.15, "费用率": 20.0, "产品列表": ["氯化钾缓释片", "炎琥宁80mg", "盐酸二甲双胍缓释片", "苯磺酸氨氯地平片"]}, {"终端名称": "重庆市梁平区福禄中心卫生院", "区": "梁平区", "产品数": 7, "在销产品数量": 2, "累计销售金额": 5274.33, "目标销售金额": 32147.45, "销售费用": 3518.72, "年市场规模": 15400.0, "医院等级": "一级", "完成率": 16.41, "费用率": 7.4, "产品列表": ["吲达帕胺片", "注射用谷胱甘肽", "炎琥宁80mg", "瑞舒伐他汀钙片", "盐酸二甲双胍片", "阿卡波糖片", "阿托伐他汀钙片"]}, {"终端名称": "重庆市梁平区竹山镇卫生院（重庆市梁平区竹山镇计划生育服务站）", "区": "梁平区", "产品数": 2, "在销产品数量": 2, "累计销售金额": 1727.43, "目标销售金额": 943.78, "销售费用": 207.48, "年市场规模": 560.0, "医院等级": "其他", "完成率": 183.03, "费用率": 11.58, "产品列表": ["炎琥宁80mg", "苯磺酸氨氯地平片"]}, {"终端名称": "重庆市梁平区第二人民医院", "区": "梁平区", "产品数": 2, "在销产品数量": 2, "累计销售金额": 78.0, "目标销售金额": 14762.33, "销售费用": 0.0, "年市场规模": 300.0, "医院等级": "其他", "完成率": 0.53, "费用率": 0.0, "产品列表": ["注射用谷胱甘肽", "苯磺酸氨氯地平片"]}, {"终端名称": "重庆市梁平区精神卫生中心（重庆市梁平区失能老人护理院）", "区": "梁平区", "产品数": 2, "在销产品数量": 1, "累计销售金额": 0.0, "目标销售金额": 4122.5, "销售费用": 27.65, "年市场规模": 0.0, "医院等级": "二级", "完成率": 0.0, "费用率": 0.0, "产品列表": ["注射用泮托拉唑钠", "盐酸度洛西汀肠溶胶囊"]}, {"终端名称": "重庆市梁平区紫照镇卫生院", "区": "梁平区", "产品数": 1, "在销产品数量": 1, "累计销售金额": 0.0, "目标销售金额": 188.95, "销售费用": 0.0, "年市场规模": 0.0, "医院等级": "其他", "完成率": 0.0, "费用率": 0.0, "产品列表": ["注射用二氯醋酸二异丙胺"]}, {"终端名称": "重庆市梁平区聚奎镇卫生院（重庆市梁平区聚奎镇计划生育服务站）", "区": "梁平区", "产品数": 2, "在销产品数量": 2, "累计销售金额": 37680.0, "目标销售金额": 18773.69, "销售费用": 4234.29, "年市场规模": 10.0, "医院等级": "一级", "完成率": 200.71, "费用率": 20.0, "产品列表": ["注射用谷胱甘肽", "苯磺酸氨氯地平片"]}, {"终端名称": "重庆市梁平区荫平镇卫生院", "区": "梁平区", "产品数": 1, "在销产品数量": 0, "累计销售金额": 0.0, "目标销售金额": 918.25, "销售费用": 43.69, "年市场规模": 0.0, "医院等级": "其他", "完成率": 0.0, "费用率": 0.0, "产品列表": ["阿卡波糖片"]}, {"终端名称": "重庆市梁平区葫芦药房", "区": "梁平区", "产品数": 1, "在销产品数量": 1, "累计销售金额": 0.0, "目标销售金额": 20.77, "销售费用": 0.0, "年市场规模": 0.0, "医院等级": "其他", "完成率": 0.0, "费用率": 0.0, "产品列表": ["苯磺酸氨氯地平片"]}, {"终端名称": "重庆市梁平区虎城中心卫生院", "区": "梁平区", "产品数": 4, "在销产品数量": 4, "累计销售金额": 37018.73, "目标销售金额": 15348.36, "销售费用": 3229.0, "年市场规模": 2800.0, "医院等级": "其他", "完成率": 241.19, "费用率": 17.94, "产品列表": ["恩替卡韦片", "注射用泮托拉唑钠", "炎琥宁80mg", "苯磺酸氨氯地平片"]}, {"终端名称": "重庆市梁平区袁驿中心卫生院", "区": "梁平区", "产品数": 2, "在销产品数量": 1, "累计销售金额": 62.0, "目标销售金额": 11291.36, "销售费用": 522.41, "年市场规模": 0.0, "医院等级": "其他", "完成率": 0.55, "费用率": 0.0, "产品列表": ["苯磺酸氨氯地平片", "阿卡波糖片"]}, {"终端名称": "重庆市梁平区诚德中医医院有限责任公司", "区": "梁平区", "产品数": 1, "在销产品数量": 1, "累计销售金额": 93.0, "目标销售金额": 353.01, "销售费用": 0.0, "年市场规模": 0.0, "医院等级": "其他", "完成率": 26.34, "费用率": 0.0, "产品列表": ["苯磺酸氨氯地平片"]}, {"终端名称": "重庆市梁平区金带镇卫生院", "区": "梁平区", "产品数": 1, "在销产品数量": 1, "累计销售金额": 0.0, "目标销售金额": 677.98, "销售费用": 0.0, "年市场规模": 2700.0, "医院等级": "其他", "完成率": 0.0, "费用率": 0.0, "产品列表": ["阿法骨化醇片"]}, {"终端名称": "重庆市梁平区龙胜乡卫生院", "区": "梁平区", "产品数": 2, "在销产品数量": 2, "累计销售金额": 814.0, "目标销售金额": 3432.02, "销售费用": 0.0, "年市场规模": 0.0, "医院等级": "其他", "完成率": 23.72, "费用率": 0.0, "产品列表": ["苯磺酸氨氯地平片", "阿卡波糖片"]}, {"终端名称": "重庆市梁平区龙门镇卫生院", "区": "梁平区", "产品数": 2, "在销产品数量": 2, "累计销售金额": 0.0, "目标销售金额": 1289.2, "销售费用": 0.0, "年市场规模": 2400.0, "医院等级": "其他", "完成率": 0.0, "费用率": 0.0, "产品列表": ["苯磺酸氨氯地平片", "阿法骨化醇片"]}], "products": [{"药品名称": "丙泊酚中/长链脂肪乳注射液", "产品分类": "商销品", "终端数": 1, "在销终端数": 0, "累计销售金额": 0.0, "目标销售金额": 370.93, "当前销量": 0.0, "目标销量": 57.6, "销售费用": 88.24, "年市场规模": 0.0, "完成率": 0.0, "费用率": 20.0, "在销终端": "重庆市梁平区梁山街道社区卫生服务中心", "终端列表": ["重庆市梁平区梁山街道社区卫生服务中心"]}, {"药品名称": "亚叶酸钙注射液", "产品分类": "代理品", "终端数": 1, "在销终端数": 1, "累计销售金额": 0.0, "目标销售金额": 11067.96, "当前销量": 0.0, "目标销量": 500.0, "销售费用": 6480.0, "年市场规模": 0.0, "完成率": 0.0, "费用率": 54.0, "在销终端": "重庆市梁平区中医医院", "终端列表": ["重庆市梁平区中医医院"]}, {"药品名称": "吲达帕胺片", "产品分类": "商销品", "终端数": 3, "在销终端数": 0, "累计销售金额": 0.0, "目标销售金额": 3829.56, "当前销量": 0.0, "目标销量": 51763.2, "销售费用": 0.0, "年市场规模": 0.0, "完成率": 0.0, "费用率": 0.0, "在销终端": "重庆市梁平区中医医院|重庆市梁平区新盛中心卫生院|重庆市梁平区福禄中心卫生院", "终端列表": ["重庆市梁平区中医医院", "重庆市梁平区新盛中心卫生院", "重庆市梁平区福禄中心卫生院"]}, {"药品名称": "恩替卡韦片", "产品分类": "商销品", "终端数": 5, "在销终端数": 3, "累计销售金额": 628.0, "目标销售金额": 6084.57, "当前销量": 3600.0, "目标销量": 43774.8, "销售费用": 0.0, "年市场规模": 0.0, "完成率": 10.32, "费用率": 0.0, "在销终端": "重庆市梁平区云龙中心卫生院|重庆市梁平区仁贤街道社区卫生服务中心|重庆市梁平区大观镇卫生院|重庆市梁平区梁山街道社区卫生服务中心|重庆市梁平区虎城中心卫生院", "终端列表": ["重庆市梁平区云龙中心卫生院", "重庆市梁平区仁贤街道社区卫生服务中心", "重庆市梁平区大观镇卫生院", "重庆市梁平区梁山街道社区卫生服务中心", "重庆市梁平区虎城中心卫生院"]}, {"药品名称": "氯化钾缓释片", "产品分类": "商销品", "终端数": 7, "在销终端数": 0, "累计销售金额": 0.0, "目标销售金额": 11851.65, "当前销量": 0.0, "目标销量": 50618.4, "销售费用": 5638.89, "年市场规模": 0.0, "完成率": 0.0, "费用率": 40.0, "在销终端": "重庆市梁平区中医医院|重庆市梁平区安胜镇卫生院|重庆市梁平区文化镇卫生院|重庆市梁平区明达镇卫生院|重庆市梁平区星桥镇卫生院|重庆市梁平区梁山街道社区卫生服务中心|重庆市梁平区礼让中心卫生院", "终端列表": ["重庆市梁平区中医医院", "重庆市梁平区安胜镇卫生院", "重庆市梁平区文化镇卫生院", "重庆市梁平区明达镇卫生院", "重庆市梁平区星桥镇卫生院", "重庆市梁平区梁山街道社区卫生服务中心", "重庆市梁平区礼让中心卫生院"]}, {"药品名称": "氯化钾颗粒", "产品分类": "商销品", "终端数": 1, "在销终端数": 1, "累计销售金额": 0.0, "目标销售金额": 18.22, "当前销量": 0.0, "目标销量": 66.67, "销售费用": 0.0, "年市场规模": 0.0, "完成率": 0.0, "费用率": 0.0, "在销终端": "重庆市梁平区中医医院", "终端列表": ["重庆市梁平区中医医院"]}, {"药品名称": "注射用二氯醋酸二异丙胺", "产品分类": "商销品", "终端数": 1, "在销终端数": 1, "累计销售金额": 0.0, "目标销售金额": 188.95, "当前销量": 0.0, "目标销量": 30.0, "销售费用": 0.0, "年市场规模": 0.0, "完成率": 0.0, "费用率": 0.0, "在销终端": "重庆市梁平区紫照镇卫生院", "终端列表": ["重庆市梁平区紫照镇卫生院"]}, {"药品名称": "注射用克林霉素", "产品分类": "商销品", "终端数": 1, "在销终端数": 1, "累计销售金额": 0.0, "目标销售金额": 2020.15, "当前销量": 0.0, "目标销量": 1300.0, "销售费用": 0.0, "年市场规模": 0.0, "完成率": 0.0, "费用率": 0.0, "在销终端": "重庆市梁平区回龙镇卫生院", "终端列表": ["重庆市梁平区回龙镇卫生院"]}, {"药品名称": "注射用水溶性维生素", "产品分类": "商销品", "终端数": 1, "在销终端数": 1, "累计销售金额": 2682.0, "目标销售金额": 2382.47, "当前销量": 450.0, "目标销量": 1150.0, "销售费用": 0.0, "年市场规模": 0.0, "完成率": 112.57, "费用率": 0.0, "在销终端": "重庆市梁平区人民医院", "终端列表": ["重庆市梁平区人民医院"]}, {"药品名称": "注射用泮托拉唑钠", "产品分类": "商销品", "终端数": 8, "在销终端数": 3, "累计销售金额": 3943.0, "目标销售金额": 7939.24, "当前销量": 3000.0, "目标销量": 5246.4, "销售费用": 1888.7, "年市场规模": 0.0, "完成率": 49.66, "费用率": 20.0, "在销终端": "重庆市梁平区中医医院|重庆市梁平区双桂街道社区卫生服务中心|重庆市梁平区合兴街道社区卫生服务中心|重庆市梁平区文化镇卫生院|重庆市梁平区新盛中心卫生院|重庆市梁平区星桥镇卫生院|重庆市梁平区精神卫生中心（重庆市梁平区失能老人护理院）|重庆市梁平区虎城中心卫生院", "终端列表": ["重庆市梁平区中医医院", "重庆市梁平区双桂街道社区卫生服务中心", "重庆市梁平区合兴街道社区卫生服务中心", "重庆市梁平区文化镇卫生院", "重庆市梁平区新盛中心卫生院", "重庆市梁平区星桥镇卫生院", "重庆市梁平区精神卫生中心（重庆市梁平区失能老人护理院）", "重庆市梁平区虎城中心卫生院"]}, {"药品名称": "注射用美罗培南", "产品分类": "商销品", "终端数": 1, "在销终端数": 0, "累计销售金额": 0.0, "目标销售金额": 150116.81, "当前销量": 0.0, "目标销量": 19200.0, "销售费用": 80352.0, "年市场规模": 0.0, "完成率": 0.0, "费用率": 45.0, "在销终端": "重庆市梁平区人民医院", "终端列表": ["重庆市梁平区人民医院"]}, {"药品名称": "注射用艾司奥美拉唑钠", "产品分类": "商销品", "终端数": 1, "在销终端数": 0, "累计销售金额": 0.0, "目标销售金额": 18722.23, "当前销量": 0.0, "目标销量": 7423.2, "销售费用": 11134.8, "年市场规模": 0.0, "完成率": 0.0, "费用率": 50.0, "在销终端": "重庆市梁平区中医医院", "终端列表": ["重庆市梁平区中医医院"]}, {"药品名称": "注射用谷胱甘肽", "产品分类": "品牌品", "终端数": 5, "在销终端数": 5, "累计销售金额": 10816.0, "目标销售金额": 33648.24, "当前销量": 1300.0, "目标销量": 5870.04, "销售费用": 0.0, "年市场规模": 5380.0, "完成率": 32.14, "费用率": 0.0, "在销终端": "重庆市梁平区中医医院|重庆市梁平区柏家中心卫生院|重庆市梁平区福禄中心卫生院|重庆市梁平区第二人民医院|重庆市梁平区聚奎镇卫生院（重庆市梁平区聚奎镇计划生育服务站）", "终端列表": ["重庆市梁平区中医医院", "重庆市梁平区柏家中心卫生院", "重庆市梁平区福禄中心卫生院", "重庆市梁平区第二人民医院", "重庆市梁平区聚奎镇卫生院（重庆市梁平区聚奎镇计划生育服务站）"]}, {"药品名称": "炎琥宁80mg", "产品分类": "品牌品", "终端数": 9, "在销终端数": 9, "累计销售金额": 14783.54, "目标销售金额": 26466.66, "当前销量": 5530.0, "目标销量": 7390.0, "销售费用": 2204.65, "年市场规模": 26772.0, "完成率": 55.86, "费用率": 7.4, "在销终端": "重庆市梁平区合兴街道社区卫生服务中心|重庆市梁平区文化镇卫生院|重庆市梁平区明达镇卫生院|重庆市梁平区曲水镇卫生院|重庆市梁平区石安镇卫生院|重庆市梁平区礼让中心卫生院|重庆市梁平区福禄中心卫生院|重庆市梁平区竹山镇卫生院（重庆市梁平区竹山镇计划生育服务站）|重庆市梁平区虎城中心卫生院", "终端列表": ["重庆市梁平区合兴街道社区卫生服务中心", "重庆市梁平区文化镇卫生院", "重庆市梁平区明达镇卫生院", "重庆市梁平区曲水镇卫生院", "重庆市梁平区石安镇卫生院", "重庆市梁平区礼让中心卫生院", "重庆市梁平区福禄中心卫生院", "重庆市梁平区竹山镇卫生院（重庆市梁平区竹山镇计划生育服务站）", "重庆市梁平区虎城中心卫生院"]}, {"药品名称": "琥珀酸美托洛尔缓释片", "产品分类": "商销品", "终端数": 1, "在销终端数": 0, "累计销售金额": 0.0, "目标销售金额": 1403.8, "当前销量": 0.0, "目标销量": 3871.2, "销售费用": 667.91, "年市场规模": 0.0, "完成率": 0.0, "费用率": 40.0, "在销终端": "重庆市梁平区仁贤街道社区卫生服务中心", "终端列表": ["重庆市梁平区仁贤街道社区卫生服务中心"]}, {"药品名称": "瑞舒伐他汀钙片", "产品分类": "商销品", "终端数": 2, "在销终端数": 0, "累计销售金额": 0.0, "目标销售金额": 26907.42, "当前销量": 0.0, "目标销量": 165261.6, "销售费用": 6401.13, "年市场规模": 0.0, "完成率": 0.0, "费用率": 20.0, "在销终端": "重庆市梁平区梁山街道社区卫生服务中心|重庆市梁平区福禄中心卫生院", "终端列表": ["重庆市梁平区梁山街道社区卫生服务中心", "重庆市梁平区福禄中心卫生院"]}, {"药品名称": "甲苯磺酸索拉非尼片", "产品分类": "代理品", "终端数": 1, "在销终端数": 1, "累计销售金额": 0.0, "目标销售金额": 9467.09, "当前销量": 0.0, "目标销量": 1267.2, "销售费用": 2566.08, "年市场规模": 0.0, "完成率": 0.0, "费用率": 25.0, "在销终端": "重庆市梁平区人民医院", "终端列表": ["重庆市梁平区人民医院"]}, {"药品名称": "盐酸二甲双胍片", "产品分类": "商销品", "终端数": 2, "在销终端数": 0, "累计销售金额": 0.0, "目标销售金额": 1107.96, "当前销量": 0.0, "目标销量": 14976.0, "销售费用": 527.16, "年市场规模": 0.0, "完成率": 0.0, "费用率": 40.0, "在销终端": "重庆市梁平区双桂街道社区卫生服务中心|重庆市梁平区福禄中心卫生院", "终端列表": ["重庆市梁平区双桂街道社区卫生服务中心", "重庆市梁平区福禄中心卫生院"]}, {"药品名称": "盐酸二甲双胍缓释片", "产品分类": "商销品", "终端数": 3, "在销终端数": 0, "累计销售金额": 0.0, "目标销售金额": 10173.94, "当前销量": 0.0, "目标销量": 103432.8, "销售费用": 4235.57, "年市场规模": 0.0, "完成率": 0.0, "费用率": 35.0, "在销终端": "重庆市梁平区安胜镇卫生院|重庆市梁平区文化镇卫生院|重庆市梁平区礼让中心卫生院", "终端列表": ["重庆市梁平区安胜镇卫生院", "重庆市梁平区文化镇卫生院", "重庆市梁平区礼让中心卫生院"]}, {"药品名称": "盐酸度洛西汀肠溶胶囊", "产品分类": "品牌品", "终端数": 3, "在销终端数": 3, "累计销售金额": 2181.6, "目标销售金额": 11906.26, "当前销量": 5400.0, "目标销量": 29443.2, "销售费用": 0.0, "年市场规模": 0.0, "完成率": 18.32, "费用率": 0.0, "在销终端": "重庆市梁平区中医医院|重庆市梁平区人民医院|重庆市梁平区精神卫生中心（重庆市梁平区失能老人护理院）", "终端列表": ["重庆市梁平区中医医院", "重庆市梁平区人民医院", "重庆市梁平区精神卫生中心（重庆市梁平区失能老人护理院）"]}, {"药品名称": "盐酸舍曲林片", "产品分类": "品牌品", "终端数": 1, "在销终端数": 0, "累计销售金额": 0.0, "目标销售金额": 654.39, "当前销量": 0.0, "目标销量": 1069.2, "销售费用": 311.35, "年市场规模": 0.0, "完成率": 0.0, "费用率": 40.0, "在销终端": "重庆市梁平区中医医院", "终端列表": ["重庆市梁平区中医医院"]}, {"药品名称": "硫代硫酸钠注射液", "产品分类": "代理品", "终端数": 1, "在销终端数": 1, "累计销售金额": 0.0, "目标销售金额": 0.0, "当前销量": 0.0, "目标销量": 0.0, "销售费用": 0.0, "年市场规模": 0.0, "完成率": 0.0, "费用率": 50.0, "在销终端": "重庆市梁平区人民医院", "终端列表": ["重庆市梁平区人民医院"]}, {"药品名称": "硫辛酸注射液", "产品分类": "商销品", "终端数": 1, "在销终端数": 0, "累计销售金额": 0.0, "目标销售金额": 551.13, "当前销量": 0.0, "目标销量": 108.0, "销售费用": 295.0, "年市场规模": 0.0, "完成率": 0.0, "费用率": 45.0, "在销终端": "重庆市梁平区梁山街道社区卫生服务中心", "终端列表": ["重庆市梁平区梁山街道社区卫生服务中心"]}, {"药品名称": "硫酸异帕米星注射液", "产品分类": "品牌品", "终端数": 1, "在销终端数": 1, "累计销售金额": 18186.0, "目标销售金额": 31173.45, "当前销量": 350.0, "目标销量": 600.0, "销售费用": 15388.2, "年市场规模": 0.0, "完成率": 58.34, "费用率": 41.5, "在销终端": "重庆市梁平区中医医院", "终端列表": ["重庆市梁平区中医医院"]}, {"药品名称": "苯磺酸氨氯地平片", "产品分类": "商销品", "终端数": 23, "在销终端数": 22, "累计销售金额": 165920.0, "目标销售金额": 112057.66, "当前销量": 696360.0, "目标销量": 1510975.6, "销售费用": 19973.61, "年市场规模": 0.0, "完成率": 148.07, "费用率": 20.0, "在销终端": "重庆市梁平区七星镇卫生院|重庆市梁平区中医医院|重庆市梁平区云龙中心卫生院|重庆市梁平区仁贤街道社区卫生服务中心|重庆市梁平区合兴街道社区卫生服务中心|重庆市梁平区大观镇卫生院|重庆市梁平区文化镇卫生院|重庆市梁平区新盛中心卫生院|重庆市梁平区明达镇卫生院|重庆市梁平区星桥镇卫生院|重庆市梁平区曲水镇卫生院|重庆市梁平区柏家中心卫生院|重庆市梁平区梁山街道社区卫生服务中心|重庆市梁平区礼让中心卫生院|重庆市梁平区竹山镇卫生院（重庆市梁平区竹山镇计划生育服务站）|重庆市梁平区第二人民医院|重庆市梁平区聚奎镇卫生院（重庆市梁平区聚奎镇计划生育服务站）|重庆市梁平区葫芦药房|重庆市梁平区虎城中心卫生院|重庆市梁平区袁驿中心卫生院|重庆市梁平区诚德中医医院有限责任公司|重庆市梁平区龙胜乡卫生院|重庆市梁平区龙门镇卫生院", "终端列表": ["重庆市梁平区七星镇卫生院", "重庆市梁平区中医医院", "重庆市梁平区云龙中心卫生院", "重庆市梁平区仁贤街道社区卫生服务中心", "重庆市梁平区合兴街道社区卫生服务中心", "重庆市梁平区大观镇卫生院", "重庆市梁平区文化镇卫生院", "重庆市梁平区新盛中心卫生院", "重庆市梁平区明达镇卫生院", "重庆市梁平区星桥镇卫生院", "重庆市梁平区曲水镇卫生院", "重庆市梁平区柏家中心卫生院", "重庆市梁平区梁山街道社区卫生服务中心", "重庆市梁平区礼让中心卫生院", "重庆市梁平区竹山镇卫生院（重庆市梁平区竹山镇计划生育服务站）", "重庆市梁平区第二人民医院", "重庆市梁平区聚奎镇卫生院（重庆市梁平区聚奎镇计划生育服务站）", "重庆市梁平区葫芦药房", "重庆市梁平区虎城中心卫生院", "重庆市梁平区袁驿中心卫生院", "重庆市梁平区诚德中医医院有限责任公司", "重庆市梁平区龙胜乡卫生院", "重庆市梁平区龙门镇卫生院"]}, {"药品名称": "谷胱甘肽片0.1g", "产品分类": "品牌品", "终端数": 2, "在销终端数": 2, "累计销售金额": 142686.9, "目标销售金额": 501831.31, "当前销量": 111240.0, "目标销量": 397440.0, "销售费用": 167136.24, "年市场规模": 0.0, "完成率": 28.43, "费用率": 28.0, "在销终端": "重庆市梁平区中医医院|重庆市梁平区人民医院", "终端列表": ["重庆市梁平区中医医院", "重庆市梁平区人民医院"]}, {"药品名称": "阿卡波糖片", "产品分类": "商销品", "终端数": 7, "在销终端数": 2, "累计销售金额": 8615.0, "目标销售金额": 128014.52, "当前销量": 67350.0, "目标销量": 1003756.8, "销售费用": 6090.8, "年市场规模": 0.0, "完成率": 6.73, "费用率": 4.0, "在销终端": "重庆市梁平区中医医院|重庆市梁平区人民医院|重庆市梁平区文化镇卫生院|重庆市梁平区梁山街道社区卫生服务中心|重庆市梁平区福禄中心卫生院|重庆市梁平区荫平镇卫生院|重庆市梁平区袁驿中心卫生院", "终端列表": ["重庆市梁平区中医医院", "重庆市梁平区人民医院", "重庆市梁平区文化镇卫生院", "重庆市梁平区梁山街道社区卫生服务中心", "重庆市梁平区福禄中心卫生院", "重庆市梁平区荫平镇卫生院", "重庆市梁平区袁驿中心卫生院"]}, {"药品名称": "阿托伐他汀钙片", "产品分类": "商销品", "终端数": 1, "在销终端数": 0, "累计销售金额": 0.0, "目标销售金额": 2677.82, "当前销量": 0.0, "目标销量": 21542.4, "销售费用": 1433.34, "年市场规模": 0.0, "完成率": 0.0, "费用率": 45.0, "在销终端": "重庆市梁平区福禄中心卫生院", "终端列表": ["重庆市梁平区福禄中心卫生院"]}, {"药品名称": "阿法骨化醇片", "产品分类": "品牌品", "终端数": 9, "在销终端数": 8, "累计销售金额": 69173.96, "目标销售金额": 205089.19, "当前销量": 121500.0, "目标销量": 365904.0, "销售费用": 67203.36, "年市场规模": 383670.0, "完成率": 33.73, "费用率": 28.0, "在销终端": "重庆市梁平区中医医院|重庆市梁平区人民医院|重庆市梁平区双桂街道社区卫生服务中心|重庆市梁平区安胜镇卫生院|重庆市梁平区明达镇卫生院|重庆市梁平区星桥镇卫生院|重庆市梁平区柏家中心卫生院|重庆市梁平区金带镇卫生院|重庆市梁平区龙门镇卫生院", "终端列表": ["重庆市梁平区中医医院", "重庆市梁平区人民医院", "重庆市梁平区双桂街道社区卫生服务中心", "重庆市梁平区安胜镇卫生院", "重庆市梁平区明达镇卫生院", "重庆市梁平区星桥镇卫生院", "重庆市梁平区柏家中心卫生院", "重庆市梁平区金带镇卫生院", "重庆市梁平区龙门镇卫生院"]}, {"药品名称": "阿立哌唑口崩片", "产品分类": "品牌品", "终端数": 1, "在销终端数": 0, "累计销售金额": 0.0, "目标销售金额": 331.65, "当前销量": 0.0, "目标销量": 1012.8, "销售费用": 138.07, "年市场规模": 0.0, "完成率": 0.0, "费用率": 35.0, "在销终端": "重庆市梁平区中医医院", "终端列表": ["重庆市梁平区中医医院"]}, {"药品名称": "雷贝拉唑钠肠溶片", "产品分类": "商销品", "终端数": 1, "在销终端数": 1, "累计销售金额": 0.0, "目标销售金额": 150.32, "当前销量": 0.0, "目标销量": 600.0, "销售费用": 0.0, "年市场规模": 0.0, "完成率": 0.0, "费用率": 0.0, "在销终端": "重庆市梁平区复平镇卫生院", "终端列表": ["重庆市梁平区复平镇卫生院"]}]}, "忠县": {"stats": {"total_terminals": 31, "active_terminals": 22, "active_products": 13, "total_sales": 523839.33, "total_target": 2882455.19, "total_fee": 575226.79, "completion_rate": 18.17, "fee_rate": 18.48}, "by_type": {"品牌品": {"sales": 279241.73, "target": 892248.3, "completion": 31.3}, "商销品": {"sales": 233565.0, "target": 354085.53, "completion": 65.96}, "代理品": {"sales": 7761.6, "target": 1636121.36, "completion": 0.47}}, "terminals": [{"终端名称": "忠县东溪中心卫生院", "区": "忠县", "产品数": 4, "在销产品数量": 1, "累计销售金额": 0.0, "目标销售金额": 6340.43, "销售费用": 1147.81, "年市场规模": 100.0, "医院等级": "其他", "完成率": 0.0, "费用率": 0.0, "产品列表": ["注射用谷胱甘肽", "盐酸二甲双胍片", "盐酸二甲双胍缓释片", "阿法骨化醇片"]}, {"终端名称": "忠县乌杨街道卫生院", "区": "忠县", "产品数": 1, "在销产品数量": 1, "累计销售金额": 96.0, "目标销售金额": 0.0, "销售费用": 0.0, "年市场规模": 0.0, "医院等级": "一级", "完成率": 0.0, "费用率": 0.0, "产品列表": ["阿卡波糖片"]}, {"终端名称": "忠县任家镇卫生院", "区": "忠县", "产品数": 4, "在销产品数量": 2, "累计销售金额": 941.0, "目标销售金额": 5849.78, "销售费用": 3003.13, "年市场规模": 0.0, "医院等级": "一级", "完成率": 16.09, "费用率": 0.0, "产品列表": ["注射用泮托拉唑钠", "盐酸二甲双胍缓释片", "阿卡波糖片", "阿托伐他汀钙片"]}, {"终端名称": "忠县兴峰乡卫生院", "区": "忠县", "产品数": 1, "在销产品数量": 0, "累计销售金额": 0.0, "目标销售金额": 253.71, "销售费用": 120.71, "年市场规模": 0.0, "医院等级": "其他", "完成率": 0.0, "费用率": 0.0, "产品列表": ["氯化钾缓释片"]}, {"终端名称": "忠县双桂镇卫生院", "区": "忠县", "产品数": 2, "在销产品数量": 2, "累计销售金额": 1141.0, "目标销售金额": 3417.81, "销售费用": 0.0, "年市场规模": 0.0, "医院等级": "其他", "完成率": 33.38, "费用率": 0.0, "产品列表": ["恩替卡韦片", "苯磺酸氨氯地平片"]}, {"终端名称": "忠县善广乡卫生院", "区": "忠县", "产品数": 1, "在销产品数量": 0, "累计销售金额": 0.0, "目标销售金额": 2130.69, "销售费用": 0.0, "年市场规模": 0.0, "医院等级": "其他", "完成率": 0.0, "费用率": 0.0, "产品列表": ["吲达帕胺片"]}, {"终端名称": "忠县复兴镇卫生院", "区": "忠县", "产品数": 4, "在销产品数量": 4, "累计销售金额": 1476.82, "目标销售金额": 2149.18, "销售费用": 25.23, "年市场规模": 4082.0, "医院等级": "其他", "完成率": 68.72, "费用率": 7.4, "产品列表": ["注射用水溶性维生素", "注射用谷胱甘肽", "炎琥宁80mg", "阿法骨化醇片"]}, {"终端名称": "忠县妇幼保健院", "区": "忠县", "产品数": 4, "在销产品数量": 4, "累计销售金额": 480.48, "目标销售金额": 10472.89, "销售费用": 489.41, "年市场规模": 16660.0, "医院等级": "二级", "完成率": 4.59, "费用率": 0.0, "产品列表": ["注射用谷胱甘肽", "炎琥宁80mg", "谷胱甘肽片0.1g", "阿卡波糖片"]}, {"终端名称": "忠县官坝中心卫生院", "区": "忠县", "产品数": 8, "在销产品数量": 2, "累计销售金额": 3164.24, "目标销售金额": 42067.25, "销售费用": 16587.45, "年市场规模": 5660.0, "医院等级": "一级", "完成率": 7.52, "费用率": 25.26, "产品列表": ["吲达帕胺片", "氯化钾缓释片", "注射用奥美拉唑钠", "炎琥宁80mg", "琥珀酸美托洛尔缓释片", "盐酸二甲双胍片", "盐酸二甲双胍缓释片", "盐酸度洛西汀肠溶胶囊"]}, {"终端名称": "忠县新生街道卫生院", "区": "忠县", "产品数": 2, "在销产品数量": 1, "累计销售金额": 263.72, "目标销售金额": 13921.76, "销售费用": 987.2, "年市场规模": 15000.0, "医院等级": "一级", "完成率": 1.89, "费用率": 7.4, "产品列表": ["炎琥宁80mg", "阿法骨化醇片"]}, {"终端名称": "忠县新立中心卫生院", "区": "忠县", "产品数": 3, "在销产品数量": 2, "累计销售金额": 31935.58, "目标销售金额": 19952.42, "销售费用": 2855.69, "年市场规模": 24280.0, "医院等级": "一级", "完成率": 160.06, "费用率": 18.67, "产品列表": ["炎琥宁80mg", "苯磺酸氨氯地平片", "阿法骨化醇片"]}, {"终端名称": "忠县永丰镇卫生院", "区": "忠县", "产品数": 8, "在销产品数量": 6, "累计销售金额": 3983.0, "目标销售金额": 16849.75, "销售费用": 1867.96, "年市场规模": 19150.0, "医院等级": "其他", "完成率": 23.64, "费用率": 1.1, "产品列表": ["恩替卡韦片", "氯化钾缓释片", "氯化钾颗粒", "注射用泮托拉唑钠", "炎琥宁80mg", "盐酸二甲双胍缓释片", "苯磺酸氨氯地平片", "阿卡波糖片"]}, {"终端名称": "忠县汝溪中心卫生院", "区": "忠县", "产品数": 1, "在销产品数量": 1, "累计销售金额": 0.0, "目标销售金额": 3779.07, "销售费用": 0.0, "年市场规模": 0.0, "医院等级": "一级", "完成率": 0.0, "费用率": 0.0, "产品列表": ["注射用二氯醋酸二异丙胺"]}, {"终端名称": "忠县洋渡镇卫生院", "区": "忠县", "产品数": 1, "在销产品数量": 0, "累计销售金额": 0.0, "目标销售金额": 916.31, "销售费用": 381.47, "年市场规模": 0.0, "医院等级": "其他", "完成率": 0.0, "费用率": 0.0, "产品列表": ["盐酸二甲双胍缓释片"]}, {"终端名称": "忠县涂井乡卫生院", "区": "忠县", "产品数": 2, "在销产品数量": 1, "累计销售金额": 0.0, "目标销售金额": 1026.92, "销售费用": 243.65, "年市场规模": 0.0, "医院等级": "其他", "完成率": 0.0, "费用率": 0.0, "产品列表": ["氯化钾颗粒", "注射用泮托拉唑钠"]}, {"终端名称": "忠县白石中心卫生院", "区": "忠县", "产品数": 2, "在销产品数量": 2, "累计销售金额": 6147.0, "目标销售金额": 3578.42, "销售费用": 0.0, "年市场规模": 0.0, "医院等级": "一级", "完成率": 171.78, "费用率": 0.0, "产品列表": ["注射用二氯醋酸二异丙胺", "苯磺酸氨氯地平片"]}, {"终端名称": "忠县石子乡卫生院", "区": "忠县", "产品数": 4, "在销产品数量": 1, "累计销售金额": 474.69, "目标销售金额": 1487.67, "销售费用": 467.19, "年市场规模": 7000.0, "医院等级": "其他", "完成率": 31.91, "费用率": 7.4, "产品列表": ["氯化钾缓释片", "炎琥宁80mg", "琥珀酸美托洛尔缓释片", "盐酸二甲双胍缓释片"]}, {"终端名称": "忠县石宝中心卫生院", "区": "忠县", "产品数": 4, "在销产品数量": 3, "累计销售金额": 10660.45, "目标销售金额": 69519.6, "销售费用": 16734.17, "年市场规模": 1800.0, "医院等级": "一级", "完成率": 15.33, "费用率": 3.08, "产品列表": ["炎琥宁80mg", "盐酸二甲双胍缓释片", "苯磺酸氨氯地平片", "谷胱甘肽片0.1g"]}, {"终端名称": "忠县石黄镇卫生院", "区": "忠县", "产品数": 3, "在销产品数量": 1, "累计销售金额": 0.0, "目标销售金额": 4038.15, "销售费用": 696.19, "年市场规模": 0.0, "医院等级": "其他", "完成率": 0.0, "费用率": 0.0, "产品列表": ["氯化钾缓释片", "琥珀酸美托洛尔缓释片", "苯磺酸氨氯地平片"]}, {"终端名称": "忠县磨子土家族乡卫生院", "区": "忠县", "产品数": 4, "在销产品数量": 2, "累计销售金额": 0.0, "目标销售金额": 6964.62, "销售费用": 409.54, "年市场规模": 5200.0, "医院等级": "一级", "完成率": 0.0, "费用率": 0.0, "产品列表": ["注射用泮托拉唑钠", "注射用谷胱甘肽", "谷胱甘肽片0.1g", "阿法骨化醇片"]}, {"终端名称": "忠县花桥镇卫生院", "区": "忠县", "产品数": 1, "在销产品数量": 1, "累计销售金额": 738.41, "目标销售金额": 1074.42, "销售费用": 94.62, "年市场规模": 10440.0, "医院等级": "一级", "完成率": 68.73, "费用率": 7.4, "产品列表": ["炎琥宁80mg"]}, {"终端名称": "忠县野鹤镇卫生院", "区": "忠县", "产品数": 4, "在销产品数量": 1, "累计销售金额": 74.0, "目标销售金额": 1499.26, "销售费用": 112.57, "年市场规模": 0.0, "医院等级": "一级", "完成率": 4.94, "费用率": 0.0, "产品列表": ["恩替卡韦片", "盐酸二甲双胍片", "阿卡波糖片", "阿法骨化醇片"]}, {"终端名称": "忠县金声乡卫生院", "区": "忠县", "产品数": 2, "在销产品数量": 2, "累计销售金额": 2257.0, "目标销售金额": 2578.62, "销售费用": 227.09, "年市场规模": 3148.0, "医院等级": "其他", "完成率": 87.53, "费用率": 0.0, "产品列表": ["炎琥宁80mg", "阿卡波糖片"]}, {"终端名称": "忠县金鸡镇卫生院", "区": "忠县", "产品数": 4, "在销产品数量": 2, "累计销售金额": 655.0, "目标销售金额": 4903.17, "销售费用": 2121.93, "年市场规模": 7300.0, "医院等级": "其他", "完成率": 13.36, "费用率": 0.0, "产品列表": ["富马酸替诺福韦二吡呋酯片", "炎琥宁80mg", "盐酸二甲双胍片", "盐酸二甲双胍缓释片"]}, {"终端名称": "忠县马灌中心卫生院", "区": "忠县", "产品数": 3, "在销产品数量": 2, "累计销售金额": 4205.0, "目标销售金额": 35207.06, "销售费用": 6529.67, "年市场规模": 13460.0, "医院等级": "一级", "完成率": 11.94, "费用率": 0.0, "产品列表": ["炎琥宁80mg", "盐酸二甲双胍缓释片", "苯磺酸氨氯地平片"]}, {"终端名称": "忠县黄金镇卫生院（忠县黄金中心卫生院）", "区": "忠县", "产品数": 3, "在销产品数量": 3, "累计销售金额": 1527.61, "目标销售金额": 4387.24, "销售费用": 0.0, "年市场规模": 10160.0, "医院等级": "其他", "完成率": 34.82, "费用率": 0.0, "产品列表": ["恩替卡韦片", "注射用谷胱甘肽", "炎琥宁80mg"]}, {"终端名称": "重庆三峡民康医院", "区": "忠县", "产品数": 4, "在销产品数量": 3, "累计销售金额": 744.0, "目标销售金额": 5656.46, "销售费用": 1155.87, "年市场规模": 5460.0, "医院等级": "二级", "完成率": 13.15, "费用率": 0.0, "产品列表": ["恩替卡韦片", "氯化钾缓释片", "炎琥宁80mg", "盐酸度洛西汀肠溶胶囊"]}, {"终端名称": "重庆市忠县中医医院", "区": "忠县", "产品数": 7, "在销产品数量": 7, "累计销售金额": 112630.6, "目标销售金额": 353577.59, "销售费用": 86845.56, "年市场规模": 32500.0, "医院等级": "二甲", "完成率": 31.85, "费用率": 17.93, "产品列表": ["富马酸替诺福韦二吡呋酯片", "恩替卡韦片", "注射用二氯醋酸二异丙胺", "炎琥宁80mg", "甲苯磺酸索拉非尼片", "苯磺酸氨氯地平片", "阿法骨化醇片"]}, {"终端名称": "重庆市忠县人民医院", "区": "忠县", "产品数": 10, "在销产品数量": 10, "累计销售金额": 298784.38, "目标销售金额": 2241221.51, "销售费用": 431271.09, "年市场规模": 92580.0, "医院等级": "三级", "完成率": 13.33, "费用率": 23.01, "产品列表": ["依匹斯汀10mg", "氯化钾颗粒", "注射用二氯醋酸二异丙胺", "注射用谷胱甘肽", "炎琥宁80mg", "甲苯磺酸索拉非尼片", "盐酸度洛西汀肠溶胶囊", "谷胱甘肽片0.1g", "阿卡波糖片", "阿法骨化醇片"]}, {"终端名称": "重庆市忠县忠州街道社区卫生服务中心", "区": "忠县", "产品数": 1, "在销产品数量": 1, "累计销售金额": 0.0, "目标销售金额": 311.48, "销售费用": 0.0, "年市场规模": 0.0, "医院等级": "一级", "完成率": 0.0, "费用率": 0.0, "产品列表": ["苯磺酸氨氯地平片"]}, {"终端名称": "重庆市忠县白公街道社区卫生服务中心", "区": "忠县", "产品数": 2, "在销产品数量": 2, "累计销售金额": 41459.36, "目标销售金额": 17321.95, "销售费用": 851.58, "年市场规模": 12450.0, "医院等级": "其他", "完成率": 239.35, "费用率": 1.27, "产品列表": ["炎琥宁80mg", "阿卡波糖片"]}], "products": [{"药品名称": "依匹斯汀10mg", "产品分类": "品牌品", "终端数": 1, "在销终端数": 1, "累计销售金额": 154215.0, "目标销售金额": 643767.08, "当前销量": 54000.0, "目标销量": 222600.0, "销售费用": 66312.45, "年市场规模": 0.0, "完成率": 23.96, "费用率": 43.0, "在销终端": "重庆市忠县人民医院", "终端列表": ["重庆市忠县人民医院"]}, {"药品名称": "吲达帕胺片", "产品分类": "商销品", "终端数": 2, "在销终端数": 0, "累计销售金额": 0.0, "目标销售金额": 3335.24, "当前销量": 0.0, "目标销量": 45081.6, "销售费用": 0.0, "年市场规模": 0.0, "完成率": 0.0, "费用率": 0.0, "在销终端": "忠县善广乡卫生院|忠县官坝中心卫生院", "终端列表": ["忠县善广乡卫生院", "忠县官坝中心卫生院"]}, {"药品名称": "富马酸替诺福韦二吡呋酯片", "产品分类": "商销品", "终端数": 2, "在销终端数": 2, "累计销售金额": 2159.0, "目标销售金额": 1697.38, "当前销量": 6750.0, "目标销量": 5829.6, "销售费用": 0.0, "年市场规模": 0.0, "完成率": 127.2, "费用率": 0.0, "在销终端": "忠县金鸡镇卫生院|重庆市忠县中医医院", "终端列表": ["忠县金鸡镇卫生院", "重庆市忠县中医医院"]}, {"药品名称": "恩替卡韦片", "产品分类": "商销品", "终端数": 6, "在销终端数": 6, "累计销售金额": 4215.0, "目标销售金额": 8255.09, "当前销量": 26235.0, "目标销量": 59390.4, "销售费用": 0.0, "年市场规模": 0.0, "完成率": 51.06, "费用率": 0.0, "在销终端": "忠县双桂镇卫生院|忠县永丰镇卫生院|忠县野鹤镇卫生院|忠县黄金镇卫生院（忠县黄金中心卫生院）|重庆三峡民康医院|重庆市忠县中医医院", "终端列表": ["忠县双桂镇卫生院", "忠县永丰镇卫生院", "忠县野鹤镇卫生院", "忠县黄金镇卫生院（忠县黄金中心卫生院）", "重庆三峡民康医院", "重庆市忠县中医医院"]}, {"药品名称": "氯化钾缓释片", "产品分类": "商销品", "终端数": 6, "在销终端数": 0, "累计销售金额": 0.0, "目标销售金额": 12032.87, "当前销量": 0.0, "目标销量": 51392.4, "销售费用": 5725.11, "年市场规模": 0.0, "完成率": 0.0, "费用率": 40.0, "在销终端": "忠县兴峰乡卫生院|忠县官坝中心卫生院|忠县永丰镇卫生院|忠县石子乡卫生院|忠县石黄镇卫生院|重庆三峡民康医院", "终端列表": ["忠县兴峰乡卫生院", "忠县官坝中心卫生院", "忠县永丰镇卫生院", "忠县石子乡卫生院", "忠县石黄镇卫生院", "重庆三峡民康医院"]}, {"药品名称": "氯化钾颗粒", "产品分类": "商销品", "终端数": 3, "在销终端数": 3, "累计销售金额": 0.0, "目标销售金额": 226.78, "当前销量": 0.0, "目标销量": 830.0, "销售费用": 0.0, "年市场规模": 0.0, "完成率": 0.0, "费用率": 0.0, "在销终端": "忠县永丰镇卫生院|忠县涂井乡卫生院|重庆市忠县人民医院", "终端列表": ["忠县永丰镇卫生院", "忠县涂井乡卫生院", "重庆市忠县人民医院"]}, {"药品名称": "注射用二氯醋酸二异丙胺", "产品分类": "商销品", "终端数": 4, "在销终端数": 4, "累计销售金额": 31349.0, "目标销售金额": 113057.23, "当前销量": 1530.0, "目标销量": 17950.0, "销售费用": 0.0, "年市场规模": 0.0, "完成率": 27.73, "费用率": 0.0, "在销终端": "忠县汝溪中心卫生院|忠县白石中心卫生院|重庆市忠县中医医院|重庆市忠县人民医院", "终端列表": ["忠县汝溪中心卫生院", "忠县白石中心卫生院", "重庆市忠县中医医院", "重庆市忠县人民医院"]}, {"药品名称": "注射用奥美拉唑钠", "产品分类": "商销品", "终端数": 1, "在销终端数": 0, "累计销售金额": 0.0, "目标销售金额": 1978.35, "当前销量": 0.0, "目标销量": 2353.2, "销售费用": 705.96, "年市场规模": 0.0, "完成率": 0.0, "费用率": 30.0, "在销终端": "忠县官坝中心卫生院", "终端列表": ["忠县官坝中心卫生院"]}, {"药品名称": "注射用水溶性维生素", "产品分类": "商销品", "终端数": 1, "在销终端数": 1, "累计销售金额": 0.0, "目标销售金额": 372.91, "当前销量": 0.0, "目标销量": 180.0, "销售费用": 0.0, "年市场规模": 0.0, "完成率": 0.0, "费用率": 0.0, "在销终端": "忠县复兴镇卫生院", "终端列表": ["忠县复兴镇卫生院"]}, {"药品名称": "注射用泮托拉唑钠", "产品分类": "商销品", "终端数": 4, "在销终端数": 2, "累计销售金额": 363.0, "目标销售金额": 2745.68, "当前销量": 240.0, "目标销量": 1814.4, "销售费用": 653.18, "年市场规模": 0.0, "完成率": 13.22, "费用率": 20.0, "在销终端": "忠县任家镇卫生院|忠县永丰镇卫生院|忠县涂井乡卫生院|忠县磨子土家族乡卫生院", "终端列表": ["忠县任家镇卫生院", "忠县永丰镇卫生院", "忠县涂井乡卫生院", "忠县磨子土家族乡卫生院"]}, {"药品名称": "注射用谷胱甘肽", "产品分类": "品牌品", "终端数": 6, "在销终端数": 6, "累计销售金额": 31371.6, "目标销售金额": 75435.97, "当前销量": 3830.0, "目标销量": 13160.04, "销售费用": 0.0, "年市场规模": 11932.0, "完成率": 41.59, "费用率": 0.0, "在销终端": "忠县东溪中心卫生院|忠县复兴镇卫生院|忠县妇幼保健院|忠县磨子土家族乡卫生院|忠县黄金镇卫生院（忠县黄金中心卫生院）|重庆市忠县人民医院", "终端列表": ["忠县东溪中心卫生院", "忠县复兴镇卫生院", "忠县妇幼保健院", "忠县磨子土家族乡卫生院", "忠县黄金镇卫生院（忠县黄金中心卫生院）", "重庆市忠县人民医院"]}, {"药品名称": "炎琥宁80mg", "产品分类": "品牌品", "终端数": 17, "在销终端数": 17, "累计销售金额": 22208.27, "目标销售金额": 109877.84, "当前销量": 7970.0, "目标销量": 30680.0, "销售费用": 9488.64, "年市场规模": 178948.0, "完成率": 20.21, "费用率": 10.22, "在销终端": "忠县复兴镇卫生院|忠县妇幼保健院|忠县官坝中心卫生院|忠县新生街道卫生院|忠县新立中心卫生院|忠县永丰镇卫生院|忠县石子乡卫生院|忠县石宝中心卫生院|忠县花桥镇卫生院|忠县金声乡卫生院|忠县金鸡镇卫生院|忠县马灌中心卫生院|忠县黄金镇卫生院（忠县黄金中心卫生院）|重庆三峡民康医院|重庆市忠县中医医院|重庆市忠县人民医院|重庆市忠县白公街道社区卫生服务中心", "终端列表": ["忠县复兴镇卫生院", "忠县妇幼保健院", "忠县官坝中心卫生院", "忠县新生街道卫生院", "忠县新立中心卫生院", "忠县永丰镇卫生院", "忠县石子乡卫生院", "忠县石宝中心卫生院", "忠县花桥镇卫生院", "忠县金声乡卫生院", "忠县金鸡镇卫生院", "忠县马灌中心卫生院", "忠县黄金镇卫生院（忠县黄金中心卫生院）", "重庆三峡民康医院", "重庆市忠县中医医院", "重庆市忠县人民医院", "重庆市忠县白公街道社区卫生服务中心"]}, {"药品名称": "琥珀酸美托洛尔缓释片", "产品分类": "商销品", "终端数": 3, "在销终端数": 0, "累计销售金额": 0.0, "目标销售金额": 4748.8, "当前销量": 0.0, "目标销量": 13095.6, "销售费用": 2259.43, "年市场规模": 0.0, "完成率": 0.0, "费用率": 40.0, "在销终端": "忠县官坝中心卫生院|忠县石子乡卫生院|忠县石黄镇卫生院", "终端列表": ["忠县官坝中心卫生院", "忠县石子乡卫生院", "忠县石黄镇卫生院"]}, {"药品名称": "甲苯磺酸索拉非尼片", "产品分类": "代理品", "终端数": 2, "在销终端数": 2, "累计销售金额": 7761.6, "目标销售金额": 1636121.36, "当前销量": 1680.0, "目标销量": 219000.0, "销售费用": 443475.0, "年市场规模": 0.0, "完成率": 0.47, "费用率": 25.0, "在销终端": "重庆市忠县中医医院|重庆市忠县人民医院", "终端列表": ["重庆市忠县中医医院", "重庆市忠县人民医院"]}, {"药品名称": "盐酸二甲双胍片", "产品分类": "商销品", "终端数": 4, "在销终端数": 0, "累计销售金额": 0.0, "目标销售金额": 5406.8, "当前销量": 0.0, "目标销量": 73082.4, "销售费用": 2572.5, "年市场规模": 0.0, "完成率": 0.0, "费用率": 40.0, "在销终端": "忠县东溪中心卫生院|忠县官坝中心卫生院|忠县野鹤镇卫生院|忠县金鸡镇卫生院", "终端列表": ["忠县东溪中心卫生院", "忠县官坝中心卫生院", "忠县野鹤镇卫生院", "忠县金鸡镇卫生院"]}, {"药品名称": "盐酸二甲双胍缓释片", "产品分类": "商销品", "终端数": 9, "在销终端数": 0, "累计销售金额": 0.0, "目标销售金额": 75431.58, "当前销量": 0.0, "目标销量": 766870.8, "销售费用": 31403.36, "年市场规模": 0.0, "完成率": 0.0, "费用率": 35.0, "在销终端": "忠县东溪中心卫生院|忠县任家镇卫生院|忠县官坝中心卫生院|忠县永丰镇卫生院|忠县洋渡镇卫生院|忠县石子乡卫生院|忠县石宝中心卫生院|忠县金鸡镇卫生院|忠县马灌中心卫生院", "终端列表": ["忠县东溪中心卫生院", "忠县任家镇卫生院", "忠县官坝中心卫生院", "忠县永丰镇卫生院", "忠县洋渡镇卫生院", "忠县石子乡卫生院", "忠县石宝中心卫生院", "忠县金鸡镇卫生院", "忠县马灌中心卫生院"]}, {"药品名称": "盐酸度洛西汀肠溶胶囊", "产品分类": "品牌品", "终端数": 3, "在销终端数": 3, "累计销售金额": 412.08, "目标销售金额": 832.86, "当前销量": 1020.0, "目标销量": 2059.6, "销售费用": 0.0, "年市场规模": 0.0, "完成率": 49.48, "费用率": 0.0, "在销终端": "忠县官坝中心卫生院|重庆三峡民康医院|重庆市忠县人民医院", "终端列表": ["忠县官坝中心卫生院", "重庆三峡民康医院", "重庆市忠县人民医院"]}, {"药品名称": "苯磺酸氨氯地平片", "产品分类": "商销品", "终端数": 9, "在销终端数": 9, "累计销售金额": 142475.0, "目标销售金额": 100048.71, "当前销量": 566160.0, "目标销量": 1349048.0, "销售费用": 9489.88, "年市场规模": 0.0, "完成率": 142.41, "费用率": 20.0, "在销终端": "忠县双桂镇卫生院|忠县新立中心卫生院|忠县永丰镇卫生院|忠县白石中心卫生院|忠县石宝中心卫生院|忠县石黄镇卫生院|忠县马灌中心卫生院|重庆市忠县中医医院|重庆市忠县忠州街道社区卫生服务中心", "终端列表": ["忠县双桂镇卫生院", "忠县新立中心卫生院", "忠县永丰镇卫生院", "忠县白石中心卫生院", "忠县石宝中心卫生院", "忠县石黄镇卫生院", "忠县马灌中心卫生院", "重庆市忠县中医医院", "重庆市忠县忠州街道社区卫生服务中心"]}, {"药品名称": "谷胱甘肽片0.1g", "产品分类": "品牌品", "终端数": 4, "在销终端数": 4, "累计销售金额": 44560.8, "目标销售金额": 0.0, "当前销量": 34740.0, "目标销量": 0.0, "销售费用": 0.0, "年市场规模": 0.0, "完成率": 0.0, "费用率": 0.0, "在销终端": "忠县妇幼保健院|忠县石宝中心卫生院|忠县磨子土家族乡卫生院|重庆市忠县人民医院", "终端列表": ["忠县妇幼保健院", "忠县石宝中心卫生院", "忠县磨子土家族乡卫生院", "重庆市忠县人民医院"]}, {"药品名称": "阿卡波糖片", "产品分类": "商销品", "终端数": 5, "在销终端数": 4, "累计销售金额": 53004.0, "目标销售金额": 19974.8, "当前销量": 396750.0, "目标销量": 156621.6, "销售费用": 586.3, "年市场规模": 0.0, "完成率": 265.35, "费用率": 4.0, "在销终端": "忠县妇幼保健院|忠县永丰镇卫生院|忠县野鹤镇卫生院|重庆市忠县人民医院|重庆市忠县白公街道社区卫生服务中心", "终端列表": ["忠县妇幼保健院", "忠县永丰镇卫生院", "忠县野鹤镇卫生院", "重庆市忠县人民医院", "重庆市忠县白公街道社区卫生服务中心"]}, {"药品名称": "阿托伐他汀钙片", "产品分类": "商销品", "终端数": 1, "在销终端数": 0, "累计销售金额": 0.0, "目标销售金额": 4773.3, "当前销量": 0.0, "目标销量": 38400.0, "销售费用": 2554.97, "年市场规模": 0.0, "完成率": 0.0, "费用率": 45.0, "在销终端": "忠县任家镇卫生院", "终端列表": ["忠县任家镇卫生院"]}, {"药品名称": "阿法骨化醇片", "产品分类": "品牌品", "终端数": 8, "在销终端数": 3, "累计销售金额": 26473.98, "目标销售金额": 62334.55, "当前销量": 46500.0, "目标销量": 111212.4, "销售费用": 0.0, "年市场规模": 95550.0, "完成率": 42.47, "费用率": 0.0, "在销终端": "忠县东溪中心卫生院|忠县复兴镇卫生院|忠县新生街道卫生院|忠县新立中心卫生院|忠县磨子土家族乡卫生院|忠县野鹤镇卫生院|重庆市忠县中医医院|重庆市忠县人民医院", "终端列表": ["忠县东溪中心卫生院", "忠县复兴镇卫生院", "忠县新生街道卫生院", "忠县新立中心卫生院", "忠县磨子土家族乡卫生院", "忠县野鹤镇卫生院", "重庆市忠县中医医院", "重庆市忠县人民医院"]}]}};
+
+let currentSlice = '全部';
+let pieChart, progressChart;
+
+// ======= 工具函数 =======
+function fmt(n, digit=0) {
+  if (n === null || n === undefined || n === '') return '—';
+  const v = parseFloat(n);
+  if (isNaN(v)) return '—';
+  return v.toLocaleString('zh-CN', {minimumFractionDigits: digit, maximumFractionDigits: digit});
+}
+
+function fmtWan(n) {
+  if (!n && n !== 0) return '—';
+  const v = parseFloat(n);
+  if (isNaN(v)) return '—';
+  if (Math.abs(v) >= 10000) return (v / 10000).toFixed(2) + '万';
+  return v.toFixed(2);
+}
+
+function rateColor(r) {
+  if (r >= 80) return '#2E7D32';
+  if (r >= 50) return '#F9A825';
+  if (r >= 20) return '#E65100';
+  return '#C62828';
+}
+
+function getRateClass(r) {
+  if (r >= 80) return 'good';
+  if (r >= 40) return 'warn';
+  return 'bad';
+}
+
+function badgeHtml(type) {
+  const map = {
+    '品牌品': '<span class="badge badge-brand">品牌品</span>',
+    '商销品': '<span class="badge badge-comm">商销品</span>',
+    '代理品': '<span class="badge badge-agent">代理品</span>',
+  };
+  return map[type] || type;
+}
+
+function rateBarHtml(rate, color) {
+  const w = Math.min(parseFloat(rate) || 0, 100);
+  return `<div class="rate-bar"><div class="rate-track"><div class="rate-fill" style="width:${w}%;background:${color}"></div></div><span style="color:${color};font-weight:600">${rate}%</span></div>`;
+}
+
+// ======= 切换切片 =======
+function switchSlice(name) {
+  currentSlice = name;
+  document.querySelectorAll('.slicer-btn').forEach(b => {
+    b.classList.toggle('active', b.textContent.trim() === name);
+  });
+  renderAll();
+}
+
+// ======= 渲染KPI卡片 =======
+function renderKPI() {
+  const d = DASHBOARD_DATA[currentSlice];
+  const s = d.stats;
+  document.getElementById('kpi-target').textContent = fmtWan(s.total_target);
+  document.getElementById('kpi-target').style.color = '#1565C0';
+  document.getElementById('kpi-sales').textContent = fmtWan(s.total_sales);
+  document.getElementById('kpi-sales').style.color = '#0277BD';
+  
+  const rEl = document.getElementById('kpi-rate');
+  rEl.textContent = s.completion_rate + '%';
+  rEl.className = 'kpi-value';
+  rEl.style.color = rateColor(s.completion_rate);
+  document.getElementById('kpi-rate-tag').innerHTML = `<span class="kpi-tag ${getRateClass(s.completion_rate)}">${s.completion_rate >= 80 ? '良好' : s.completion_rate >= 40 ? '一般' : '待提升'}</span>`;
+
+  document.getElementById('kpi-terminal').textContent = s.total_terminals + ' / ' + s.active_terminals;
+  document.getElementById('kpi-terminal').style.color = '#E65100';
+  document.getElementById('kpi-terminal-rate').textContent = `在销率 ${(s.active_terminals/s.total_terminals*100).toFixed(1)}%`;
+  document.getElementById('kpi-products').textContent = s.active_products;
+  document.getElementById('kpi-products').style.color = '#7B1FA2';
+  document.getElementById('kpi-fee').textContent = fmtWan(s.total_fee);
+  document.getElementById('kpi-fee').style.color = '#C62828';
+  document.getElementById('kpi-fee-rate').textContent = `费用率 ${s.fee_rate}%`;
+}
+
+// ======= 渲染饼图 =======
+function renderPie() {
+  if (!pieChart) {
+    pieChart = echarts.init(document.getElementById('pieChart'));
+  }
+  const d = DASHBOARD_DATA[currentSlice];
+  const bt = d.by_type;
+  const colors = ['#1976D2', '#0288D1', '#7B1FA2'];
+  const types = ['品牌品', '商销品', '代理品'];
+  const pieData = types.map((t, i) => ({
+    name: t,
+    value: bt[t].sales,
+    itemStyle: { color: colors[i] }
+  }));
+  pieChart.setOption({
+    backgroundColor: 'transparent',
+    tooltip: {
+      trigger: 'item',
+      formatter: p => `${p.name}<br/>销售金额：${fmtWan(p.value)}<br/>占比：${p.percent}%`
+    },
+    legend: {
+      bottom: 0,
+      textStyle: { color: '#5c7a9a', fontSize: 11 },
+      itemWidth: 10, itemHeight: 10,
+    },
+    series: [{
+      type: 'pie',
+      radius: ['38%', '68%'],
+      center: ['50%', '42%'],
+      avoidLabelOverlap: true,
+      label: {
+        show: true,
+        formatter: p => `${p.percent.toFixed(1)}%`,
+        color: '#1a2a3a', fontSize: 11
+      },
+      labelLine: { lineStyle: { color: 'rgba(90,120,160,0.4)' } },
+      data: pieData,
+    }]
+  });
+
+  // 类型金额明细
+  const html = types.map((t, i) => {
+    const info = bt[t];
+    return `<div style="display:flex;align-items:center;justify-content:space-between;padding:3px 0;border-bottom:1px solid #f0f4f8;">
+      <span style="color:${colors[i]};font-weight:600;font-size:11px;min-width:50px;">${t}</span>
+      <span style="color:#1a2a3a;font-size:11px;font-weight:600;">${fmtWan(info.sales)}</span>
+      <span style="color:#7a93aa;font-size:10px;">目标 ${fmtWan(info.target)}</span>
+      <span style="color:${rateColor(info.completion)};font-size:11px;font-weight:600;">${info.completion}%</span>
+    </div>`;
+  }).join('');
+  document.getElementById('typeDetail').innerHTML = html;
+}
+
+// ======= 渲染进度柱状图 =======
+function renderProgress() {
+  if (!progressChart) {
+    progressChart = echarts.init(document.getElementById('progressChart'));
+  }
+  const d = DASHBOARD_DATA[currentSlice];
+  const bt = d.by_type;
+  const types = ['品牌品', '商销品', '代理品'];
+  const colors = { '品牌品': '#1976D2', '商销品': '#0288D1', '代理品': '#7B1FA2' };
+
+  const option = {
+    backgroundColor: 'transparent',
+    tooltip: {
+      trigger: 'axis',
+      axisPointer: { type: 'shadow' },
+      backgroundColor: '#fff',
+      borderColor: '#dde6f0',
+      textStyle: { color: '#1a2a3a' },
+      formatter: params => {
+        let s = `<b>${params[0].axisValue}</b><br/>`;
+        params.forEach(p => {
+          s += `${p.marker}${p.seriesName}：${fmtWan(p.value)}<br/>`;
+        });
+        return s;
+      }
+    },
+    legend: {
+      data: ['目标金额', '完成金额'],
+      bottom: 0,
+      textStyle: { color: '#5c7a9a', fontSize: 11 },
+      itemWidth: 10, itemHeight: 10,
+    },
+    grid: { left: '3%', right: '4%', bottom: '18%', top: '6%', containLabel: true },
+    xAxis: {
+      type: 'category',
+      data: types,
+      axisLine: { lineStyle: { color: '#dde6f0' } },
+      axisLabel: { color: '#5c7a9a', fontSize: 12 },
+    },
+    yAxis: {
+      type: 'value',
+      axisLabel: {
+        color: '#5c7a9a', fontSize: 10,
+        formatter: v => fmtWan(v)
+      },
+      splitLine: { lineStyle: { color: '#f0f4f8' } },
+    },
+    series: [
+      {
+        name: '目标金额',
+        type: 'bar',
+        barGap: '10%',
+        barMaxWidth: 40,
+        data: types.map(t => bt[t].target),
+        itemStyle: {
+          color: p => {
+            const c = {'品牌品':'#1976D2','商销品':'#0288D1','代理品':'#7B1FA2'}[types[p.dataIndex]];
+            return { type:'linear', x:0,y:0,x2:0,y2:1, colorStops:[{offset:0,color:c+'40'},{offset:1,color:c+'15'}] };
+          },
+          borderRadius: [4,4,0,0],
+          borderColor: p => ({'品牌品':'#1976D2','商销品':'#0288D1','代理品':'#7B1FA2'}[types[p.dataIndex]]),
+          borderWidth: 1,
+        },
+        label: { show: false },
+      },
+      {
+        name: '完成金额',
+        type: 'bar',
+        barMaxWidth: 40,
+        data: types.map(t => bt[t].sales),
+        itemStyle: {
+          color: p => {
+            const c = {'品牌品':'#1976D2','商销品':'#0288D1','代理品':'#7B1FA2'}[types[p.dataIndex]];
+            return { type:'linear', x:0,y:0,x2:0,y2:1, colorStops:[{offset:0,color:c},{offset:1,color:c+'cc'}] };
+          },
+          borderRadius: [4,4,0,0],
+        },
+        label: {
+          show: true,
+          position: 'top',
+          formatter: p => {
+            const t = types[p.dataIndex];
+            return bt[t].completion + '%';
+          },
+          color: p => rateColor(bt[types[p.dataIndex]].completion),
+          fontSize: 11,
+          fontWeight: 600,
+        }
+      }
+    ]
+  };
+  progressChart.setOption(option, true);
+}
+
+// ======= 渲染终端表格 =======
+function renderTerminalTable() {
+  const d = DASHBOARD_DATA[currentSlice];
+  const search = (document.getElementById('terminalSearch').value || '').trim().toLowerCase();
+  const productSearch = (document.getElementById('productFilter').value || '').trim().toLowerCase();
+  const grade = document.getElementById('gradeFilter').value;
+  let rows = d.terminals.filter(r => {
+    if (search && !r['终端名称'].toLowerCase().includes(search)) return false;
+    if (grade && r['医院等级'] !== grade) return false;
+    // 按产品筛选
+    if (productSearch) {
+      const products = r['产品列表'] || [];
+      const matchProduct = products.some(p => p.toLowerCase().includes(productSearch));
+      if (!matchProduct) return false;
+    }
+    return true;
+  });
+  rows.sort((a, b) => b['累计销售金额'] - a['累计销售金额']);
+  
+  const tbody = document.getElementById('terminalTbody');
+  tbody.innerHTML = rows.map(r => {
+    const cr = parseFloat(r['完成率']) || 0;
+    const fr = parseFloat(r['费用率']) || 0;
+    const activeCount = parseInt(r['在销产品数量']) || 0;
+    const activeClass = activeCount > 0 ? 'color-green' : 'color-muted';
+    return `<tr>
+      <td class="font-bold">${r['终端名称']}</td>
+      <td>${r['区']}</td>
+      <td><span style="color:#1565C0;font-size:11px;background:#EBF3FB;padding:1px 5px;border-radius:3px;">${r['医院等级'] || '—'}</span></td>
+      <td class="text-right ${activeClass}" style="font-weight:600;">${activeCount > 0 ? activeCount : '—'}</td>
+      <td class="text-right font-bold color-blue">${fmt(r['累计销售金额'], 2)}</td>
+      <td class="text-right">${fmt(r['目标销售金额'], 2)}</td>
+      <td class="text-right">${rateBarHtml(cr, rateColor(cr))}</td>
+      <td class="text-right">${fmt(r['销售费用'], 2)}</td>
+      <td class="text-right" style="color:${fr > 100 ? '#C62828' : fr > 50 ? '#E65100' : '#2E7D32'};font-weight:600;">${fr > 0 ? fr + '%' : '—'}</td>
+    </tr>`;
+  }).join('');
+  document.getElementById('terminalCount').textContent = `共 ${rows.length} 家终端`;
+}
+
+// ======= 渲染产品表格 =======
+function renderProductTable() {
+  const d = DASHBOARD_DATA[currentSlice];
+  const search = (document.getElementById('productSearch').value || '').trim().toLowerCase();
+  const terminalSearch = (document.getElementById('terminalFilter').value || '').trim().toLowerCase();
+  const type = document.getElementById('typeFilter').value;
+  let rows = d.products.filter(r => {
+    if (search && !r['药品名称'].toLowerCase().includes(search)) return false;
+    if (type && r['产品分类'] !== type) return false;
+    // 按终端筛选
+    if (terminalSearch) {
+      const terminals = r['终端列表'] || [];
+      const matchTerminal = terminals.some(t => t.toLowerCase().includes(terminalSearch));
+      if (!matchTerminal) return false;
+    }
+    return true;
+  });
+  rows.sort((a, b) => b['累计销售金额'] - a['累计销售金额']);
+  
+  const tbody = document.getElementById('productTbody');
+  tbody.innerHTML = rows.map(r => {
+    const cr = parseFloat(r['完成率']) || 0;
+    const fr = parseFloat(r['费用率']) || 0;
+    const activeTerminals = parseInt(r['在销终端数']) || 0;
+    const activeClass = activeTerminals > 0 ? 'color-green' : 'color-muted';
+    return `<tr>
+      <td class="font-bold">${r['药品名称']}</td>
+      <td class="text-center">${badgeHtml(r['产品分类'])}</td>
+      <td class="text-right">${r['终端数']}</td>
+      <td class="text-right ${activeClass}" style="font-weight:600;">${activeTerminals > 0 ? activeTerminals : '—'}</td>
+      <td class="text-right">${fmt(r['年市场规模'])}</td>
+      <td class="text-right">${fmt(r['当前销量'])}</td>
+      <td class="text-right">${fmt(r['目标销量'])}</td>
+      <td class="text-right font-bold color-blue">${fmt(r['累计销售金额'], 2)}</td>
+      <td class="text-right">${fmt(r['目标销售金额'], 2)}</td>
+      <td class="text-right">${rateBarHtml(cr, rateColor(cr))}</td>
+      <td class="text-right">${fmt(r['销售费用'], 2)}</td>
+      <td class="text-right" style="color:${fr > 100 ? '#C62828' : fr > 50 ? '#E65100' : '#2E7D32'};font-weight:600;">${fr > 0 ? fr + '%' : '—'}</td>
+    </tr>`;
+  }).join('');
+  document.getElementById('productCount').textContent = `共 ${rows.length} 种产品`;
+}
+
+// ======= Tab 切换 =======
+function switchTab(tab) {
+  document.querySelectorAll('.tab-btn').forEach((b, i) => {
+    b.classList.toggle('active', ['terminal','product'][i] === tab);
+  });
+  document.getElementById('tab-terminal').classList.toggle('active', tab === 'terminal');
+  document.getElementById('tab-product').classList.toggle('active', tab === 'product');
+}
+
+// ======= 全部渲染 =======
+function renderAll() {
+  renderKPI();
+  renderPie();
+  renderProgress();
+  renderTerminalTable();
+  renderProductTable();
+}
+
+// ======= 时间 =======
+function updateTime() {
+  const now = new Date();
+  document.getElementById('timeDisplay').textContent =
+    now.toLocaleDateString('zh-CN') + ' ' + now.toLocaleTimeString('zh-CN');
+}
+setInterval(updateTime, 1000);
+updateTime();
+
+// ======= 窗口缩放 =======
+window.addEventListener('resize', () => {
+  if (pieChart) pieChart.resize();
+  if (progressChart) progressChart.resize();
+});
+
+// ======= 初始化 =======
+renderAll();
+</script>
+</body>
+</html>
