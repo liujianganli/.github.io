@@ -1,0 +1,629 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>重庆长寿公司看板</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<style>
+  :root {
+    --blue-dark: #0d2b5e;
+    --blue-mid: #1a5faa;
+    --blue-light: #3b8cde;
+    --blue-pale: #e8f2fc;
+    --orange: #f47b20;
+    --orange-light: #ffb347;
+    --orange-pale: #fff4e8;
+    --white: #ffffff;
+    --gray-1: #f5f7fa;
+    --gray-2: #e9ecef;
+    --gray-3: #adb5bd;
+    --text-dark: #1a2332;
+    --text-mid: #4a5568;
+    --text-light: #718096;
+    --card-shadow: 0 4px 20px rgba(13,43,94,0.10);
+    --green: #27ae60;
+    --red: #e74c3c;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Microsoft YaHei', 'PingFang SC', Arial, sans-serif;
+    background: linear-gradient(135deg, #0d2b5e 0%, #1a5faa 40%, #0d2b5e 100%);
+    min-height: 100vh;
+    color: var(--text-dark);
+  }
+  .header {
+    background: linear-gradient(90deg, rgba(13,43,94,0.95), rgba(26,95,170,0.95), rgba(13,43,94,0.95));
+    backdrop-filter: blur(10px);
+    padding: 16px 32px;
+    display: flex; align-items: center; justify-content: space-between;
+    border-bottom: 2px solid rgba(244,123,32,0.6);
+    position: sticky; top: 0; z-index: 100;
+  }
+  .header-left { display: flex; align-items: center; gap: 14px; }
+  .header-logo {
+    width: 44px; height: 44px;
+    background: linear-gradient(135deg, var(--orange), var(--orange-light));
+    border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 22px; font-weight: bold; color: #fff;
+    box-shadow: 0 2px 10px rgba(244,123,32,0.5);
+  }
+  .header-title { color: #fff; }
+  .header-title h1 { font-size: 22px; font-weight: 700; letter-spacing: 2px; }
+  .header-title p { font-size: 12px; color: rgba(255,255,255,0.6); margin-top: 2px; }
+  .header-time { color: rgba(255,255,255,0.7); font-size: 13px; text-align: right; }
+  .header-time span { display: block; color: var(--orange-light); font-size: 15px; font-weight: 600; }
+  .main { max-width: 1600px; margin: 0 auto; padding: 24px 24px 32px; }
+  .card {
+    background: #fff; border-radius: 16px;
+    box-shadow: var(--card-shadow); overflow: hidden;
+  }
+  .card-header {
+    padding: 16px 24px 0;
+    display: flex; align-items: center; gap: 10px;
+  }
+  .card-icon {
+    width: 32px; height: 32px; border-radius: 8px;
+    display: flex; align-items: center; justify-content: center; font-size: 15px;
+  }
+  .card-icon.blue { background: linear-gradient(135deg, var(--blue-mid), var(--blue-light)); color: #fff; }
+  .card-icon.orange { background: linear-gradient(135deg, var(--orange), var(--orange-light)); color: #fff; }
+  .card-title { font-size: 15px; font-weight: 700; color: var(--blue-dark); flex: 1; }
+  .card-badge {
+    font-size: 11px; padding: 3px 10px; border-radius: 20px;
+    background: var(--blue-pale); color: var(--blue-mid); font-weight: 600;
+  }
+  .tab-row { display: flex; gap: 6px; flex-wrap: wrap; }
+  .tab-btn {
+    padding: 7px 18px; border-radius: 20px; font-size: 13px; font-weight: 600;
+    border: none; cursor: pointer; transition: all .2s;
+    background: var(--gray-2); color: var(--text-mid);
+  }
+  .tab-btn.active { background: var(--blue-mid); color: #fff; box-shadow: 0 2px 8px rgba(26,95,170,0.3); }
+  .tab-btn:hover:not(.active) { background: var(--blue-pale); color: var(--blue-mid); }
+  .sub-tab-row { display: flex; gap: 4px; }
+  .sub-tab-btn {
+    padding: 5px 14px; border-radius: 14px; font-size: 12px; font-weight: 600;
+    border: 1.5px solid var(--gray-2); cursor: pointer; transition: all .2s;
+    background: #fff; color: var(--text-mid);
+  }
+  .sub-tab-btn.active { background: var(--orange); color: #fff; border-color: var(--orange); }
+  .sub-tab-btn:hover:not(.active) { border-color: var(--orange); color: var(--orange); }
+  .tag-row { display: flex; gap: 4px; }
+  .tag-btn {
+    padding: 4px 12px; border-radius: 12px; font-size: 11px; font-weight: 600;
+    border: 1.5px solid var(--gray-2); cursor: pointer; transition: all .2s;
+    background: #fff; color: var(--text-mid);
+  }
+  .tag-btn.active { background: var(--blue-mid); color: #fff; border-color: var(--blue-mid); }
+  .tag-btn:hover:not(.active) { border-color: var(--blue-light); color: var(--blue-light); }
+  .tab-divider { width: 1px; height: 24px; background: var(--gray-2); margin: 0 6px; }
+  .kpi-grid {
+    display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px;
+    padding: 16px 24px 20px;
+  }
+  .kpi-card {
+    background: var(--gray-1); border-radius: 12px; padding: 16px 18px;
+    border: 1px solid var(--gray-2);
+  }
+  .kpi-card.orange-card { background: var(--orange-pale); border-color: rgba(244,123,32,0.2); }
+  .kpi-label { font-size: 12px; color: var(--text-light); margin-bottom: 6px; font-weight: 500; }
+  .kpi-value { font-size: 26px; font-weight: 800; color: var(--blue-dark); line-height: 1.2; }
+  .kpi-value.orange { color: var(--orange); }
+  .kpi-sub { font-size: 11px; color: var(--text-light); margin-top: 4px; }
+  .kpi-progress-wrap { margin-top: 8px; }
+  .kpi-progress-bar {
+    height: 6px; background: var(--gray-2); border-radius: 3px; overflow: hidden;
+  }
+  .kpi-progress-fill {
+    height: 100%; border-radius: 3px; transition: width .6s;
+  }
+  .kpi-progress-fill.blue { background: linear-gradient(90deg, var(--blue-mid), var(--blue-light)); }
+  .kpi-progress-fill.orange { background: linear-gradient(90deg, var(--orange), var(--orange-light)); }
+  .kpi-progress-pct { font-size: 11px; color: var(--text-light); margin-top: 3px; }
+  .row { display: grid; gap: 20px; }
+  .row-3col { grid-template-columns: 1fr 1.5fr; }
+  .row-2col { grid-template-columns: 1fr 1fr; }
+  .donut-container { display: flex; align-items: center; gap: 20px; padding: 16px 24px 20px; }
+  .donut-chart-wrap {
+    width: 220px; height: 220px; position: relative; flex-shrink: 0;
+  }
+  .donut-center {
+    position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+    text-align: center; pointer-events: none;
+  }
+  .donut-center-label { font-size: 11px; color: var(--text-light); }
+  .donut-center-value { font-size: 18px; font-weight: 800; color: var(--blue-dark); }
+  .legend-list { flex: 1; display: flex; flex-direction: column; gap: 10px; }
+  .legend-item { display: flex; align-items: center; gap: 8px; font-size: 13px; }
+  .legend-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+  .legend-name { font-weight: 600; color: var(--text-dark); min-width: 50px; }
+  .legend-amt { font-weight: 700; color: var(--blue-dark); text-align: right; min-width: 60px; }
+  .legend-pct {
+    font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 10px;
+    min-width: 50px; text-align: center;
+  }
+  .legend-target { font-size: 11px; color: var(--blue-mid); text-align: right; min-width: 60px; }
+  .chart-wrap { padding: 10px 24px 20px; position: relative; }
+  .chart-wrap canvas { width: 100% !important; }
+  .filter-row {
+    display: flex; align-items: center; gap: 10px; padding: 12px 24px;
+    flex-wrap: wrap; border-bottom: 1px solid var(--gray-2);
+  }
+  .filter-label { font-size: 13px; color: var(--text-mid); font-weight: 600; }
+  .filter-select {
+    padding: 6px 12px; border-radius: 8px; border: 1.5px solid var(--gray-2);
+    font-size: 13px; color: var(--text-dark); background: #fff; cursor: pointer;
+  }
+  .filter-input {
+    padding: 6px 12px; border-radius: 8px; border: 1.5px solid var(--gray-2);
+    font-size: 13px; width: 180px; outline: none;
+  }
+  .filter-input:focus { border-color: var(--blue-light); }
+  .filter-clear {
+    padding: 6px 14px; border-radius: 8px; border: 1.5px solid var(--gray-2);
+    font-size: 12px; cursor: pointer; background: #fff; color: var(--text-mid);
+    transition: all .2s;
+  }
+  .filter-clear:hover { border-color: var(--orange); color: var(--orange); }
+  .table-wrap { overflow-x: auto; padding: 0; }
+  .data-table {
+    width: 100%; border-collapse: collapse; font-size: 13px;
+  }
+  .data-table th {
+    background: var(--gray-1); color: var(--text-mid); font-weight: 600;
+    padding: 10px 14px; text-align: center; white-space: nowrap;
+    border-bottom: 2px solid var(--gray-2); font-size: 12px;
+    position: sticky; top: 0;
+  }
+  .data-table td {
+    padding: 10px 14px; border-bottom: 1px solid var(--gray-2);
+    white-space: nowrap; vertical-align: middle; text-align: center;
+  }
+  /* 终端表列宽 */
+  #term-table th:nth-child(1), #term-table td:nth-child(1) { width: 60px; text-align: center; }
+  #term-table th:nth-child(2), #term-table td:nth-child(2) { max-width: 200px; text-align: left; overflow: hidden; text-overflow: ellipsis; }
+  #term-table th:nth-child(3), #term-table td:nth-child(3) { width: 70px; text-align: center; }
+  #term-table th:nth-child(4), #term-table td:nth-child(4) { width: 80px; text-align: center; }
+  #term-table th:nth-child(5), #term-table td:nth-child(5) { width: auto; text-align: right; }
+  #term-table th:nth-child(6), #term-table td:nth-child(6) { width: auto; text-align: right; }
+  #term-table th:nth-child(7), #term-table td:nth-child(7) { width: auto; text-align: right; }
+  #term-table th:nth-child(8), #term-table td:nth-child(8) { width: 120px; text-align: center; }
+  /* 产品表列宽 */
+  #prod-table th:nth-child(1), #prod-table td:nth-child(1) { max-width: 220px; text-align: left; overflow: hidden; text-overflow: ellipsis; }
+  #prod-table th:nth-child(2), #prod-table td:nth-child(2) { width: 70px; text-align: center; }
+  #prod-table th:nth-child(3), #prod-table td:nth-child(3) { width: auto; text-align: right; }
+  #prod-table th:nth-child(4), #prod-table td:nth-child(4) { width: auto; text-align: right; }
+  #prod-table th:nth-child(5), #prod-table td:nth-child(5) { width: auto; text-align: right; }
+  #prod-table th:nth-child(6), #prod-table td:nth-child(6) { width: auto; text-align: right; }
+  #prod-table th:nth-child(7), #prod-table td:nth-child(7) { width: auto; text-align: right; }
+  #prod-table th:nth-child(8), #prod-table td:nth-child(8) { width: 80px; text-align: center; }
+  .data-table tbody tr:hover { background: var(--blue-pale); }
+  .data-table tbody tr.row-active { background: rgba(26,95,170,0.12); }
+  .data-table tbody tr.row-active td { border-bottom: 2px solid var(--blue-mid); }
+  .num-right { text-align: right; font-variant-numeric: tabular-nums; }
+  .num-target { color: var(--blue-mid); font-weight: 600; }
+  .num-actual { color: var(--orange); font-weight: 700; }
+  .badge {
+    display: inline-block; padding: 2px 8px; border-radius: 10px;
+    font-size: 11px; font-weight: 700; white-space: nowrap;
+  }
+  .badge-3a { background: #ffeaa7; color: #d68910; }
+  .badge-3 { background: #dfe6e9; color: #636e72; }
+  .badge-2 { background: #81ecec; color: #00b894; }
+  .badge-1 { background: #fab1a0; color: #e17055; }
+  .badge-none { background: var(--gray-2); color: var(--text-light); }
+  .progress-cell { min-width: 120px; }
+  .mini-bar {
+    display: inline-block; width: 60px; height: 5px; background: var(--gray-2);
+    border-radius: 3px; overflow: hidden; vertical-align: middle; margin-left: 4px;
+  }
+  .mini-bar-fill {
+    height: 100%; border-radius: 3px;
+    background: linear-gradient(90deg, var(--blue-mid), var(--blue-light));
+  }
+  .mini-bar-fill.over { background: linear-gradient(90deg, var(--orange), var(--orange-light)); }
+  .pct-text { font-size: 11px; font-weight: 700; }
+  .pct-text.over { color: var(--orange); }
+  .pct-text.normal { color: var(--blue-mid); }
+  .pagination { display: flex; align-items: center; gap: 6px; margin: 14px 24px; justify-content: flex-end; }
+  .page-info { font-size: 13px; color: var(--text-mid); margin-right: 8px; }
+  .page-btn {
+    padding: 5px 12px; border-radius: 7px; border: 1.5px solid var(--gray-2);
+    font-size: 13px; cursor: pointer; background: #fff; color: var(--text-mid); transition: all .2s;
+  }
+  .page-btn:hover { background: var(--blue-pale); border-color: var(--blue-light); color: var(--blue-mid); }
+  .page-btn.active { background: var(--blue-mid); color: #fff; border-color: var(--blue-mid); }
+  .page-btn:disabled { opacity: 0.4; cursor: default; pointer-events: none; }
+  @media (max-width: 1100px) {
+    .row-3col, .row-2col { grid-template-columns: 1fr; }
+    .kpi-grid { grid-template-columns: repeat(2, 1fr); }
+    .donut-container { flex-direction: column; }
+  }
+</style>
+</head>
+<body>
+<div class="header">
+  <div class="header-left">
+    <div class="header-logo">渝</div>
+    <div class="header-title">
+      <h1>重庆长寿公司看板</h1>
+      <p>区县终端销售数据分析平台 · 2026年</p>
+    </div>
+  </div>
+  <div class="header-time">数据截至<span id="cur-time">--</span></div>
+</div>
+<div class="main">
+  <!-- 顶部区域切片 -->
+  <div style="margin-bottom:16px;display:flex;align-items:center;gap:12px;padding:12px 20px;background:var(--card);border-radius:10px;">
+    <span style="font-size:14px;font-weight:600;color:var(--text);white-space:nowrap;">📍 区域</span>
+    <div class="sub-tab-row" id="region-tabs" style="gap:8px;">
+      <button class="sub-tab-btn active" onclick="switchRegion('全部',this)">全部</button>
+      <button class="sub-tab-btn" onclick="switchRegion('垫江',this)">垫江</button>
+      <button class="sub-tab-btn" onclick="switchRegion('涪陵',this)">涪陵</button>
+      <button class="sub-tab-btn" onclick="switchRegion('丰都',this)">丰都</button>
+      <button class="sub-tab-btn" onclick="switchRegion('长寿',this)">长寿</button>
+    </div>
+  </div>
+  <!-- 模块一 -->
+  <div style="margin-bottom:20px;">
+    <div class="card">
+      <div class="card-header">
+        <div class="card-icon blue">📊</div>
+        <span class="card-title">销售概览</span>
+        <span class="card-badge">实时汇总</span>
+      </div>
+      <div style="padding:12px 24px 0;">
+        <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+          <div class="tab-row" id="cat-tabs">
+            <button class="tab-btn active" onclick="switchCat('全部',this)">全部汇总</button>
+            <button class="tab-btn" onclick="switchCat('品牌品',this)">品牌品</button>
+            <button class="tab-btn" onclick="switchCat('代理品',this)">代理品</button>
+            <button class="tab-btn" onclick="switchCat('商销品',this)">商销品</button>
+          </div>
+          <div class="tab-divider"></div>
+          <div class="sub-tab-row" id="metric-tabs">
+            <button class="sub-tab-btn active" onclick="switchMetric('金额',this)">金额</button>
+            <button class="sub-tab-btn" onclick="switchMetric('终端数',this)">终端数</button>
+          </div>
+
+        </div>
+      </div>
+      <div class="kpi-grid" id="kpi-grid"></div>
+    </div>
+  </div>
+  <!-- 模块二 + 三 -->
+  <div class="row row-3col" style="margin-bottom:20px;">
+    <div class="card">
+      <div class="card-header">
+        <div class="card-icon orange">🍩</div>
+        <span class="card-title">26年销售进度(按金额)</span>
+        <span class="card-badge">按品类</span>
+      </div>
+      <div class="donut-container">
+        <div class="donut-chart-wrap">
+          <canvas id="donut-chart"></canvas>
+          <div class="donut-center">
+            <div class="donut-center-label">累计金额</div>
+            <div class="donut-center-value" id="donut-total">--</div>
+            <div class="donut-center-label" style="margin-top:6px;">目标金额</div>
+            <div class="donut-center-value" id="donut-target" style="font-size:14px;color:#f47b20;">--</div>
+            <div class="donut-center-label" style="margin-top:4px;">完成率</div>
+            <div class="donut-center-value" id="donut-rate" style="font-size:16px;color:#e74c3c;">--</div>
+          </div>
+        </div>
+        <div class="legend-list" id="donut-legend"></div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-header">
+        <div class="card-icon blue">📈</div>
+        <span class="card-title">销售进度（按药品）</span>
+        <span class="card-badge" id="bar3-badge">品牌品</span>
+      </div>
+      <div style="padding:12px 24px 0;">
+        <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
+          <div class="tab-row" id="bar-tabs">
+            <button class="tab-btn active" onclick="switchBarCat('品牌品',this)">品牌品</button>
+            <button class="tab-btn" onclick="switchBarCat('代理品',this)">代理品</button>
+            <button class="tab-btn" onclick="switchBarCat('商销品',this)">商销品</button>
+          </div>
+          <div class="tab-divider"></div>
+          <div class="tag-row" id="tag-tabs">
+            <button class="tag-btn active" onclick="switchTag('全部',this)">全部</button>
+            <button class="tag-btn" onclick="switchTag('勾选品',this)">勾选品</button>
+            <button class="tag-btn" onclick="switchTag('非勾选品',this)">非勾选品</button>
+          </div>
+        </div>
+      </div>
+      <div class="chart-wrap"><canvas id="bar-chart"></canvas></div>
+    </div>
+  </div>
+  <!-- 模块四+五 合并 -->
+  <div class="card" style="margin-bottom:20px;">
+    <div class="card-header" style="border-bottom:none;padding-bottom:0;">
+      <div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap;">
+        <div style="display:flex;align-items:center;gap:8px;">
+          <div class="card-icon orange">📋</div>
+          <span class="card-title">销售明细</span>
+        </div>
+        <div class="sub-tab-row" id="table-tabs" style="gap:4px;">
+          <button class="sub-tab-btn active" onclick="switchTable('terminal',this)">终端销售</button>
+          <button class="sub-tab-btn" onclick="switchTable('product',this)">产品销售</button>
+        </div>
+        <span class="card-badge" id="term-count-badge" style="display:inline;">共 0 家</span>
+        <span class="card-badge" id="prod-count-badge" style="display:none;">共 0 个</span>
+      </div>
+    </div>
+    <!-- 统一筛选行 -->
+    <div class="filter-row" style="padding:8px 24px;">
+      <span class="filter-label">🔍</span>
+      <select class="filter-select" id="filter-level" onchange="applyFilter()">
+        <option value="">全部等级</option><option>三甲</option><option>三级</option><option>二级</option><option>一级</option><option>其它</option>
+      </select>
+      <input class="filter-input" id="filter-name" placeholder="搜索终端名称..." oninput="applyFilter()" style="flex:1;min-width:200px;" />
+      <button class="filter-clear" onclick="clearFilter()">清除</button>
+    </div>
+    <!-- 终端销售面板 -->
+    <div id="terminal-panel">
+      <div class="table-wrap">
+        <table class="data-table" id="term-table">
+          <thead><tr>
+            <th>区县</th><th>终端名称</th><th>医院等级</th><th>在销产品数</th>
+            <th>26年目标销售金额（无税）</th>
+            <th>26年累计销售金额</th><th>预估销售费用</th><th>完成率</th>
+          </tr></thead>
+          <tbody id="term-tbody"></tbody>
+        </table>
+      </div>
+      <div class="pagination" id="pagination"></div>
+    </div>
+    <!-- 产品销售面板 -->
+    <div id="product-panel" style="display:none;">
+      <div id="prod-filter-hint" style="display:none;margin-bottom:8px;padding:8px 14px;background:rgba(26,95,170,0.08);border-radius:8px;font-size:13px;color:var(--blue-mid);cursor:pointer" onclick="clearTerminalSelect()">
+        <span id="prod-filter-text"></span>&nbsp;&nbsp;<span style="font-size:12px;opacity:0.7">点击查看全部产品 →</span>
+      </div>
+      <div class="table-wrap">
+        <table class="data-table" id="prod-table">
+          <thead><tr>
+            <th>产品名称</th><th>分类</th><th>年市场规模(销量)</th><th>年勾选折合量</th><th>2025年销量</th><th>当前销量(1-3月)</th><th>目标销量</th><th>费用率</th>
+          </tr></thead>
+          <tbody id="prod-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+<script>
+var TOTAL_TERMINALS = 732;
+var SUMMARY = {"全部": {"target26": 8804206.31, "actual26": 2151615.71, "actual25": 7693336.41, "terminals": 109, "products": 34}, "品牌品": {"target26": 6030894.7, "actual26": 1323621.71, "actual25": 4761778.65, "terminals": 85, "products": 7}, "代理品": {"target26": 558000.18, "actual26": 1386.0, "actual25": 75293.76, "terminals": 4, "products": 3}, "商销品": {"target26": 2215311.43, "actual26": 826608.0, "actual25": 2856264.0, "terminals": 77, "products": 24}};
+var REGION_SUMMARY = {"垫江": {"target26": 1650121.89, "actual26": 700288.84, "actual25": 2358717.69, "terminals": 23, "products": 72}, "涪陵": {"target26": 4467487.28, "actual26": 644452.75, "actual25": 2817952.36, "terminals": 39, "products": 152}, "丰都": {"target26": 875476.47, "actual26": 286282.13, "actual25": 849617.35, "terminals": 26, "products": 59}, "长寿": {"target26": 1811120.68, "actual26": 520592.0, "actual25": 1667048.99, "terminals": 24, "products": 89}};
+var DONUT_DATA = {"品牌品": 1323621.71, "代理品": 1386.0, "商销品": 826608.0};
+var BAR_DATA = {"品牌品": {"labels": ["谷胱甘肽片0.1g", "注射用谷胱甘肽", "依匹斯汀10mg", "炎琥宁80mg", "阿法骨化醇片", "盐酸度洛西汀肠溶胶囊", "盐酸舍曲林片"], "target": [3120081.62, 807170.07, 711440.71, 606226.27, 497105.88, 285976.46, 2893.7], "actual": [687130.53, 126510.9, 179449.0, 72439.57, 168835.7, 89256.0, 0.0], "tag": ["非勾选品", "非勾选品", "非勾选品", "非勾选品", "勾选品", "勾选品", "勾选品"]}, "代理品": {"labels": ["甲苯磺酸索拉非尼片", "甲磺酸仑伐替尼胶囊", "注射用培美曲塞二钠"], "target": [422325.51, 77311.81, 58362.86], "actual": [1386.0, 0.0, 0.0], "tag": ["勾选品", "勾选品", "勾选品"]}, "商销品": {"labels": ["苯磺酸氨氯地平片", "盐酸二甲双胍缓释片", "注射用二氯醋酸二异丙胺", "注射用拉氧头孢钠", "阿卡波糖片", "富马酸替诺福韦二吡呋酯片", "中/长链脂肪乳注射液（C6~24）", "丙泊酚中/长链脂肪乳注射液", "恩替卡韦片", "琥珀酸美托洛尔缓释片", "氯化钾缓释片", "注射用艾司奥美拉唑钠", "阿托伐他汀钙片", "硫辛酸注射液", "注射用水溶性维生素", "拉米夫定", "注射用克林霉素", "硫酸氢氯吡格雷片", "注射用泮托拉唑钠", "盐酸二甲双胍片", "吲达帕胺片", "注射用奥美拉唑钠", "瑞舒伐他汀钙片", "富马酸丙酚替诺福韦片"], "target": [491214.71, 429888.23, 316938.15, 159765.11, 143731.37, 106642.63, 96924.11, 95198.62, 85714.53, 70470.0, 63479.46, 37840.94, 24044.45, 20110.29, 11995.2, 10877.15, 10706.78, 10247.44, 7655.96, 7082.41, 6622.19, 4824.32, 2811.53, 525.87], "actual": [464944.0, 0.0, 239732.0, 0.0, 36671.0, 30380.0, 0.0, 0.0, 45910.0, 0.0, 0.0, 0.0, 0.0, 0.0, 2324.0, 0.0, 6647.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0], "tag": ["勾选品", "勾选品", "非勾选品", "非勾选品", "勾选品", "勾选品", "勾选品", "勾选品", "勾选品", "勾选品", "勾选品", "勾选品", "勾选品", "勾选品", "非勾选品", "非勾选品", "非勾选品", "勾选品", "勾选品", "勾选品", "勾选品", "勾选品", "勾选品", "非勾选品"]}};
+var TERMINALS = [{"name":"丰都县三元中心卫生院","quxian":"丰都","level":"其它","products":2,"hospital_scale":173.87,"actual25":1723.4,"target26":1146.67,"actual26":0.0,"rep":"","cost":0.0,"checked_qty":0.0},{"name":"丰都县中医院","quxian":"丰都","level":"二级","products":3,"hospital_scale":0,"actual25":118695.45,"target26":393540.51,"actual26":32753.52,"rep":"张美玲","cost":117509.34,"checked_qty":452648.0},{"name":"丰都县人民医院","quxian":"丰都","level":"三级","products":7,"hospital_scale":0,"actual25":611745.41,"target26":364870.33,"actual26":219279.25,"rep":"钟荀(重庆)","cost":78753.95,"checked_qty":290663.0},{"name":"丰都县仁沙镇卫生院","quxian":"丰都","level":"其它","products":1,"hospital_scale":0,"actual25":654.69,"target26":2686.06,"actual26":1454.87,"rep":"自然流","cost":0.0,"checked_qty":0.0},{"name":"丰都县仙女湖镇卫生院","quxian":"丰都","level":"其它","products":4,"hospital_scale":0,"actual25":4921.29,"target26":4259.95,"actual26":1818.58,"rep":"自然流","cost":749.3,"checked_qty":35392.0},{"name":"丰都县兴义镇卫生院（丰都县兴义镇计划生育服务站）","quxian":"丰都","level":"其它","products":2,"hospital_scale":0,"actual25":4474.0,"target26":2046.21,"actual26":1428.0,"rep":"","cost":550.14,"checked_qty":20612.0},{"name":"丰都县兴义镇泥巴溪村卫生室","quxian":"丰都","level":"其它","products":1,"hospital_scale":0,"actual25":170.8,"target26":0.0,"actual26":0.0,"rep":"","cost":0.0,"checked_qty":0.0},{"name":"丰都县包鸾中心卫生院（丰都县包鸾镇计划生育服务站）","quxian":"丰都","level":"其它","products":1,"hospital_scale":0,"actual25":0.0,"target26":8543.51,"actual26":0.0,"rep":"","cost":2032.46,"checked_qty":96000.0},{"name":"丰都县十直镇卫生院（丰都县十直镇计划生育服务站）","quxian":"丰都","level":"其它","products":4,"hospital_scale":0,"actual25":10244.0,"target26":5018.31,"actual26":2987.86,"rep":"廖瑜英(重庆)","cost":1033.36,"checked_qty":25488.0},{"name":"丰都县南天湖镇卫生院","quxian":"丰都","level":"其它","products":1,"hospital_scale":0,"actual25":0.0,"target26":1466.64,"actual26":0.0,"rep":"","cost":348.91,"checked_qty":16480.0},{"name":"丰都县双龙镇卫生院（丰都县双龙镇计划生育服务站）","quxian":"丰都","level":"其它","products":1,"hospital_scale":0,"actual25":0.0,"target26":537.21,"actual26":716.81,"rep":"李迅(重庆)","cost":180.52,"checked_qty":0.0},{"name":"丰都县名山街道社区卫生服务中心","quxian":"丰都","level":"其它","products":1,"hospital_scale":204.8,"actual25":0.0,"target26":21704.09,"actual26":0.0,"rep":"曾强","cost":5163.29,"checked_qty":243880.0},{"name":"丰都县太平坝乡卫生院（丰都县太平坝乡计划生育服务站）","quxian":"丰都","level":"其它","products":2,"hospital_scale":0,"actual25":2856.0,"target26":498.37,"actual26":2483.6,"rep":"","cost":118.56,"checked_qty":5600.0},{"name":"丰都县妇幼保健计划生育服务中心","quxian":"丰都","level":"其它","products":2,"hospital_scale":198.4,"actual25":7324.12,"target26":6339.43,"actual26":0.0,"rep":"自然流","cost":0.0,"checked_qty":0.0},{"name":"丰都县暨龙镇卫生院（丰都县暨龙镇计划生育服务站）","quxian":"丰都","level":"其它","products":1,"hospital_scale":0,"actual25":0.0,"target26":10146.85,"actual26":0.0,"rep":"","cost":2413.88,"checked_qty":114016.0},{"name":"丰都县树人中心卫生院","quxian":"丰都","level":"其它","products":1,"hospital_scale":0,"actual25":0.0,"target26":2491.86,"actual26":0.0,"rep":"","cost":592.8,"checked_qty":28000.0},{"name":"丰都县武平中心卫生院（丰都县武平镇计划生育服务站）","quxian":"丰都","level":"其它","products":1,"hospital_scale":0,"actual25":0.0,"target26":1310.01,"actual26":0.0,"rep":"","cost":311.64,"checked_qty":14720.0},{"name":"丰都县江池镇卫生院（丰都县江池镇计划生育服务站）","quxian":"丰都","level":"其它","products":2,"hospital_scale":0,"actual25":20997.6,"target26":1428.03,"actual26":14621.6,"rep":"","cost":211.71,"checked_qty":10800.0},{"name":"丰都县社坛中心卫生院","quxian":"丰都","level":"其它","products":3,"hospital_scale":462.0,"actual25":4095.0,"target26":5747.95,"actual26":0.0,"rep":"","cost":685.52,"checked_qty":5368.0},{"name":"丰都县社坛镇地坝嘴村卫生室","quxian":"丰都","level":"其它","products":1,"hospital_scale":0,"actual25":102.48,"target26":0.0,"actual26":0.0,"rep":"","cost":0.0,"checked_qty":0.0},{"name":"丰都县精神病医院","quxian":"丰都","level":"二级","products":4,"hospital_scale":0,"actual25":14818.1,"target26":7854.76,"actual26":5136.42,"rep":"自然流","cost":278.29,"checked_qty":24872.0},{"name":"丰都县董家中心卫生院","quxian":"丰都","level":"其它","products":2,"hospital_scale":309.6,"actual25":1654.0,"target26":3638.53,"actual26":0.0,"rep":"","cost":592.8,"checked_qty":28000.0},{"name":"丰都县许明寺镇卫生院（丰都县许明寺镇计划生育服务站）","quxian":"丰都","level":"其它","products":2,"hospital_scale":0,"actual25":0.0,"target26":6440.82,"actual26":18.19,"rep":"自然流","cost":1515.2,"checked_qty":71568.0},{"name":"丰都县都督乡卫生院","quxian":"丰都","level":"其它","products":2,"hospital_scale":0,"actual25":341.6,"target26":837.26,"actual26":0.0,"rep":"","cost":199.18,"checked_qty":9408.0},{"name":"丰都县青龙乡卫生院（丰都县青龙乡计划生育服务站）","quxian":"丰都","level":"其它","products":3,"hospital_scale":0,"actual25":322.98,"target26":1281.74,"actual26":727.43,"rep":"自然流","cost":296.4,"checked_qty":14000.0},{"name":"丰都县高镇中心卫生院（丰都县高家镇计划生育服务站）","quxian":"丰都","level":"其它","products":1,"hospital_scale":0,"actual25":7029.5,"target26":4872.14,"actual26":0.0,"rep":"","cost":0.0,"checked_qty":0.0},{"name":"丰都县龙孔镇卫生院（丰都县龙孔镇计划生育服务站）","quxian":"丰都","level":"其它","products":2,"hospital_scale":0,"actual25":37308.4,"target26":7854.34,"actual26":2856.0,"rep":"","cost":1868.51,"checked_qty":88256.0},{"name":"丰都县龙河中心卫生院（丰都县龙河镇计划生育服务站）","quxian":"丰都","level":"其它","products":1,"hospital_scale":0,"actual25":0.0,"target26":8914.89,"actual26":0.0,"rep":"","cost":2120.81,"checked_qty":100173.0},{"name":"丰都新安门诊部","quxian":"丰都","level":"其它","products":1,"hospital_scale":0,"actual25":138.53,"target26":0.0,"actual26":0.0,"rep":"","cost":0.0,"checked_qty":0.0},{"name":"垫江县三溪镇卫生院（垫江县三溪镇公共卫生管理中心、垫江县三溪镇计划生育服务站）","quxian":"垫江","level":"其它","products":1,"hospital_scale":0,"actual25":0.0,"target26":6482.5,"actual26":0.0,"rep":"","cost":2698.77,"checked_qty":54920.0},{"name":"垫江县人民医院","quxian":"垫江","level":"三级","products":8,"hospital_scale":17717.47,"actual25":1740358.3,"target26":1157617.52,"actual26":535265.0,"rep":"钟荀(重庆)","cost":247219.51,"checked_qty":1051249.0},{"name":"垫江县包家镇卫生院","quxian":"垫江","level":"其它","products":3,"hospital_scale":0,"actual25":32203.0,"target26":3482.43,"actual26":2196.0,"rep":"天圣","cost":658.44,"checked_qty":33680.0},{"name":"垫江县周嘉中心卫生院","quxian":"垫江","level":"其它","products":6,"hospital_scale":372.61,"actual25":527.0,"target26":5442.39,"actual26":0.0,"rep":"","cost":920.78,"checked_qty":41399.0},{"name":"垫江县坪山中心卫生院","quxian":"垫江","level":"其它","products":3,"hospital_scale":601.12,"actual25":3530.11,"target26":968.15,"actual26":1766.9,"rep":"廖瑜英(重庆)","cost":85.39,"checked_qty":12.0},{"name":"垫江县大石乡卫生院","quxian":"垫江","level":"其它","products":1,"hospital_scale":0,"actual25":716.28,"target26":537.21,"actual26":0.0,"rep":"吴玲","cost":180.13,"checked_qty":0.0},{"name":"垫江县妇幼保健院（垫江县妇幼保健计划生育服务中心、垫江县妇女儿童医院）","quxian":"垫江","level":"二级","products":1,"hospital_scale":0,"actual25":21535.88,"target26":41651.87,"actual26":723.9,"rep":"自然流","cost":0.0,"checked_qty":0.0},{"name":"垫江县新民中心卫生院","quxian":"垫江","level":"其它","products":6,"hospital_scale":407.09,"actual25":1756.0,"target26":14378.61,"actual26":0.0,"rep":"重庆今瑜","cost":4223.53,"checked_qty":118373.0},{"name":"垫江县普顺镇卫生院","quxian":"垫江","level":"其它","products":2,"hospital_scale":227.41,"actual25":1570.28,"target26":286.51,"actual26":0.0,"rep":"吴玲","cost":96.07,"checked_qty":0.0},{"name":"垫江县曹回镇卫生院","quxian":"垫江","level":"其它","products":1,"hospital_scale":120.33,"actual25":0.0,"target26":4487.23,"actual26":0.0,"rep":"谭茂","cost":1868.11,"checked_qty":38016.0},{"name":"垫江县杠家镇卫生院","quxian":"垫江","level":"其它","products":1,"hospital_scale":149.09,"actual25":683.2,"target26":0.0,"actual26":0.0,"rep":"","cost":0.0,"checked_qty":0.0},{"name":"垫江县桂溪社区卫生服务中心","quxian":"垫江","level":"其它","products":1,"hospital_scale":255.57,"actual25":0.0,"target26":2691.21,"actual26":0.0,"rep":"天圣","cost":1120.39,"checked_qty":22800.0},{"name":"垫江县永平镇卫生院","quxian":"垫江","level":"其它","products":1,"hospital_scale":0,"actual25":1708.0,"target26":0.0,"actual26":0.0,"rep":"","cost":0.0,"checked_qty":0.0},{"name":"垫江县沙坪镇卫生院","quxian":"垫江","level":"其它","products":4,"hospital_scale":541.03,"actual25":1407.45,"target26":812.74,"actual26":1018.42,"rep":"重庆今瑜","cost":237.2,"checked_qty":1814.0},{"name":"垫江县沙河乡卫生院","quxian":"垫江","level":"其它","products":1,"hospital_scale":0,"actual25":0.0,"target26":8.14,"actual26":0.0,"rep":"","cost":3.39,"checked_qty":69.0},{"name":"垫江县澄溪镇卫生院","quxian":"垫江","level":"其它","products":5,"hospital_scale":508.27,"actual25":2327.92,"target26":3773.64,"actual26":0.0,"rep":"吴玲","cost":1159.93,"checked_qty":12008.0},{"name":"垫江县砚台镇卫生院","quxian":"垫江","level":"其它","products":2,"hospital_scale":169.55,"actual25":836.55,"target26":1039.53,"actual26":0.0,"rep":"天圣","cost":8.74,"checked_qty":376.0},{"name":"垫江县精神卫生中心","quxian":"垫江","level":"三级","products":1,"hospital_scale":0,"actual25":0.0,"target26":9971.63,"actual26":0.0,"rep":"","cost":4151.35,"checked_qty":84480.0},{"name":"垫江县长龙镇卫生院","quxian":"垫江","level":"其它","products":2,"hospital_scale":0,"actual25":0.0,"target26":1554.32,"actual26":0.0,"rep":"重庆今瑜","cost":534.72,"checked_qty":4640.0},{"name":"垫江县高安中心卫生院","quxian":"垫江","level":"其它","products":3,"hospital_scale":510.88,"actual25":113781.0,"target26":32768.08,"actual26":55356.0,"rep":"天圣","cost":4946.09,"checked_qty":297800.0},{"name":"垫江县鹤游中心卫生院","quxian":"垫江","level":"其它","products":2,"hospital_scale":233.28,"actual25":245.7,"target26":2081.94,"actual26":0.0,"rep":"重庆今瑜","cost":90.87,"checked_qty":12480.0},{"name":"垫江县黄沙镇卫生院","quxian":"垫江","level":"其它","products":3,"hospital_scale":0,"actual25":2831.33,"target26":767.09,"actual26":474.69,"rep":"重庆今瑜","cost":62.57,"checked_qty":800.0},{"name":"涪陵区况守勤诊所","quxian":"涪陵","level":"其它","products":1,"hospital_scale":0,"actual25":287941.5,"target26":277635.4,"actual26":64102.5,"rep":"周虹兰","cost":142003.2,"checked_qty":0.0},{"name":"重庆健侨医院有限公司","quxian":"垫江","level":"其它","products":1,"hospital_scale":0,"actual25":1616.19,"target26":0.0,"actual26":923.54,"rep":"","cost":0.0,"checked_qty":0.0},{"name":"重庆大学附属涪陵医院","quxian":"涪陵","level":"三级","products":22,"hospital_scale":0,"actual25":1800652.79,"target26":3157484.08,"actual26":433811.43,"rep":"焦国胜(渝)","cost":1045932.6,"checked_qty":3542677.0},{"name":"重庆工贸职业技术学院医务室","quxian":"涪陵","level":"其它","products":1,"hospital_scale":0,"actual25":0.0,"target26":0.0,"actual26":341.6,"rep":"","cost":0.0,"checked_qty":0.0},{"name":"重庆市垫江县中医院","quxian":"垫江","level":"三级","products":10,"hospital_scale":13648.27,"actual25":425751.34,"target26":356023.63,"actual26":102036.96,"rep":"李迅","cost":71679.52,"checked_qty":70142.0},{"name":"重庆市垫江监狱医院","quxian":"垫江","level":"其它","products":2,"hospital_scale":0,"actual25":1638.0,"target26":3295.52,"actual26":527.43,"rep":"廖瑜英(重庆)","cost":189.14,"checked_qty":0.0},{"name":"重庆市涪陵区中医院","quxian":"涪陵","level":"三级","products":8,"hospital_scale":5346.52,"actual25":181169.74,"target26":287329.12,"actual26":28193.53,"rep":"姜永娇","cost":91287.87,"checked_qty":105896.0},{"name":"重庆市涪陵区义和街道社区卫生服务中心","quxian":"涪陵","level":"其它","products":3,"hospital_scale":0,"actual25":1228.5,"target26":3832.43,"actual26":0.0,"rep":"重庆今瑜","cost":1261.03,"checked_qty":11875.0},{"name":"重庆市涪陵区人民医院","quxian":"涪陵","level":"二级","products":3,"hospital_scale":3735.87,"actual25":62626.52,"target26":34214.29,"actual26":969.6,"rep":"自然流","cost":0.0,"checked_qty":0.0},{"name":"重庆市涪陵区儿童医院","quxian":"涪陵","level":"二级","products":9,"hospital_scale":0,"actual25":97517.28,"target26":244027.06,"actual26":3584.07,"rep":"李迅(重庆)","cost":54280.83,"checked_qty":201492.0},{"name":"重庆市涪陵区南沱镇卫生院","quxian":"涪陵","level":"其它","products":3,"hospital_scale":0,"actual25":1784.81,"target26":2462.33,"actual26":1041.0,"rep":"重庆今瑜","cost":813.45,"checked_qty":2304.0},{"name":"重庆市涪陵区南沱镇焦岩村卫生室","quxian":"涪陵","level":"其它","products":1,"hospital_scale":0,"actual25":170.8,"target26":0.0,"actual26":0.0,"rep":"","cost":0.0,"checked_qty":0.0},{"name":"重庆市涪陵区同乐镇卫生院","quxian":"涪陵","level":"其它","products":1,"hospital_scale":0,"actual25":0.0,"target26":3295.96,"actual26":0.0,"rep":"","cost":1764.21,"checked_qty":11048.0},{"name":"重庆市涪陵区增福乡卫生院","quxian":"涪陵","level":"其它","products":2,"hospital_scale":0,"actual25":0.0,"target26":4220.97,"actual26":1075.22,"rep":"李迅(重庆)","cost":1162.3,"checked_qty":29320.0},{"name":"重庆市涪陵区大木乡卫生院","quxian":"涪陵","level":"其它","products":1,"hospital_scale":0,"actual25":854.0,"target26":1183.78,"actual26":0.0,"rep":"","cost":0.0,"checked_qty":1760.0},{"name":"重庆市涪陵区大木镇卫生院","quxian":"涪陵","level":"其它","products":3,"hospital_scale":0,"actual25":3157.27,"target26":2349.52,"actual26":434.52,"rep":"李迅(重庆)","cost":176.53,"checked_qty":0.0},{"name":"重庆市涪陵区大顺镇卫生院","quxian":"涪陵","level":"其它","products":1,"hospital_scale":0,"actual25":573.22,"target26":572.99,"actual26":0.0,"rep":"","cost":0.0,"checked_qty":0.0},{"name":"重庆市涪陵区妇幼保健院","quxian":"涪陵","level":"三级","products":8,"hospital_scale":1326.32,"actual25":30643.59,"target26":56469.45,"actual26":536.0,"rep":"李迅(重庆)","cost":15311.35,"checked_qty":3069.0},{"name":"重庆市涪陵区崇义街道社区卫生服务中心（重庆市涪陵区崇义街道计划生育服务站）","quxian":"涪陵","level":"其它","products":3,"hospital_scale":0,"actual25":6248.9,"target26":7229.96,"actual26":683.2,"rep":"","cost":681.78,"checked_qty":808.0},{"name":"重庆市涪陵区敦仁街道社区卫生服务中心（重庆市涪陵区敦仁街道计划生育服务站）","quxian":"涪陵","level":"其它","products":5,"hospital_scale":0,"actual25":102396.98,"target26":31113.48,"actual26":31833.48,"rep":"李迅(重庆)","cost":6712.11,"checked_qty":204152.0},{"name":"重庆市涪陵区新城区社区卫生服务中心","quxian":"涪陵","level":"其它","products":12,"hospital_scale":0,"actual25":0.0,"target26":42670.44,"actual26":0.0,"rep":"","cost":16321.57,"checked_qty":256968.0},{"name":"重庆市涪陵区新妙中心卫生院","quxian":"涪陵","level":"其它","products":3,"hospital_scale":226.93,"actual25":18250.04,"target26":11505.23,"actual26":4174.37,"rep":"廖瑜英(重庆)","cost":624.18,"checked_qty":0.0},{"name":"重庆市涪陵区李渡街道社区卫生服务中心","quxian":"涪陵","level":"其它","products":1,"hospital_scale":0,"actual25":1146.44,"target26":1146.67,"actual26":0.0,"rep":"","cost":0.0,"checked_qty":0.0},{"name":"重庆市涪陵区武陵山乡卫生院","quxian":"涪陵","level":"其它","products":4,"hospital_scale":0,"actual25":68.32,"target26":588.68,"actual26":0.0,"rep":"","cost":238.28,"checked_qty":5048.0},{"name":"重庆市涪陵区江东街道社区卫生服务中心","quxian":"涪陵","level":"其它","products":7,"hospital_scale":120.4,"actual25":15314.06,"target26":21062.61,"actual26":5274.34,"rep":"重庆今瑜","cost":3739.92,"checked_qty":28896.0},{"name":"重庆市涪陵区清溪中心卫生院","quxian":"涪陵","level":"其它","products":7,"hospital_scale":208.47,"actual25":40708.41,"target26":25236.33,"actual26":1168.15,"rep":"重庆今瑜","cost":3614.85,"checked_qty":79867.0},{"name":"重庆市涪陵区焦石中心卫生院","quxian":"涪陵","level":"其它","products":4,"hospital_scale":215.87,"actual25":7797.8,"target26":7228.37,"actual26":0.0,"rep":"自然流","cost":231.88,"checked_qty":1120.0},{"name":"重庆市涪陵区珍溪中心卫生院","quxian":"涪陵","level":"其它","products":3,"hospital_scale":307.76,"actual25":8242.44,"target26":6389.43,"actual26":0.0,"rep":"李迅(重庆)","cost":1094.22,"checked_qty":3572.0},{"name":"重庆市涪陵区白涛街道社区卫生服务中心（重庆市涪陵区白涛街道计划生育服务站）","quxian":"涪陵","level":"其它","products":2,"hospital_scale":0,"actual25":6929.44,"target26":3439.32,"actual26":683.2,"rep":"","cost":0.0,"checked_qty":0.0},{"name":"重庆市涪陵区百胜镇卫生院","quxian":"涪陵","level":"其它","products":4,"hospital_scale":0,"actual25":20067.47,"target26":4410.73,"actual26":6347.86,"rep":"廖瑜英(重庆)","cost":879.54,"checked_qty":39997.0},{"name":"重庆市涪陵区石沱镇卫生院","quxian":"涪陵","level":"其它","products":3,"hospital_scale":0,"actual25":1628.17,"target26":4747.72,"actual26":1054.87,"rep":"廖瑜英(重庆)","cost":208.06,"checked_qty":22336.0},{"name":"重庆市涪陵区罗云镇卫生院","quxian":"涪陵","level":"其它","products":2,"hospital_scale":0,"actual25":2815.0,"target26":1843.96,"actual26":0.0,"rep":"","cost":0.0,"checked_qty":0.0},{"name":"重庆市涪陵区荔枝街道乌江村卫生室","quxian":"涪陵","level":"其它","products":1,"hospital_scale":0,"actual25":170.8,"target26":0.0,"actual26":0.0,"rep":"","cost":0.0,"checked_qty":0.0},{"name":"重庆市涪陵区荔枝街道社区卫生服务中心","quxian":"涪陵","level":"其它","products":4,"hospital_scale":275.68,"actual25":50257.74,"target26":23381.57,"actual26":6238.67,"rep":"李迅(重庆)","cost":1823.71,"checked_qty":5242.0},{"name":"重庆市涪陵区蔺市街道社区卫生服务中心","quxian":"涪陵","level":"其它","products":2,"hospital_scale":0,"actual25":9261.08,"target26":6590.93,"actual26":0.0,"rep":"李迅(重庆)","cost":875.38,"checked_qty":0.0},{"name":"重庆市涪陵区马武中心卫生院","quxian":"涪陵","level":"其它","products":1,"hospital_scale":265.67,"actual25":2150.2,"target26":1490.6,"actual26":0.0,"rep":"","cost":0.0,"checked_qty":0.0},{"name":"重庆市涪陵区马鞍街道社区卫生服务中心","quxian":"涪陵","level":"其它","products":3,"hospital_scale":0,"actual25":4614.09,"target26":12321.56,"actual26":2963.74,"rep":"廖瑜英(重庆)","cost":756.58,"checked_qty":0.0},{"name":"重庆市涪陵区龙桥街道社区卫生服务中心","quxian":"涪陵","level":"其它","products":3,"hospital_scale":0,"actual25":5166.34,"target26":8934.62,"actual26":1818.6,"rep":"李迅(重庆)","cost":2994.2,"checked_qty":14660.0},{"name":"重庆市涪陵区龙潭中心卫生院","quxian":"涪陵","level":"其它","products":3,"hospital_scale":433.6,"actual25":13789.84,"target26":10745.41,"actual26":776.12,"rep":"廖瑜英(重庆)","cost":643.09,"checked_qty":0.0},{"name":"重庆市涪陵精神卫生中心","quxian":"涪陵","level":"二级","products":2,"hospital_scale":0,"actual25":2688.05,"target26":8043.16,"actual26":0.0,"rep":"李迅(重庆)","cost":673.93,"checked_qty":12442.0},{"name":"重庆市长寿区万顺镇卫生院","quxian":"长寿","level":"其它","products":3,"hospital_scale":168.92,"actual25":3570.25,"target26":5579.83,"actual26":1609.2,"rep":"自然流","cost":0.0,"checked_qty":1440.0},{"name":"重庆市长寿区中医院","quxian":"长寿","level":"三级","products":10,"hospital_scale":4968.93,"actual25":437712.06,"target26":434577.36,"actual26":183675.22,"rep":"颜昌荣（渝）","cost":98422.37,"checked_qty":590216.0},{"name":"重庆市长寿区九石坎医院","quxian":"长寿","level":"二级","products":1,"hospital_scale":0,"actual25":34211.22,"target26":0.0,"actual26":8540.0,"rep":"","cost":0.0,"checked_qty":0.0},{"name":"重庆市长寿区云台镇卫生院","quxian":"长寿","level":"其它","products":2,"hospital_scale":207.03,"actual25":74172.8,"target26":11402.86,"actual26":14708.0,"rep":"","cost":2549.04,"checked_qty":120400.0},{"name":"重庆市长寿区云集镇卫生院","quxian":"长寿","level":"其它","products":3,"hospital_scale":143.73,"actual25":1088.68,"target26":657.31,"actual26":854.0,"rep":"吴玲","cost":180.13,"checked_qty":720.0},{"name":"重庆市长寿区人民医院","quxian":"长寿","level":"三级","products":11,"hospital_scale":20403.09,"actual25":847303.01,"target26":1000621.61,"actual26":227270.64,"rep":"钟荀(重庆)","cost":231086.18,"checked_qty":1413336.0},{"name":"重庆市长寿区但渡镇卫生院","quxian":"长寿","level":"其它","products":1,"hospital_scale":0,"actual25":8568.0,"target26":13181.93,"actual26":8568.0,"rep":"陈小凤","cost":3135.91,"checked_qty":148120.0},{"name":"重庆市长寿区八颗街道核桃幸福村联合卫生室","quxian":"长寿","level":"其它","products":1,"hospital_scale":0,"actual25":85.4,"target26":0.0,"actual26":0.0,"rep":"","cost":0.0,"checked_qty":0.0},{"name":"重庆市长寿区八颗街道社区卫生服务中心","quxian":"长寿","level":"其它","products":1,"hospital_scale":0,"actual25":48.0,"target26":40.03,"actual26":0.0,"rep":"","cost":0.0,"checked_qty":240.0},{"name":"重庆市长寿区凤城街道关口社区卫生服务中心","quxian":"长寿","level":"其它","products":1,"hospital_scale":172.67,"actual25":0.0,"target26":4.0,"actual26":0.0,"rep":"","cost":0.0,"checked_qty":24.0},{"name":"重庆市长寿区凤城街道社区卫生服务中心（重庆市长寿区凤城医院）","quxian":"长寿","level":"其它","products":1,"hospital_scale":0,"actual25":181.86,"target26":35.81,"actual26":0.0,"rep":"自然流","cost":0.0,"checked_qty":0.0},{"name":"重庆市长寿区化工园区医院有限公司","quxian":"长寿","level":"其它","products":2,"hospital_scale":0,"actual25":1144.97,"target26":0.0,"actual26":0.0,"rep":"","cost":0.0,"checked_qty":0.0},{"name":"重庆市长寿区双龙镇卫生院","quxian":"长寿","level":"其它","products":1,"hospital_scale":241.2,"actual25":341.6,"target26":0.0,"actual26":0.0,"rep":"","cost":0.0,"checked_qty":0.0},{"name":"重庆市长寿区妇幼保健院","quxian":"长寿","level":"二级","products":2,"hospital_scale":0,"actual25":4114.2,"target26":6898.8,"actual26":0.0,"rep":"王怀宇","cost":2285.71,"checked_qty":0.0},{"name":"重庆市长寿区新市街道社区卫生服务中心","quxian":"长寿","level":"其它","products":2,"hospital_scale":0,"actual25":2267.8,"target26":3924.42,"actual26":0.0,"rep":"无","cost":1307.04,"checked_qty":0.0},{"name":"重庆市长寿区江南街道社区卫生服务中心","quxian":"长寿","level":"其它","products":6,"hospital_scale":0,"actual25":0.0,"target26":30673.77,"actual26":0.0,"rep":"李迅","cost":12764.51,"checked_qty":186218.0},{"name":"重庆市长寿区洪湖镇卫生院","quxian":"长寿","level":"其它","products":3,"hospital_scale":209.73,"actual25":1024.8,"target26":8524.11,"actual26":0.0,"rep":"","cost":1548.36,"checked_qty":6157.0},{"name":"重庆市长寿区海棠镇卫生院","quxian":"长寿","level":"其它","products":2,"hospital_scale":0,"actual25":58929.0,"target26":4983.72,"actual26":3312.8,"rep":"陈小凤","cost":1185.6,"checked_qty":56000.0},{"name":"重庆市长寿区渡舟街道社区卫生服务中心","quxian":"长寿","level":"其它","products":1,"hospital_scale":0,"actual25":2866.5,"target26":2006.5,"actual26":819.0,"rep":"","cost":0.0,"checked_qty":0.0},{"name":"重庆市长寿区瑞滨医院有限公司","quxian":"长寿","level":"其它","products":1,"hospital_scale":0,"actual25":1091.15,"target26":823.73,"actual26":0.0,"rep":"自然流","cost":0.0,"checked_qty":0.0},{"name":"重庆市长寿区石堰镇卫生院","quxian":"长寿","level":"其它","products":5,"hospital_scale":258.17,"actual25":7088.61,"target26":6198.93,"actual26":4428.11,"rep":"颜昌荣（渝）","cost":2112.88,"checked_qty":914.0},{"name":"重庆市长寿区石堰镇海天村卫生室","quxian":"长寿","level":"其它","products":2,"hospital_scale":0,"actual25":1026.02,"target26":0.0,"actual26":0.0,"rep":"","cost":0.0,"checked_qty":0.0},{"name":"重庆市长寿区第三人民医院","quxian":"长寿","level":"二级","products":7,"hospital_scale":996.71,"actual25":42920.88,"target26":160853.66,"actual26":0.0,"rep":"李迅(重庆)","cost":37472.31,"checked_qty":1191440.0},{"name":"重庆市长寿区菩提街道社区卫生服务中心","quxian":"长寿","level":"其它","products":5,"hospital_scale":0,"actual25":101206.8,"target26":18283.31,"actual26":61594.13,"rep":"陈小凤","cost":3396.74,"checked_qty":164272.0},{"name":"重庆市长寿区葛兰镇卫生院","quxian":"长寿","level":"其它","products":5,"hospital_scale":603.53,"actual25":19498.64,"target26":37366.59,"actual26":4284.0,"rep":"陈小凤","cost":9212.0,"checked_qty":294896.0},{"name":"重庆市长寿区邻封镇保家村卫生室","quxian":"长寿","level":"其它","products":1,"hospital_scale":0,"actual25":461.77,"target26":0.0,"actual26":0.0,"rep":"","cost":0.0,"checked_qty":0.0},{"name":"重庆市长寿区邻封镇卫生院","quxian":"长寿","level":"其它","products":3,"hospital_scale":149.71,"actual25":3985.8,"target26":16435.59,"actual26":0.0,"rep":"","cost":3556.8,"checked_qty":169440.0},{"name":"重庆市长寿区长寿湖镇卫生院（重庆市长寿区第二人民医院）","quxian":"长寿","level":"其它","products":2,"hospital_scale":0,"actual25":6104.7,"target26":2895.52,"actual26":512.4,"rep":"","cost":0.0,"checked_qty":1152.0},{"name":"重庆市长寿区龙河镇卫生院","quxian":"长寿","level":"其它","products":3,"hospital_scale":134.75,"actual25":5572.7,"target26":45151.29,"actual26":416.5,"rep":"","cost":11197.44,"checked_qty":4608.0},{"name":"重庆涪陵新九洲妇科医院","quxian":"涪陵","level":"其它","products":1,"hospital_scale":0,"actual25":17937.6,"target26":144768.23,"actual26":43389.6,"rep":"","cost":0.0,"checked_qty":0.0},{"name":"重庆涪陵衡生中医医院","quxian":"涪陵","level":"其它","products":2,"hospital_scale":0,"actual25":11094.97,"target26":1617.52,"actual26":2331.88,"rep":"","cost":0.0,"checked_qty":0.0},{"name":"重庆立佳医院有限公司","quxian":"涪陵","level":"其它","products":1,"hospital_scale":0,"actual25":0.0,"target26":4852.57,"actual26":1454.4,"rep":"","cost":0.0,"checked_qty":0.0},{"name":"重庆远博中医医院","quxian":"垫江","level":"二级","products":1,"hospital_scale":0,"actual25":3694.16,"target26":0.0,"actual26":0.0,"rep":"","cost":0.0,"checked_qty":0.0},{"name":"长寿区余忠霞诊所","quxian":"长寿","level":"其它","products":1,"hospital_scale":0,"actual25":461.77,"target26":0.0,"actual26":0.0,"rep":"","cost":0.0,"checked_qty":0.0},{"name":"长江师范学院医院","quxian":"涪陵","level":"其它","products":2,"hospital_scale":0,"actual25":888.16,"target26":1050.8,"actual26":170.8,"rep":"","cost":115.94,"checked_qty":1760.0}];
+var TERM_PRODUCTS = {"重庆市垫江县中医院":["硫酸氢氯吡格雷片","阿托伐他汀钙片","盐酸二甲双胍缓释片","富马酸替诺福韦二吡呋酯片","注射用二氯醋酸二异丙胺","盐酸度洛西汀肠溶胶囊","谷胱甘肽片0.1g","依匹斯汀10mg","注射用谷胱甘肽","阿法骨化醇片"],"重庆市涪陵区江东街道社区卫生服务中心":["阿托伐他汀钙片","瑞舒伐他汀钙片","氯化钾缓释片","盐酸二甲双胍片","注射用谷胱甘肽","阿法骨化醇片","炎琥宁80mg"],"重庆市涪陵区龙桥街道社区卫生服务中心":["阿托伐他汀钙片","注射用谷胱甘肽","炎琥宁80mg"],"重庆市涪陵区武陵山乡卫生院":["阿托伐他汀钙片","阿卡波糖片","盐酸二甲双胍片","阿法骨化醇片"],"重庆市涪陵区妇幼保健院":["阿托伐他汀钙片","阿卡波糖片","注射用泮托拉唑钠","注射用奥美拉唑钠","注射用水溶性维生素","注射用谷胱甘肽","阿法骨化醇片","炎琥宁80mg"],"重庆市涪陵区清溪中心卫生院":["阿托伐他汀钙片","瑞舒伐他汀钙片","苯磺酸氨氯地平片","吲达帕胺片","注射用谷胱甘肽","阿法骨化醇片","炎琥宁80mg"],"重庆市涪陵区石沱镇卫生院":["吲达帕胺片","注射用谷胱甘肽","炎琥宁80mg"],"垫江县澄溪镇卫生院":["瑞舒伐他汀钙片","苯磺酸氨氯地平片","氯化钾缓释片","阿法骨化醇片","炎琥宁80mg"],"丰都县暨龙镇卫生院（丰都县暨龙镇计划生育服务站）":["苯磺酸氨氯地平片"],"丰都县精神病医院":["苯磺酸氨氯地平片","氯化钾缓释片","盐酸度洛西汀肠溶胶囊","炎琥宁80mg"],"丰都县名山街道社区卫生服务中心":["苯磺酸氨氯地平片"],"丰都县南天湖镇卫生院":["苯磺酸氨氯地平片"],"丰都县包鸾中心卫生院（丰都县包鸾镇计划生育服务站）":["苯磺酸氨氯地平片"],"丰都县武平中心卫生院（丰都县武平镇计划生育服务站）":["苯磺酸氨氯地平片"],"丰都县中医院":["苯磺酸氨氯地平片","谷胱甘肽片0.1g","甲苯磺酸索拉非尼片"],"垫江县人民医院":["苯磺酸氨氯地平片","恩替卡韦片","富马酸替诺福韦二吡呋酯片","注射用二氯醋酸二异丙胺","盐酸度洛西汀肠溶胶囊","谷胱甘肽片0.1g","注射用谷胱甘肽","阿法骨化醇片"],"丰都县社坛中心卫生院":["苯磺酸氨氯地平片","注射用泮托拉唑钠","注射用谷胱甘肽"],"丰都县仙女湖镇卫生院":["苯磺酸氨氯地平片","谷胱甘肽片0.1g","阿法骨化醇片","炎琥宁80mg"],"丰都县太平坝乡卫生院（丰都县太平坝乡计划生育服务站）":["苯磺酸氨氯地平片","阿法骨化醇片"],"丰都县人民医院":["苯磺酸氨氯地平片","注射用二氯醋酸二异丙胺","注射用拉氧头孢钠","盐酸度洛西汀肠溶胶囊","谷胱甘肽片0.1g","阿法骨化醇片","炎琥宁80mg"],"丰都县青龙乡卫生院（丰都县青龙乡计划生育服务站）":["苯磺酸氨氯地平片","注射用谷胱甘肽","炎琥宁80mg"],"重庆市涪陵区敦仁街道社区卫生服务中心（重庆市涪陵区敦仁街道计划生育服务站）":["苯磺酸氨氯地平片","硫辛酸注射液","注射用谷胱甘肽","阿法骨化醇片","炎琥宁80mg"],"重庆市长寿区中医院":["苯磺酸氨氯地平片","恩替卡韦片","富马酸替诺福韦二吡呋酯片","富马酸丙酚替诺福韦片","注射用水溶性维生素","注射用二氯醋酸二异丙胺","盐酸度洛西汀肠溶胶囊","谷胱甘肽片0.1g","阿法骨化醇片","炎琥宁80mg"],"重庆市长寿区邻封镇卫生院":["苯磺酸氨氯地平片","注射用谷胱甘肽","阿法骨化醇片"],"重庆市长寿区人民医院":["苯磺酸氨氯地平片","阿卡波糖片","富马酸替诺福韦二吡呋酯片","盐酸二甲双胍片","拉米夫定","注射用二氯醋酸二异丙胺","注射用拉氧头孢钠","谷胱甘肽片0.1g","阿法骨化醇片","炎琥宁80mg","甲苯磺酸索拉非尼片"],"重庆市涪陵区中医院":["恩替卡韦片","富马酸替诺福韦二吡呋酯片","中/长链脂肪乳注射液（C6~24）","盐酸度洛西汀肠溶胶囊","谷胱甘肽片0.1g","依匹斯汀10mg","注射用谷胱甘肽","炎琥宁80mg"],"重庆市涪陵区崇义街道社区卫生服务中心（重庆市涪陵区崇义街道计划生育服务站）":["硫辛酸注射液","注射用谷胱甘肽","阿法骨化醇片"],"重庆市涪陵区焦石中心卫生院":["琥珀酸美托洛尔缓释片","注射用谷胱甘肽","阿法骨化醇片","炎琥宁80mg"],"重庆市涪陵区荔枝街道社区卫生服务中心":["注射用克林霉素","注射用谷胱甘肽","阿法骨化醇片","炎琥宁80mg"],"重庆市涪陵区南沱镇卫生院":["氯化钾缓释片","注射用克林霉素","炎琥宁80mg"],"重庆大学附属涪陵医院":["注射用二氯醋酸二异丙胺","注射用拉氧头孢钠","苯磺酸氨氯地平片","氯化钾缓释片","盐酸二甲双胍缓释片","富马酸替诺福韦二吡呋酯片","注射用泮托拉唑钠","中/长链脂肪乳注射液（C6~24）","丙泊酚中/长链脂肪乳注射液","注射用艾司奥美拉唑钠","琥珀酸美托洛尔缓释片","盐酸二甲双胍片","盐酸舍曲林片","盐酸度洛西汀肠溶胶囊","谷胱甘肽片0.1g","依匹斯汀10mg","注射用谷胱甘肽","阿法骨化醇片","炎琥宁80mg","注射用培美曲塞二钠","甲苯磺酸索拉非尼片","甲磺酸仑伐替尼胶囊"],"重庆市长寿区石堰镇卫生院":["氯化钾缓释片","谷胱甘肽片0.1g","阿法骨化醇片","注射用谷胱甘肽","炎琥宁80mg"],"重庆市长寿区妇幼保健院":["注射用水溶性维生素","炎琥宁80mg"],"垫江县桂溪社区卫生服务中心":["盐酸二甲双胍缓释片"],"垫江县精神卫生中心":["盐酸二甲双胍缓释片"],"长江师范学院医院":["琥珀酸美托洛尔缓释片","阿法骨化醇片"],"重庆市长寿区万顺镇卫生院":["恩替卡韦片","阿法骨化醇片","炎琥宁80mg"],"重庆市涪陵区增福乡卫生院":["苯磺酸氨氯地平片","炎琥宁80mg"],"重庆市长寿区洪湖镇卫生院":["恩替卡韦片","注射用奥美拉唑钠","阿法骨化醇片"],"重庆市长寿区云集镇卫生院":["恩替卡韦片","阿法骨化醇片","炎琥宁80mg"],"重庆市涪陵区新城区社区卫生服务中心":["硫酸氢氯吡格雷片","阿托伐他汀钙片","瑞舒伐他汀钙片","苯磺酸氨氯地平片","恩替卡韦片","阿卡波糖片","氯化钾缓释片","盐酸二甲双胍缓释片","注射用艾司奥美拉唑钠","琥珀酸美托洛尔缓释片","盐酸二甲双胍片","阿法骨化醇片"],"重庆市长寿区第三人民医院":["苯磺酸氨氯地平片","恩替卡韦片","盐酸二甲双胍缓释片","盐酸度洛西汀肠溶胶囊","注射用谷胱甘肽","阿法骨化醇片","炎琥宁80mg"],"重庆市长寿区葛兰镇卫生院":["苯磺酸氨氯地平片","氯化钾缓释片","吲达帕胺片","阿法骨化醇片","炎琥宁80mg"],"丰都县江池镇卫生院（丰都县江池镇计划生育服务站）":["苯磺酸氨氯地平片","阿法骨化醇片"],"丰都县龙孔镇卫生院（丰都县龙孔镇计划生育服务站）":["苯磺酸氨氯地平片","阿法骨化醇片"],"重庆市长寿区八颗街道社区卫生服务中心":["恩替卡韦片"],"重庆市长寿区海棠镇卫生院":["苯磺酸氨氯地平片","阿法骨化醇片"],"重庆市长寿区云台镇卫生院":["苯磺酸氨氯地平片","注射用谷胱甘肽"],"重庆市长寿区江南街道社区卫生服务中心":["阿托伐他汀钙片","盐酸二甲双胍缓释片","吲达帕胺片","注射用奥美拉唑钠","琥珀酸美托洛尔缓释片","阿法骨化醇片"],"重庆市涪陵区同乐镇卫生院":["阿托伐他汀钙片"],"丰都县十直镇卫生院（丰都县十直镇计划生育服务站）":["苯磺酸氨氯地平片","氯化钾缓释片","注射用谷胱甘肽","炎琥宁80mg"],"重庆市涪陵区百胜镇卫生院":["苯磺酸氨氯地平片","注射用克林霉素","盐酸度洛西汀肠溶胶囊","炎琥宁80mg"],"丰都县兴义镇卫生院（丰都县兴义镇计划生育服务站）":["苯磺酸氨氯地平片","琥珀酸美托洛尔缓释片"],"重庆市长寿区凤城街道关口社区卫生服务中心":["恩替卡韦片"],"丰都县许明寺镇卫生院（丰都县许明寺镇计划生育服务站）":["苯磺酸氨氯地平片","炎琥宁80mg"],"重庆市涪陵区义和街道社区卫生服务中心":["硫酸氢氯吡格雷片","吲达帕胺片","注射用谷胱甘肽"],"丰都县都督乡卫生院":["苯磺酸氨氯地平片","阿法骨化醇片"],"重庆市长寿区但渡镇卫生院":["苯磺酸氨氯地平片"],"丰都县董家中心卫生院":["苯磺酸氨氯地平片","注射用谷胱甘肽"],"重庆市涪陵区罗云镇卫生院":["注射用水溶性维生素","注射用谷胱甘肽"],"丰都县龙河中心卫生院（丰都县龙河镇计划生育服务站）":["苯磺酸氨氯地平片"],"重庆市长寿区菩提街道社区卫生服务中心":["苯磺酸氨氯地平片","恩替卡韦片","谷胱甘肽片0.1g","阿法骨化醇片","炎琥宁80mg"],"丰都县树人中心卫生院":["苯磺酸氨氯地平片"],"重庆市涪陵区儿童医院":["氯化钾缓释片","富马酸替诺福韦二吡呋酯片","硫辛酸注射液","中/长链脂肪乳注射液（C6~24）","注射用水溶性维生素","盐酸度洛西汀肠溶胶囊","注射用谷胱甘肽","阿法骨化醇片","炎琥宁80mg"],"垫江县包家镇卫生院":["苯磺酸氨氯地平片","阿卡波糖片","阿法骨化醇片"],"垫江县曹回镇卫生院":["盐酸二甲双胍缓释片"],"垫江县长龙镇卫生院":["氯化钾缓释片","阿法骨化醇片"],"垫江县高安中心卫生院":["苯磺酸氨氯地平片","阿卡波糖片","阿法骨化醇片"],"垫江县鹤游中心卫生院":["阿卡波糖片","注射用谷胱甘肽"],"垫江县黄沙镇卫生院":["阿卡波糖片","阿法骨化醇片","炎琥宁80mg"],"垫江县坪山中心卫生院":["瑞舒伐他汀钙片","阿法骨化醇片","炎琥宁80mg"],"垫江县三溪镇卫生院（垫江县三溪镇公共卫生管理中心、垫江县三溪镇计划生育服务站）":["盐酸二甲双胍缓释片"],"垫江县沙河乡卫生院":["盐酸二甲双胍缓释片"],"垫江县沙坪镇卫生院":["瑞舒伐他汀钙片","吲达帕胺片","阿法骨化醇片","炎琥宁80mg"],"垫江县新民中心卫生院":["瑞舒伐他汀钙片","恩替卡韦片","阿卡波糖片","盐酸二甲双胍缓释片","吲达帕胺片","阿法骨化醇片"],"垫江县砚台镇卫生院":["瑞舒伐他汀钙片","炎琥宁80mg"],"垫江县周嘉中心卫生院":["瑞舒伐他汀钙片","苯磺酸氨氯地平片","恩替卡韦片","阿卡波糖片","氯化钾缓释片","吲达帕胺片"],"重庆市涪陵区珍溪中心卫生院":["盐酸度洛西汀肠溶胶囊","注射用谷胱甘肽","炎琥宁80mg"],"涪陵区况守勤诊所":["依匹斯汀10mg"],"丰都县仁沙镇卫生院":["炎琥宁80mg"],"丰都县三元中心卫生院":["注射用谷胱甘肽","阿法骨化醇片"],"重庆市长寿区新市街道社区卫生服务中心":["依匹斯汀10mg","注射用谷胱甘肽"],"重庆市涪陵区龙潭中心卫生院":["注射用谷胱甘肽","阿法骨化醇片","炎琥宁80mg"],"重庆市长寿区长寿湖镇卫生院（重庆市长寿区第二人民医院）":["注射用谷胱甘肽","阿法骨化醇片"],"重庆市涪陵区李渡街道社区卫生服务中心":["注射用谷胱甘肽"],"重庆市涪陵区蔺市街道社区卫生服务中心":["注射用谷胱甘肽","炎琥宁80mg"],"重庆市涪陵区大木乡卫生院":["阿法骨化醇片"],"重庆市涪陵区人民医院":["阿法骨化醇片","炎琥宁80mg","盐酸度洛西汀肠溶胶囊"],"重庆市长寿区双龙镇卫生院":["阿法骨化醇片"],"垫江县大石乡卫生院":["炎琥宁80mg"],"垫江县妇幼保健院（垫江县妇幼保健计划生育服务中心、垫江县妇女儿童医院）":["炎琥宁80mg"],"重庆市涪陵区新妙中心卫生院":["注射用谷胱甘肽","阿法骨化醇片","炎琥宁80mg"],"重庆市长寿区龙河镇卫生院":["注射用谷胱甘肽","阿法骨化醇片","甲苯磺酸索拉非尼片"],"重庆市涪陵区马武中心卫生院":["注射用谷胱甘肽"],"重庆市长寿区邻封镇保家村卫生室":["谷胱甘肽片0.1g"],"重庆涪陵新九洲妇科医院":["盐酸度洛西汀肠溶胶囊"],"重庆远博中医医院":["谷胱甘肽片0.1g"],"重庆市长寿区九石坎医院":["阿法骨化醇片"],"重庆市长寿区化工园区医院有限公司":["谷胱甘肽片0.1g","阿法骨化醇片"],"重庆市长寿区凤城街道社区卫生服务中心（重庆市长寿区凤城医院）":["炎琥宁80mg"],"重庆市长寿区渡舟街道社区卫生服务中心":["注射用谷胱甘肽"],"重庆市涪陵精神卫生中心":["盐酸度洛西汀肠溶胶囊","炎琥宁80mg"],"重庆涪陵衡生中医医院":["谷胱甘肽片0.1g","盐酸度洛西汀肠溶胶囊"],"丰都县妇幼保健计划生育服务中心":["注射用谷胱甘肽","炎琥宁80mg"],"重庆市涪陵区大顺镇卫生院":["注射用谷胱甘肽"],"丰都县双龙镇卫生院（丰都县双龙镇计划生育服务站）":["炎琥宁80mg"],"重庆市涪陵区马鞍街道社区卫生服务中心":["注射用谷胱甘肽","阿法骨化醇片","炎琥宁80mg"],"丰都县社坛镇地坝嘴村卫生室":["阿法骨化醇片"],"丰都县高镇中心卫生院（丰都县高家镇计划生育服务站）":["注射用谷胱甘肽"],"长寿区余忠霞诊所":["谷胱甘肽片0.1g"],"重庆市涪陵区白涛街道社区卫生服务中心（重庆市涪陵区白涛街道计划生育服务站）":["注射用谷胱甘肽","阿法骨化醇片"],"重庆市长寿区石堰镇海天村卫生室":["谷胱甘肽片0.1g","阿法骨化醇片"],"重庆市长寿区八颗街道核桃幸福村联合卫生室":["阿法骨化醇片"],"重庆市垫江监狱医院":["注射用谷胱甘肽","炎琥宁80mg"],"丰都新安门诊部":["谷胱甘肽片0.1g"],"重庆市涪陵区南沱镇焦岩村卫生室":["阿法骨化醇片"],"重庆市涪陵区大木镇卫生院":["注射用谷胱甘肽","阿法骨化醇片","炎琥宁80mg"],"重庆市涪陵区荔枝街道乌江村卫生室":["阿法骨化醇片"],"重庆市长寿区瑞滨医院有限公司":["炎琥宁80mg"],"重庆健侨医院有限公司":["谷胱甘肽片0.1g"],"丰都县兴义镇泥巴溪村卫生室":["阿法骨化醇片"],"重庆立佳医院有限公司":["盐酸度洛西汀肠溶胶囊"],"重庆工贸职业技术学院医务室":["阿法骨化醇片"],"垫江县杠家镇卫生院":["阿法骨化醇片"],"垫江县普顺镇卫生院":["阿法骨化醇片","炎琥宁80mg"],"垫江县永平镇卫生院":["阿法骨化醇片"]};
+
+var REGION_DONUT_DATA = {"垫江": {"商销品": 309502.0, "品牌品": 390786.8325396999}, "涪陵": {"商销品": 46287.0, "品牌品": 598165.7397379999, "代理品": 0.0}, "丰都": {"商销品": 159505.0, "品牌品": 125391.13412, "代理品": 1386.0}, "长寿": {"商销品": 311314.0, "品牌品": 209278.00284700005, "代理品": 0.0}};
+var REGION_BAR_DATA = {"垫江": {"商销品": {"labels": ["注射用二氯醋酸二异丙胺", "苯磺酸氨氯地平片", "恩替卡韦片", "富马酸替诺福韦二吡呋酯片", "盐酸二甲双胍缓释片", "阿卡波糖片", "硫酸氢氯吡格雷片", "氯化钾缓释片", "吲达帕胺片", "瑞舒伐他汀钙片", "阿托伐他汀钙片"], "target": [144234.57, 63811.69, 58921.68, 35608.57, 33504.47, 23035.95, 2236.82, 2075.77, 1650.57, 382.56, 119.33], "actual": [129087, 117596, 32165, 15942, 0, 14712, 0, 0, 0, 0, 0], "tag": ["非勾选品", "勾选品", "勾选品", "勾选品", "勾选品", "勾选品", "勾选品", "勾选品", "勾选品", "勾选品", "勾选品"]}, "品牌品": {"labels": ["谷胱甘肽片0.1g", "注射用谷胱甘肽", "阿法骨化醇片", "依匹斯汀10mg", "炎琥宁80mg", "盐酸度洛西汀肠溶胶囊"], "target": [785475.09, 228143.29, 121821.31, 52056.64, 50569.59, 46474.0], "actual": [286759.11, 36036, 36124.18, 3427, 4511.34, 23929.2], "tag": ["非勾选品", "非勾选品", "勾选品", "非勾选品", "非勾选品", "勾选品"]}}, "涪陵": {"商销品": {"labels": ["盐酸二甲双胍缓释片", "注射用拉氧头孢钠", "中/长链脂肪乳注射液（C6~24）", "丙泊酚中/长链脂肪乳注射液", "琥珀酸美托洛尔缓释片", "苯磺酸氨氯地平片", "氯化钾缓释片", "注射用二氯醋酸二异丙胺", "富马酸替诺福韦二吡呋酯片", "注射用艾司奥美拉唑钠", "硫辛酸注射液", "恩替卡韦片", "阿托伐他汀钙片", "注射用克林霉素", "注射用水溶性维生素", "硫酸氢氯吡格雷片", "阿卡波糖片", "盐酸二甲双胍片", "注射用泮托拉唑钠", "吲达帕胺片", "瑞舒伐他汀钙片", "注射用奥美拉唑钠"], "target": [326379.33, 147324.39, 96924.11, 95198.62, 67864.32, 60975.51, 56571.66, 52277.16, 38892.22, 37840.94, 20110.29, 14251.09, 12831.97, 10706.78, 9281.26, 8010.62, 6097.21, 5173.32, 5128.18, 3028.42, 2428.97, 45.4], "actual": [0, 0, 0, 0, 0, 34078, 0, 0, 0, 0, 0, 5026, 0, 6647, 536, 0, 0, 0, 0, 0, 0, 0], "tag": ["勾选品", "非勾选品", "勾选品", "勾选品", "勾选品", "勾选品", "勾选品", "非勾选品", "勾选品", "勾选品", "勾选品", "勾选品", "勾选品", "非勾选品", "非勾选品", "勾选品", "勾选品", "勾选品", "勾选品", "勾选品", "勾选品", "勾选品"]}, "品牌品": {"labels": ["谷胱甘肽片0.1g", "依匹斯汀10mg", "注射用谷胱甘肽", "炎琥宁80mg", "阿法骨化醇片", "盐酸度洛西汀肠溶胶囊", "盐酸舍曲林片"], "target": [1156393.89, 659384.07, 545311.62, 335435.42, 212122.57, 186041.25, 2893.7], "actual": [203690.27, 176022.0, 89271, 28361.3, 45432.77, 55388.4, 0], "tag": ["非勾选品", "非勾选品", "非勾选品", "非勾选品", "勾选品", "勾选品", "勾选品"]}, "代理品": {"labels": ["甲苯磺酸索拉非尼片", "甲磺酸仑伐替尼胶囊", "注射用培美曲塞二钠"], "target": [156888.35, 77311.81, 58362.86], "actual": [0, 0, 0], "tag": ["勾选品", "勾选品", "勾选品"]}}, "丰都": {"商销品": {"labels": ["苯磺酸氨氯地平片", "注射用二氯醋酸二异丙胺", "注射用泮托拉唑钠", "氯化钾缓释片", "注射用拉氧头孢钠", "琥珀酸美托洛尔缓释片"], "target": [141067.4, 68464.18, 2527.77, 1122.73, 654.78, 266.31], "actual": [94962, 64543, 0, 0, 0, 0], "tag": ["勾选品", "非勾选品", "勾选品", "勾选品", "非勾选品", "勾选品"]}, "品牌品": {"labels": ["谷胱甘肽片0.1g", "阿法骨化醇片", "炎琥宁80mg", "盐酸度洛西汀肠溶胶囊", "注射用谷胱甘肽"], "target": [392737.55, 40894.08, 38536.04, 20851.96, 11465.32], "actual": [77082.74, 22033.19, 16579.2, 9696, 0], "tag": ["非勾选品", "勾选品", "非勾选品", "勾选品", "非勾选品"]}, "代理品": {"labels": ["甲苯磺酸索拉非尼片"], "target": [156888.35], "actual": [1386], "tag": ["勾选品"]}}, "长寿": {"商销品": {"labels": ["苯磺酸氨氯地平片", "阿卡波糖片", "盐酸二甲双胍缓释片", "注射用二氯醋酸二异丙胺", "富马酸替诺福韦二吡呋酯片", "恩替卡韦片", "注射用拉氧头孢钠", "阿托伐他汀钙片", "拉米夫定", "注射用奥美拉唑钠", "氯化钾缓释片", "注射用水溶性维生素", "琥珀酸美托洛尔缓释片", "吲达帕胺片", "盐酸二甲双胍片", "富马酸丙酚替诺福韦片"], "target": [225360.11, 114598.21, 70004.43, 51962.24, 32141.84, 12541.76, 11785.95, 11093.15, 10877.15, 4778.92, 3709.29, 2713.94, 2339.37, 1943.19, 1909.1, 525.87], "actual": [218308, 21959, 0, 46102, 14438, 8719, 0, 0, 0, 0, 0, 1788, 0, 0, 0, 0], "tag": ["勾选品", "勾选品", "勾选品", "非勾选品", "勾选品", "勾选品", "非勾选品", "勾选品", "非勾选品", "勾选品", "勾选品", "非勾选品", "勾选品", "勾选品", "勾选品", "非勾选品"]}, "品牌品": {"labels": ["谷胱甘肽片0.1g", "炎琥宁80mg", "阿法骨化醇片", "盐酸度洛西汀肠溶胶囊", "注射用谷胱甘肽", "依匹斯汀10mg"], "target": [785475.09, 181685.23, 122267.92, 32609.25, 22249.84, 0], "actual": [119598.41, 22987.73, 65245.56, 242.4, 1203.9, 0], "tag": ["非勾选品", "非勾选品", "勾选品", "勾选品", "非勾选品", "非勾选品"]}, "代理品": {"labels": ["甲苯磺酸索拉非尼片"], "target": [108548.81], "actual": [0], "tag": ["勾选品"]}}};
+
+var PRODUCT_DATA = [{"drug": "谷胱甘肽片0.1g", "cat": "品牌品", "market_scale": 0, "checked_qty": 1707372.0, "sales_25": 1707372.0, "current_sales": 538560.0, "target_qty": 2471040.0, "costRate": 28.0}, {"drug": "阿法骨化醇片", "cat": "品牌品", "market_scale": 873860.0, "checked_qty": 569504.0, "sales_25": 974160.0, "current_sales": 296550.0, "target_qty": 886897.2, "costRate": 0}, {"drug": "盐酸度洛西汀肠溶胶囊", "cat": "品牌品", "market_scale": 0, "checked_qty": 270997.0, "sales_25": 327780.0, "current_sales": 208500.0, "target_qty": 707196.4, "costRate": 0}, {"drug": "依匹斯汀10mg", "cat": "品牌品", "market_scale": 0, "checked_qty": 184020.0, "sales_25": 197580.0, "current_sales": 62160.0, "target_qty": 246000.0, "costRate": 43.0}, {"drug": "炎琥宁80mg", "cat": "品牌品", "market_scale": 200150.0, "checked_qty": 0, "sales_25": 124710.0, "current_sales": 22505.0, "target_qty": 169270.0, "costRate": 28.54}, {"drug": "注射用谷胱甘肽", "cat": "品牌品", "market_scale": 69715.0, "checked_qty": 0, "sales_25": 110419.0, "current_sales": 15450.0, "target_qty": 110369.28, "costRate": 28.0}, {"drug": "盐酸舍曲林片", "cat": "品牌品", "market_scale": 0, "checked_qty": 3940.0, "sales_25": 0, "current_sales": 0, "target_qty": 4728.0, "costRate": 40.0}, {"drug": "甲苯磺酸索拉非尼片", "cat": "代理品", "market_scale": 0, "checked_qty": 4608.0, "sales_25": 1440.0, "current_sales": 300.0, "target_qty": 56529.6, "costRate": 25.0}, {"drug": "甲磺酸仑伐替尼胶囊", "cat": "代理品", "market_scale": 0, "checked_qty": 6292.0, "sales_25": 0, "current_sales": 0, "target_qty": 7550.4, "costRate": 50.0}, {"drug": "注射用培美曲塞二钠", "cat": "代理品", "market_scale": 0, "checked_qty": 528.0, "sales_25": 563.0, "current_sales": 0, "target_qty": 633.6, "costRate": 50.0}, {"drug": "苯磺酸氨氯地平片", "cat": "商销品", "market_scale": 0, "checked_qty": 5519580.0, "sales_25": 4132632.0, "current_sales": 1468110.0, "target_qty": 6623496.0, "costRate": 20.0}, {"drug": "盐酸二甲双胍缓释片", "cat": "商销品", "market_scale": 0, "checked_qty": 3642028.0, "sales_25": 0, "current_sales": 0, "target_qty": 4370433.6, "costRate": 35.0}, {"drug": "阿卡波糖片", "cat": "商销品", "market_scale": 0, "checked_qty": 939160.0, "sales_25": 99500.0, "current_sales": 250500.0, "target_qty": 1126992.0, "costRate": 4.0}, {"drug": "恩替卡韦片", "cat": "商销品", "market_scale": 0, "checked_qty": 513887.0, "sales_25": 777900.0, "current_sales": 284400.0, "target_qty": 616664.4, "costRate": 0}, {"drug": "富马酸替诺福韦二吡呋酯片", "cat": "商销品", "market_scale": 0, "checked_qty": 305218.0, "sales_25": 334200.0, "current_sales": 90900.0, "target_qty": 366261.6, "costRate": 0}, {"drug": "氯化钾缓释片", "cat": "商销品", "market_scale": 0, "checked_qty": 225934.0, "sales_25": 0, "current_sales": 0, "target_qty": 271120.8, "costRate": 40.0}, {"drug": "琥珀酸美托洛尔缓释片", "cat": "商销品", "market_scale": 0, "checked_qty": 161944.0, "sales_25": 0, "current_sales": 0, "target_qty": 194332.8, "costRate": 40.0}, {"drug": "阿托伐他汀钙片", "cat": "商销品", "market_scale": 0, "checked_qty": 161193.0, "sales_25": 0, "current_sales": 0, "target_qty": 193431.6, "costRate": 45.0}, {"drug": "盐酸二甲双胍片", "cat": "商销品", "market_scale": 0, "checked_qty": 79776.0, "sales_25": 0, "current_sales": 0, "target_qty": 95731.2, "costRate": 40.0}, {"drug": "吲达帕胺片", "cat": "商销品", "market_scale": 0, "checked_qty": 74592.0, "sales_25": 0, "current_sales": 0, "target_qty": 89510.4, "costRate": 0}, {"drug": "注射用二氯醋酸二异丙胺", "cat": "商销品", "market_scale": 0, "checked_qty": 0, "sales_25": 50320.0, "current_sales": 11700.0, "target_qty": 50320.0, "costRate": 0}, {"drug": "注射用拉氧头孢钠", "cat": "商销品", "market_scale": 0, "checked_qty": 0, "sales_25": 24600.0, "current_sales": 0, "target_qty": 24400.0, "costRate": 0}, {"drug": "瑞舒伐他汀钙片", "cat": "商销品", "market_scale": 0, "checked_qty": 14390.0, "sales_25": 0, "current_sales": 0, "target_qty": 17268.0, "costRate": 20.0}, {"drug": "注射用艾司奥美拉唑钠", "cat": "商销品", "market_scale": 0, "checked_qty": 12503.0, "sales_25": 0, "current_sales": 0, "target_qty": 15003.6, "costRate": 50.0}, {"drug": "丙泊酚中/长链脂肪乳注射液", "cat": "商销品", "market_scale": 0, "checked_qty": 12319.0, "sales_25": 0, "current_sales": 0, "target_qty": 14782.8, "costRate": 20.0}, {"drug": "硫酸氢氯吡格雷片", "cat": "商销品", "market_scale": 0, "checked_qty": 10995.0, "sales_25": 0, "current_sales": 0, "target_qty": 13194.0, "costRate": 50.0}, {"drug": "注射用克林霉素", "cat": "商销品", "market_scale": 0, "checked_qty": 0, "sales_25": 6890.0, "current_sales": 1245.0, "target_qty": 6890.0, "costRate": 0}, {"drug": "注射用水溶性维生素", "cat": "商销品", "market_scale": 0, "checked_qty": 0, "sales_25": 5790.0, "current_sales": 390.0, "target_qty": 5790.0, "costRate": 0}, {"drug": "注射用奥美拉唑钠", "cat": "商销品", "market_scale": 0, "checked_qty": 4782.0, "sales_25": 0, "current_sales": 0, "target_qty": 5738.4, "costRate": 30.0}, {"drug": "注射用泮托拉唑钠", "cat": "商销品", "market_scale": 0, "checked_qty": 4216.0, "sales_25": 0, "current_sales": 0, "target_qty": 5059.2, "costRate": 20.0}, {"drug": "硫辛酸注射液", "cat": "商销品", "market_scale": 0, "checked_qty": 3284.0, "sales_25": 0, "current_sales": 0, "target_qty": 3940.8, "costRate": 45.0}, {"drug": "中/长链脂肪乳注射液（C6~24）", "cat": "商销品", "market_scale": 0, "checked_qty": 2810.0, "sales_25": 121.0, "current_sales": 0, "target_qty": 3372.0, "costRate": 45.0}, {"drug": "拉米夫定", "cat": "商销品", "market_scale": 0, "checked_qty": 0, "sales_25": 0, "current_sales": 0, "target_qty": 2758.0, "costRate": 0}, {"drug": "富马酸丙酚替诺福韦片", "cat": "商销品", "market_scale": 0, "checked_qty": 1216.0, "sales_25": 0, "current_sales": 0, "target_qty": 1459.2, "costRate": 0}];
+var REGION_PRODUCT_DATA = {"垫江":[{"drug":"苯磺酸氨氯地平片","cat":"商销品","market_scale":0,"checked_qty":717026.0,"sales_25":331820.0,"current_sales":345870.0,"target_qty":860431.2,"costRate":20},{"drug":"谷胱甘肽片0.1g","cat":"品牌品","market_scale":0,"checked_qty":728388.0,"sales_25":934299.0585330001,"current_sales":223560.0,"target_qty":622080.0,"costRate":28.000000000000004},{"drug":"恩替卡韦片","cat":"商销品","market_scale":0,"checked_qty":353255.0,"sales_25":85821.0,"current_sales":201600.0,"target_qty":423906.00000000006,"costRate":0},{"drug":"阿卡波糖片","cat":"商销品","market_scale":0,"checked_qty":150520.0,"sales_25":14566.0,"current_sales":100500.0,"target_qty":180624.0,"costRate":4},{"drug":"阿法骨化醇片","cat":"品牌品","market_scale":208620.0,"checked_qty":122887.0,"sales_25":117339.53130000002,"current_sales":63450.0,"target_qty":217344.0,"costRate":0},{"drug":"富马酸替诺福韦二吡呋酯片","cat":"商销品","market_scale":0,"checked_qty":101914.0,"sales_25":53942.0,"current_sales":47700.0,"target_qty":122296.79999999999,"costRate":0},{"drug":"盐酸度洛西汀肠溶胶囊","cat":"品牌品","market_scale":0,"checked_qty":95772.0,"sales_25":39513.479999999996,"current_sales":46800.0,"target_qty":114926.4,"costRate":0},{"drug":"注射用二氯醋酸二异丙胺","cat":"商销品","market_scale":0,"checked_qty":0,"sales_25":469221.0,"current_sales":6300.0,"target_qty":22900.0,"costRate":0},{"drug":"注射用谷胱甘肽","cat":"品牌品","market_scale":31230.0,"checked_qty":0,"sales_25":255773.7,"current_sales":4400.0,"target_qty":31230.120000000003,"costRate":10},{"drug":"炎琥宁80mg","cat":"品牌品","market_scale":11550.0,"checked_qty":0,"sales_25":32432.93099,"current_sales":1530.0,"target_qty":14120.0,"costRate":28.54},{"drug":"依匹斯汀10mg","cat":"品牌品","market_scale":0,"checked_qty":8400.0,"sales_25":23989.0,"current_sales":1200.0,"target_qty":18000.0,"costRate":43},{"drug":"硫酸氢氯吡格雷片","cat":"商销品","market_scale":0,"checked_qty":2400.0,"sales_25":0.0,"current_sales":0.0,"target_qty":2880.0,"costRate":50},{"drug":"阿托伐他汀钙片","cat":"商销品","market_scale":0,"checked_qty":800.0,"sales_25":0.0,"current_sales":0.0,"target_qty":960.0,"costRate":45},{"drug":"盐酸二甲双胍缓释片","cat":"商销品","market_scale":0,"checked_qty":283851.0,"sales_25":0.0,"current_sales":0,"target_qty":340621.2,"costRate":35},{"drug":"瑞舒伐他汀钙片","cat":"商销品","market_scale":0,"checked_qty":1958.0,"sales_25":0.0,"current_sales":0.0,"target_qty":2349.6,"costRate":20},{"drug":"氯化钾缓释片","cat":"商销品","market_scale":0,"checked_qty":7388.0,"sales_25":0.0,"current_sales":0.0,"target_qty":8865.6,"costRate":40},{"drug":"吲达帕胺片","cat":"商销品","market_scale":0,"checked_qty":18592.0,"sales_25":0.0,"current_sales":0,"target_qty":22310.4,"costRate":0}],"涪陵":[{"drug":"谷胱甘肽片0.1g","cat":"品牌品","market_scale":0,"checked_qty":471636.0,"sales_25":595719.3049400001,"current_sales":161280.0,"target_qty":915840.0,"costRate":28.000000000000004},{"drug":"盐酸度洛西汀肠溶胶囊","cat":"品牌品","market_scale":0,"checked_qty":65054.0,"sales_25":53667.36,"current_sales":137100.0,"target_qty":460064.80000000005,"costRate":0},{"drug":"苯磺酸氨氯地平片","cat":"商销品","market_scale":0,"checked_qty":685157.0,"sales_25":131701.0,"current_sales":100800.0,"target_qty":822188.4,"costRate":20},{"drug":"阿法骨化醇片","cat":"品牌品","market_scale":410660.0,"checked_qty":260657.0,"sales_25":191073.84813000006,"current_sales":79800.0,"target_qty":378452.4,"costRate":0},{"drug":"依匹斯汀10mg","cat":"品牌品","market_scale":0,"checked_qty":175560.0,"sales_25":546084.0,"current_sales":60960.0,"target_qty":228000.0,"costRate":43},{"drug":"恩替卡韦片","cat":"商销品","market_scale":0,"checked_qty":85440.0,"sales_25":21012.0,"current_sales":31500.0,"target_qty":102528.0,"costRate":0},{"drug":"注射用谷胱甘肽","cat":"品牌品","market_scale":34810.0,"checked_qty":0,"sales_25":598307.7119474998,"current_sales":10900.0,"target_qty":73718.99999999999,"costRate":28.000000000000004},{"drug":"炎琥宁80mg","cat":"品牌品","market_scale":118090.0,"checked_qty":0,"sales_25":192752.18376000004,"current_sales":9200.0,"target_qty":93660.0,"costRate":28.54},{"drug":"注射用克林霉素","cat":"商销品","market_scale":0,"checked_qty":0,"sales_25":36792.0,"current_sales":1245.0,"target_qty":6890.0,"costRate":0},{"drug":"注射用水溶性维生素","cat":"商销品","market_scale":0,"checked_qty":0,"sales_25":26701.0,"current_sales":90.0,"target_qty":4480.0,"costRate":0},{"drug":"阿托伐他汀钙片","cat":"商销品","market_scale":0,"checked_qty":86025.0,"sales_25":0.0,"current_sales":0.0,"target_qty":103230.0,"costRate":45},{"drug":"瑞舒伐他汀钙片","cat":"商销品","market_scale":0,"checked_qty":12432.0,"sales_25":0.0,"current_sales":0.0,"target_qty":14918.4,"costRate":20},{"drug":"氯化钾缓释片","cat":"商销品","market_scale":0,"checked_qty":201348.0,"sales_25":0.0,"current_sales":0.0,"target_qty":241617.6,"costRate":40},{"drug":"盐酸二甲双胍片","cat":"商销品","market_scale":0,"checked_qty":58272.0,"sales_25":0.0,"current_sales":0,"target_qty":69926.4,"costRate":40},{"drug":"阿卡波糖片","cat":"商销品","market_scale":0,"checked_qty":39840.0,"sales_25":0.0,"current_sales":0,"target_qty":47808.0,"costRate":4},{"drug":"注射用泮托拉唑钠","cat":"商销品","market_scale":0,"checked_qty":2824.0,"sales_25":0.0,"current_sales":0.0,"target_qty":3388.8,"costRate":20},{"drug":"注射用奥美拉唑钠","cat":"商销品","market_scale":0,"checked_qty":45.0,"sales_25":0.0,"current_sales":0.0,"target_qty":54.0,"costRate":30},{"drug":"吲达帕胺片","cat":"商销品","market_scale":0,"checked_qty":34112.0,"sales_25":0.0,"current_sales":0,"target_qty":40934.4,"costRate":0},{"drug":"硫辛酸注射液","cat":"商销品","market_scale":0,"checked_qty":3284.0,"sales_25":0.0,"current_sales":0,"target_qty":3940.8,"costRate":45},{"drug":"富马酸替诺福韦二吡呋酯片","cat":"商销品","market_scale":0,"checked_qty":111312.0,"sales_25":0.0,"current_sales":0.0,"target_qty":133574.4,"costRate":0},{"drug":"中/长链脂肪乳注射液（C6~24）","cat":"商销品","market_scale":0,"checked_qty":2810.0,"sales_25":8062.0,"current_sales":0.0,"target_qty":3372.0,"costRate":45},{"drug":"琥珀酸美托洛尔缓释片","cat":"商销品","market_scale":0,"checked_qty":155956.0,"sales_25":0.0,"current_sales":0,"target_qty":187147.2,"costRate":40},{"drug":"注射用二氯醋酸二异丙胺","cat":"商销品","market_scale":0,"checked_qty":0,"sales_25":170067.0,"current_sales":0.0,"target_qty":8300.0,"costRate":0},{"drug":"注射用拉氧头孢钠","cat":"商销品","market_scale":0,"checked_qty":0,"sales_25":174600.0,"current_sales":0.0,"target_qty":22500.0,"costRate":0},{"drug":"硫酸氢氯吡格雷片","cat":"商销品","market_scale":0,"checked_qty":8595.0,"sales_25":0.0,"current_sales":0.0,"target_qty":10314.0,"costRate":50},{"drug":"盐酸二甲双胍缓释片","cat":"商销品","market_scale":0,"checked_qty":2765097.0,"sales_25":0.0,"current_sales":0,"target_qty":3318116.4,"costRate":35},{"drug":"注射用艾司奥美拉唑钠","cat":"商销品","market_scale":0,"checked_qty":12503.0,"sales_25":0.0,"current_sales":0.0,"target_qty":15003.599999999999,"costRate":50},{"drug":"丙泊酚中/长链脂肪乳注射液","cat":"商销品","market_scale":0,"checked_qty":12319.0,"sales_25":0.0,"current_sales":0.0,"target_qty":14782.8,"costRate":20},{"drug":"盐酸舍曲林片","cat":"品牌品","market_scale":0,"checked_qty":3940.0,"sales_25":0.0,"current_sales":0.0,"target_qty":4728.0,"costRate":40},{"drug":"注射用培美曲塞二钠","cat":"代理品","market_scale":0,"checked_qty":528.0,"sales_25":68640.96,"current_sales":0,"target_qty":633.6,"costRate":50},{"drug":"甲苯磺酸索拉非尼片","cat":"代理品","market_scale":0,"checked_qty":0,"sales_25":2772.0,"current_sales":0,"target_qty":21000.0,"costRate":25},{"drug":"甲磺酸仑伐替尼胶囊","cat":"代理品","market_scale":0,"checked_qty":6292.0,"sales_25":0.0,"current_sales":0,"target_qty":7550.4,"costRate":50}],"丰都":[{"drug":"苯磺酸氨氯地平片","cat":"商销品","market_scale":0,"checked_qty":1585117.0,"sales_25":182536.0,"current_sales":279300.0,"target_qty":1902140.4,"costRate":20},{"drug":"谷胱甘肽片0.1g","cat":"品牌品","market_scale":0,"checked_qty":198648.0,"sales_25":252976.76312789996,"current_sales":60480.0,"target_qty":311040.0,"costRate":28.000000000000004},{"drug":"阿法骨化醇片","cat":"品牌品","market_scale":36870.0,"checked_qty":61856.0,"sales_25":48695.05149,"current_sales":38700.0,"target_qty":72960.0,"costRate":0},{"drug":"盐酸度洛西汀肠溶胶囊","cat":"品牌品","market_scale":0,"checked_qty":42971.0,"sales_25":28118.4,"current_sales":24000.0,"target_qty":51565.2,"costRate":0},{"drug":"炎琥宁80mg","cat":"品牌品","market_scale":35070.0,"checked_qty":0,"sales_25":92710.52992,"current_sales":4575.0,"target_qty":10760.0,"costRate":28.54},{"drug":"注射用二氯醋酸二异丙胺","cat":"商销品","market_scale":0,"checked_qty":0,"sales_25":222726.0,"current_sales":3150.0,"target_qty":10870.0,"costRate":0},{"drug":"甲苯磺酸索拉非尼片","cat":"代理品","market_scale":0,"checked_qty":0,"sales_25":2772.0,"current_sales":300.0,"target_qty":21000.0,"costRate":25},{"drug":"氯化钾缓释片","cat":"商销品","market_scale":0,"checked_qty":3996.0,"sales_25":0.0,"current_sales":0.0,"target_qty":4795.200000000001,"costRate":40},{"drug":"注射用泮托拉唑钠","cat":"商销品","market_scale":0,"checked_qty":1392.0,"sales_25":0.0,"current_sales":0.0,"target_qty":1670.4,"costRate":20},{"drug":"注射用拉氧头孢钠","cat":"商销品","market_scale":0,"checked_qty":0,"sales_25":2328.0,"current_sales":0.0,"target_qty":100.0,"costRate":0},{"drug":"琥珀酸美托洛尔缓释片","cat":"商销品","market_scale":0,"checked_qty":612.0,"sales_25":0.0,"current_sales":0,"target_qty":734.4,"costRate":40},{"drug":"注射用谷胱甘肽","cat":"品牌品","market_scale":1250.0,"checked_qty":0,"sales_25":16754.6099558,"current_sales":0.0,"target_qty":2000.16,"costRate":0}],"长寿":[{"drug":"苯磺酸氨氯地平片","cat":"商销品","market_scale":0,"checked_qty":2532280.0,"sales_25":657442.0,"current_sales":742140.0,"target_qty":3038736.0,"costRate":20},{"drug":"阿卡波糖片","cat":"商销品","market_scale":0,"checked_qty":748800.0,"sales_25":0.0,"current_sales":150000.0,"target_qty":898560.0,"costRate":4},{"drug":"阿法骨化醇片","cat":"品牌品","market_scale":217710.0,"checked_qty":124104.0,"sales_25":197513.00435999993,"current_sales":114600.0,"target_qty":218140.8,"costRate":0},{"drug":"谷胱甘肽片0.1g","cat":"品牌品","market_scale":0,"checked_qty":308700.0,"sales_25":395967.69773009996,"current_sales":93240.0,"target_qty":622080.0,"costRate":28.000000000000004},{"drug":"恩替卡韦片","cat":"商销品","market_scale":0,"checked_qty":75192.0,"sales_25":18357.0,"current_sales":51300.0,"target_qty":90230.4,"costRate":0},{"drug":"富马酸替诺福韦二吡呋酯片","cat":"商销品","market_scale":0,"checked_qty":91992.0,"sales_25":57752.0,"current_sales":43200.0,"target_qty":110390.4,"costRate":0},{"drug":"炎琥宁80mg","cat":"品牌品","market_scale":35440.0,"checked_qty":0.0,"sales_25":95849.57926,"current_sales":7200.0,"target_qty":50730.0,"costRate":28.54},{"drug":"注射用二氯醋酸二异丙胺","cat":"商销品","market_scale":0,"checked_qty":0,"sales_25":169042.0,"current_sales":2250.0,"target_qty":8250.0,"costRate":0},{"drug":"盐酸度洛西汀肠溶胶囊","cat":"品牌品","market_scale":0,"checked_qty":67200.0,"sales_25":24482.4,"current_sales":600.0,"target_qty":80640.0,"costRate":0},{"drug":"注射用水溶性维生素","cat":"商销品","market_scale":0,"checked_qty":0,"sales_25":7808.0,"current_sales":300.0,"target_qty":1310.0,"costRate":0},{"drug":"注射用谷胱甘肽","cat":"品牌品","market_scale":2425.0,"checked_qty":0,"sales_25":27578.7,"current_sales":150.0,"target_qty":3420.0,"costRate":28.000000000000004},{"drug":"富马酸丙酚替诺福韦片","cat":"商销品","market_scale":0,"checked_qty":1216.0,"sales_25":0.0,"current_sales":0.0,"target_qty":1459.2,"costRate":0},{"drug":"盐酸二甲双胍片","cat":"商销品","market_scale":0,"checked_qty":21504.0,"sales_25":0.0,"current_sales":0,"target_qty":25804.8,"costRate":40},{"drug":"拉米夫定","cat":"商销品","market_scale":0,"checked_qty":0,"sales_25":0.0,"current_sales":0.0,"target_qty":2758.0,"costRate":0},{"drug":"注射用拉氧头孢钠","cat":"商销品","market_scale":0,"checked_qty":0,"sales_25":13968.0,"current_sales":0.0,"target_qty":1800.0,"costRate":0},{"drug":"氯化钾缓释片","cat":"商销品","market_scale":0,"checked_qty":13202.0,"sales_25":0.0,"current_sales":0.0,"target_qty":15842.4,"costRate":40},{"drug":"注射用奥美拉唑钠","cat":"商销品","market_scale":0,"checked_qty":4737.0,"sales_25":0.0,"current_sales":0.0,"target_qty":5684.4,"costRate":30},{"drug":"盐酸二甲双胍缓释片","cat":"商销品","market_scale":0,"checked_qty":593080.0,"sales_25":0.0,"current_sales":0,"target_qty":711696.0,"costRate":35},{"drug":"吲达帕胺片","cat":"商销品","market_scale":0,"checked_qty":21888.0,"sales_25":0.0,"current_sales":0,"target_qty":26265.6,"costRate":0},{"drug":"阿托伐他汀钙片","cat":"商销品","market_scale":0,"checked_qty":74368.0,"sales_25":0.0,"current_sales":0.0,"target_qty":89241.6,"costRate":45},{"drug":"琥珀酸美托洛尔缓释片","cat":"商销品","market_scale":0,"checked_qty":5376.0,"sales_25":0.0,"current_sales":0,"target_qty":6451.2,"costRate":40},{"drug":"甲苯磺酸索拉非尼片","cat":"代理品","market_scale":0,"checked_qty":4608.0,"sales_25":1108.8,"current_sales":0,"target_qty":14529.6,"costRate":25},{"drug":"依匹斯汀10mg","cat":"品牌品","market_scale":0,"checked_qty":60.0,"sales_25":179.8,"current_sales":0.0,"target_qty":0.0,"costRate":0}]};
+
+
+var fmt = function(n) { if(!n&&n!==0)return'\u2014'; if(Math.abs(n)>=1e6)return(n/1e4).toFixed(1)+'\u4e07'; if(Math.abs(n)>=1e4)return(n/1e4).toFixed(2)+'\u4e07'; return n.toLocaleString('zh-CN',{maximumFractionDigits:0}); };
+var fmtFull = function(n) { if(!n&&n!==0)return'\u2014'; return'\u00a5'+n.toLocaleString('zh-CN',{maximumFractionDigits:0}); };
+var pct = function(a,t) { if(!t||t===0)return a>0?999:0; return Math.round(a/t*100); };
+var levelBadge = function(lv) { if(!lv||lv==='\u5176\u5b83')return'<span class="badge badge-none">'+(lv||'\u2014')+'</span>'; if(lv==='\u4e09\u7532')return'<span class="badge badge-3a">'+lv+'</span>'; if(lv==='\u4e09\u7ea7')return'<span class="badge badge-3">'+lv+'</span>'; if(lv==='\u4e8c\u7ea7')return'<span class="badge badge-2">'+lv+'</span>'; if(lv==='\u4e00\u7ea7')return'<span class="badge badge-1">'+lv+'</span>'; return'<span class="badge badge-none">'+lv+'</span>'; };
+
+var curCat='\u5168\u90e8', curMetric='\u91d1\u989d', curBarCat='\u54c1\u724c\u54c1', curTag='\u5168\u90e8', curRegion='\u5168\u90e8';
+var filteredTerms=TERMINALS.slice(), curPage=1; var PAGE_SIZE=20;
+
+var selectedTerminal = null;
+function clickTerminal(name){
+  selectedTerminal=name;
+  document.getElementById('filter-name').value=name;
+  switchTable('product',document.querySelectorAll('#table-tabs .sub-tab-btn')[1]);
+  applyFilter();
+}
+function clearTerminalSelect(){
+  selectedTerminal=null;
+  document.getElementById('filter-name').value='';
+  applyFilter();
+  renderTable();
+}
+
+function renderKPI(){
+  var d;
+  if(curRegion!=='\u5168\u90e8'){
+    d=REGION_SUMMARY[curRegion];
+  } else {
+    d=SUMMARY[curCat];
+  }
+  var grid=document.getElementById('kpi-grid');
+  if(curMetric==='\u91d1\u989d'){
+    var p=pct(d.actual26,d.target26);
+    grid.innerHTML=
+      '<div class="kpi-card"><div class="kpi-label">26\u5e74\u76ee\u6807\u9500\u552e\u91d1\u989d\uff08\u65e0\u7a0e\uff09</div><div class="kpi-value">'+fmt(d.target26)+'</div><div class="kpi-sub">\u00a5 '+d.target26.toLocaleString('zh-CN',{maximumFractionDigits:0})+'</div></div>'+
+      '<div class="kpi-card orange-card"><div class="kpi-label">26\u5e74\u7d2f\u8ba1\u9500\u552e\u91d1\u989d\uff08\u65e0\u7a0e\uff09</div><div class="kpi-value orange">'+fmt(d.actual26)+'</div><div class="kpi-sub">\u00a5 '+d.actual26.toLocaleString('zh-CN',{maximumFractionDigits:0})+'</div></div>'+
+      '<div class="kpi-card"><div class="kpi-label">26\u5e74\u5b8c\u6210\u7387</div><div class="kpi-value '+(p>100?'orange':'')+'">'+(p>999?'\u2014':p+'%')+'</div><div class="kpi-progress-wrap"><div class="kpi-progress-bar"><div class="kpi-progress-fill '+(p>100?'orange':'blue')+'" style="width:'+Math.min(p,100)+'%"></div></div><div class="kpi-progress-pct">'+(p>100?'\ud83c\udf89 \u5df2\u8d85\u989d\u5b8c\u6210':'\u76ee\u6807\u5b8c\u6210\u8fdb\u5ea6')+'</div></div></div>'+
+      '<div class="kpi-card"><div class="kpi-label">25\u5e74\u5b9e\u9645\u5b8c\u6210\u91d1\u989d</div><div class="kpi-value" style="color:var(--text-mid);font-size:18px">'+fmt(d.actual25)+'</div><div class="kpi-sub">\u00a5 '+d.actual25.toLocaleString('zh-CN',{maximumFractionDigits:0})+'</div></div>';
+  } else if(curMetric==='\u7ec8\u7aef\u6570'){
+    var totalTerminals = curRegion!=='\u5168\u90e8' ? TERMINALS.filter(function(t){return t.quxian===curRegion;}).length : TOTAL_TERMINALS;
+    grid.innerHTML=
+      '<div class="kpi-card"><div class="kpi-label">\u5728\u9500\u7ec8\u7aef\u6570</div><div class="kpi-value">'+d.terminals+'</div><div class="kpi-sub">'+(curRegion==='\u5168\u90e8'?'\u5f53\u524d\u54c1\u7c7b\u8986\u76d6\u7ec8\u7aef':curRegion+'\u533a\u57df\u5728\u9500\u7ec8\u7aef')+'</div></div>'+
+      '<div class="kpi-card"><div class="kpi-label">'+(curRegion==='\u5168\u90e8'?'\u5168\u90e8\u7ec8\u7aef\u603b\u6570':curRegion+'\u7ec8\u7aef\u603b\u6570')+'</div><div class="kpi-value">'+totalTerminals+'</div><div class="kpi-sub">\u516c\u53f8\u7ba1\u8f96\u7ec8\u7aef\u603b\u6570</div></div>'+
+      '<div class="kpi-card"><div class="kpi-label">\u7ec8\u7aef\u8986\u76d6\u7387</div><div class="kpi-value">'+Math.round(d.terminals/totalTerminals*100)+'%</div><div class="kpi-progress-wrap"><div class="kpi-progress-bar"><div class="kpi-progress-fill blue" style="width:'+Math.round(d.terminals/totalTerminals*100)+'%"></div></div><div class="kpi-progress-pct">\u7ec8\u7aef\u8986\u76d6\u7387</div></div></div>'+
+      '<div class="kpi-card orange-card"><div class="kpi-label">\u5728\u9500\u4ea7\u54c1\u6570</div><div class="kpi-value orange">'+d.products+'</div><div class="kpi-sub">'+(curRegion==='\u5168\u90e8'?'\u5f53\u524d\u54c1\u7c7b\u4ea7\u54c1':curRegion+'\u533a\u57df\u4ea7\u54c1')+'</div></div>';
+  } else {
+    var allP=SUMMARY['\u5168\u90e8'].products;
+    grid.innerHTML=
+      '<div class="kpi-card"><div class="kpi-label">\u5728\u9500\u4ea7\u54c1\u6570</div><div class="kpi-value">'+d.products+'</div><div class="kpi-sub">\u5f53\u524d\u54c1\u7c7b</div></div>'+
+      '<div class="kpi-card"><div class="kpi-label">\u5168\u54c1\u7c7b\u4ea7\u54c1\u603b\u6570</div><div class="kpi-value">'+allP+'</div><div class="kpi-sub">\u54c1\u724c\u54c1 + \u4ee3\u7406\u54c1 + \u5546\u9500\u54c1</div></div>'+
+      '<div class="kpi-card"><div class="kpi-label">\u4ea7\u54c1\u5360\u6bd4</div><div class="kpi-value">'+Math.round(d.products/allP*100)+'%</div><div class="kpi-progress-wrap"><div class="kpi-progress-bar"><div class="kpi-progress-fill blue" style="width:'+Math.round(d.products/allP*100)+'%"></div></div><div class="kpi-progress-pct">\u5360\u5168\u54c1\u7c7b\u6bd4\u4f8b</div></div></div>'+
+      '<div class="kpi-card orange-card"><div class="kpi-label">\u8986\u76d6\u7ec8\u7aef\u6570</div><div class="kpi-value orange">'+d.terminals+'</div><div class="kpi-sub">\u5f53\u524d\u54c1\u7c7b\u7ec8\u7aef</div></div>';
+  }
+}
+
+function switchCat(cat,btn){ curCat=cat; document.querySelectorAll('#cat-tabs .tab-btn').forEach(function(b){b.classList.remove('active');}); btn.classList.add('active'); renderKPI(); }
+function switchMetric(m,btn){ curMetric=m; document.querySelectorAll('#metric-tabs .sub-tab-btn').forEach(function(b){b.classList.remove('active');}); btn.classList.add('active'); renderKPI(); }
+function switchRegion(r,btn){ curRegion=r; document.querySelectorAll('#region-tabs .sub-tab-btn').forEach(function(b){b.classList.remove('active');}); btn.classList.add('active'); renderKPI(); renderDonut(); renderBar(); applyFilter(); renderProductTable(); }
+
+// Donut
+var donutChart;
+function renderDonut(){
+  var cats=['品牌品','代理品','商销品'];
+  var donutSrc=curRegion!=='全部'?REGION_DONUT_DATA[curRegion]:DONUT_DATA;
+  var vals=cats.map(function(c){return donutSrc[c]||0;});
+  var total=vals.reduce(function(a,b){return a+b;},0);
+  var targetTotal=curRegion!=='全部'?REGION_SUMMARY[curRegion].target26:cats.reduce(function(s,c){return s+(SUMMARY[c]?SUMMARY[c].target26:0);},0);
+  var rate=targetTotal>0?Math.round(total/targetTotal*10000)/100:0;
+  var colors=['#1a5faa','#f47b20','#3b8cde'];
+  var lightColors=['rgba(26,95,170,0.15)','rgba(244,123,32,0.15)','rgba(59,140,222,0.15)'];
+  document.getElementById('donut-total').textContent=fmt(total);
+  document.getElementById('donut-target').textContent=fmt(targetTotal);
+  document.getElementById('donut-rate').textContent=rate+'%';
+  var targetVals=cats.map(function(c){
+    if(curRegion!=='全部'){
+      var bd=REGION_BAR_DATA[curRegion]&&REGION_BAR_DATA[curRegion][c];
+      return bd?bd.target.reduce(function(a,b){return a+b;},0):0;
+    }
+    return SUMMARY[c]?SUMMARY[c].target26:0;
+  });
+  document.getElementById('donut-legend').innerHTML=cats.map(function(c,i){
+    var p=targetVals[i]>0?Math.round(vals[i]/targetVals[i]*100):0;
+    return'<div class="legend-item"><div class="legend-dot" style="background:'+colors[i]+'"></div><span class="legend-name">'+c+'</span><span class="legend-amt">'+fmt(vals[i])+'</span><span class="legend-pct" style="background:'+lightColors[i]+';color:'+colors[i]+'">'+p+'%</span></div>';
+  }).join('');
+  if(donutChart)donutChart.destroy();
+  donutChart=new Chart(document.getElementById('donut-chart'),{
+    type:'doughnut',
+    data:{labels:cats,datasets:[{data:vals,backgroundColor:colors,borderColor:'#fff',borderWidth:3,hoverOffset:8}]},
+    options:{responsive:true,maintainAspectRatio:false,cutout:'68%',plugins:{legend:{display:false},tooltip:{callbacks:{label:function(ctx){return' '+ctx.label+': \u00a5'+ctx.raw.toLocaleString('zh-CN',{maximumFractionDigits:0});}}}}}
+  });
+}
+
+// Bar
+var barChart;
+function getFilteredBarData(){
+  var barSrc=curRegion!=='全部'?REGION_BAR_DATA[curRegion]:BAR_DATA;
+  var d=barSrc[curBarCat];
+  if(!d) return {labels:[],target:[],actual:[],tag:[]};
+  if(curTag==='全部') return d;
+  var idx=d.tag.map(function(t,i){return t===curTag?i:-1;}).filter(function(i){return i>=0;});
+  return {labels:idx.map(function(i){return d.labels[i];}),target:idx.map(function(i){return d.target[i];}),actual:idx.map(function(i){return d.actual[i];}),tag:idx.map(function(i){return d.tag[i];})};
+}
+function renderBar(){
+  var d=getFilteredBarData();
+  document.getElementById('bar3-badge').textContent=curBarCat+(curTag==='\u5168\u90e8'?'':' \u00b7 '+curTag);
+  if(barChart)barChart.destroy();
+  barChart=new Chart(document.getElementById('bar-chart'),{
+    type:'bar',
+    data:{labels:d.labels,datasets:[{label:'26\u5e74\u76ee\u6807\u91d1\u989d\uff08\u65e0\u7a0e\uff09',data:d.target,backgroundColor:'rgba(26,95,170,0.85)',borderRadius:4,borderSkipped:false},{label:'26\u5e74\u7d2f\u8ba1\u9500\u552e\u91d1\u989d',data:d.actual,backgroundColor:'rgba(244,123,32,0.85)',borderRadius:4,borderSkipped:false}]},
+    options:{responsive:true,maintainAspectRatio:false,indexAxis:'y',plugins:{legend:{position:'top',labels:{font:{size:12},padding:16,boxWidth:12}},tooltip:{callbacks:{label:function(ctx){return' '+ctx.dataset.label+': \u00a5'+ctx.raw.toLocaleString('zh-CN',{maximumFractionDigits:0});}}}},scales:{y:{grid:{display:false},ticks:{font:{size:11}}},x:{grid:{color:'rgba(0,0,0,0.06)'},ticks:{font:{size:11},callback:function(v){return v>=1e6?(v/1e4).toFixed(0)+'\u4e07':v>=1e4?(v/1e4).toFixed(1)+'\u4e07':v;}}}}}
+  });
+}
+function switchBarCat(cat,btn){ curBarCat=cat; document.querySelectorAll('#bar-tabs .tab-btn').forEach(function(b){b.classList.remove('active');}); btn.classList.add('active'); renderBar(); }
+function switchTag(tag,btn){ curTag=tag; document.querySelectorAll('#tag-tabs .tag-btn').forEach(function(b){b.classList.remove('active');}); btn.classList.add('active'); renderBar(); }
+
+// Table
+var LEVEL_ORDER = {'\u4e09\u7532':1,'\u4e09\u7ea7':2,'\u4e8c\u7ea7':3,'\u4e00\u7ea7':4,'\u5176\u5b83':5};
+function sortTerms(terms){
+  return terms.slice().sort(function(a,b){
+    var la=LEVEL_ORDER[a.level]||9, lb=LEVEL_ORDER[b.level]||9;
+    if(la!==lb) return la-lb;
+    return a.name.localeCompare(b.name,'zh-CN');
+  });
+}
+
+function applyFilter(){
+  var lv=document.getElementById('filter-level').value;
+  var kw=document.getElementById('filter-name').value.trim();
+  var terms=TERMINALS.filter(function(t){if(curRegion!=='全部'&&t.quxian!==curRegion)return false;if(lv&&t.level!==lv)return false;if(kw&&!t.name.includes(kw))return false;return true;});
+  filteredTerms=sortTerms(terms);
+  curPage=1; renderTable(); renderProductTable();
+}
+function clearFilter(){ document.getElementById('filter-level').value=''; document.getElementById('filter-name').value=''; applyFilter(); }
+function switchTable(tab,btn){
+  document.querySelectorAll('#table-tabs .sub-tab-btn').forEach(function(b){b.classList.remove('active');});
+  btn.classList.add('active');
+  if(tab==='terminal'){
+    document.getElementById('terminal-panel').style.display='';
+    document.getElementById('product-panel').style.display='none';
+    document.getElementById('term-count-badge').style.display='inline';
+    document.getElementById('prod-count-badge').style.display='none';
+    if(selectedTerminal){selectedTerminal=null;document.getElementById('filter-name').value='';applyFilter();}
+  }else{
+    document.getElementById('terminal-panel').style.display='none';
+    document.getElementById('product-panel').style.display='';
+    document.getElementById('term-count-badge').style.display='none';
+    document.getElementById('prod-count-badge').style.display='inline';
+    renderProductTable();
+  }
+}
+
+function renderTable(){
+  var total=filteredTerms.length;
+  var totalPages=Math.ceil(total/PAGE_SIZE);
+  var start=(curPage-1)*PAGE_SIZE;
+  var pageData=filteredTerms.slice(start,start+PAGE_SIZE);
+  document.getElementById('term-count-badge').textContent='\u5171 '+total+' \u5bb6';
+  document.getElementById('term-tbody').innerHTML=pageData.map(function(t){
+    var p=pct(t.actual26,t.target26);
+    var isOver=p>100;
+    var isActive=selectedTerminal===t.name;
+    return'<tr class="'+(isActive?'row-active':'')+'" style="cursor:pointer" onclick="clickTerminal(\''+t.name.replace(/'/g,"\\'")+'\')"><td>'+(t.quxian||'\u2014')+'</td><td class="terminal-name">'+t.name+'</td><td>'+levelBadge(t.level)+'</td><td class="num-right">'+t.products+'</td><td class="num-right num-target">'+fmtFull(t.target26)+'</td><td class="num-right num-actual">'+fmtFull(t.actual26)+'</td><td class="num-right" style="color:var(--text-mid)">'+(t.cost>0?fmtFull(t.cost):'\u2014')+'</td><td class="progress-cell"><span class="pct-text '+(isOver?'over':'normal')+'">'+(p>999?'\u2014':p+'%')+'</span><div class="mini-bar"><div class="mini-bar-fill '+(isOver?'over':'')+'" style="width:'+Math.min(p,100)+'%"></div></div></td></tr>';
+  }).join('');
+  var pagi=document.getElementById('pagination');
+  var html='<span class="page-info">\u7b2c '+(start+1)+'\u2013'+Math.min(start+PAGE_SIZE,total)+' \u6761\uff0c\u5171 '+total+' \u6761</span>';
+  html+='<button class="page-btn" onclick="goPage('+(curPage-1)+')" '+(curPage<=1?'disabled':'')+'>\u2039</button>';
+  var pages=[]; for(var i=1;i<=totalPages;i++){if(i===1||i===totalPages||Math.abs(i-curPage)<=1)pages.push(i);else if(pages[pages.length-1]!=='\u2026')pages.push('\u2026');}
+  pages.forEach(function(p){if(p==='\u2026')html+='<button class="page-btn" disabled>\u2026</button>';else html+='<button class="page-btn '+(p===curPage?'active':'')+'" onclick="goPage('+p+')">'+p+'</button>';});
+  html+='<button class="page-btn" onclick="goPage('+(curPage+1)+')" '+(curPage>=totalPages?'disabled':'')+'>\u203a</button>';
+  pagi.innerHTML=html;
+}
+function goPage(p){ var total=filteredTerms.length; var totalPages=Math.ceil(total/PAGE_SIZE); if(p<1||p>totalPages)return; curPage=p; renderTable(); }
+
+function updateTime(){ var now=new Date(); document.getElementById('cur-time').textContent=now.getFullYear()+'\u5e74'+(now.getMonth()+1)+'\u6708'+now.getDate()+'\u65e5'; }
+
+// Product Table
+var catBadge = function(c) { if(c==='\u54c1\u724c\u54c1')return'<span class="badge badge-3">'+c+'</span>'; if(c==='\u4ee3\u7406\u54c1')return'<span class="badge badge-2">'+c+'</span>'; return'<span class="badge badge-none">'+c+'</span>'; };
+function fmtQty(n){ if(!n&&n!==0)return'\u2014'; if(Math.abs(n)>=1e4)return(n/1e4).toFixed(1)+'\u4e07'; return n.toLocaleString('zh-CN',{maximumFractionDigits:0}); }
+function renderProductTable(){
+  var src=curRegion!=='全部'?REGION_PRODUCT_DATA[curRegion]:PRODUCT_DATA;
+  var termDrugs=null;
+  if(selectedTerminal){
+    termDrugs=[];
+    Object.keys(TERM_PRODUCTS).forEach(function(t){
+      if(t===selectedTerminal){
+        TERM_PRODUCTS[t].forEach(function(d){if(termDrugs.indexOf(d)===-1)termDrugs.push(d);});
+      }
+    });
+  }else{
+    var termKw=document.getElementById('filter-name').value.trim();
+    if(termKw){
+      termDrugs=[];
+      Object.keys(TERM_PRODUCTS).forEach(function(t){
+        if(t.includes(termKw)){
+          TERM_PRODUCTS[t].forEach(function(d){if(termDrugs.indexOf(d)===-1)termDrugs.push(d);});
+        }
+      });
+    }
+  }
+  var data=src.filter(function(p){if(termDrugs&&termDrugs.length>0&&termDrugs.indexOf(p.drug)===-1)return false;return true;});
+  var label=selectedTerminal?'（终端: '+selectedTerminal+'）':(termKw?'（匹配终端: '+termKw+'）':'');
+  document.getElementById('prod-count-badge').textContent='\u5171 '+data.length+' \u4e2a'+label;
+  var hintEl=document.getElementById('prod-filter-hint');
+  if(selectedTerminal){hintEl.style.display='';document.getElementById('prod-filter-text').textContent='📌 当前显示：'+selectedTerminal+' 的产品';}else{hintEl.style.display='none';}
+  document.getElementById('prod-tbody').innerHTML=data.map(function(p){
+    return'<tr><td class="terminal-name">'+p.drug+'</td><td>'+catBadge(p.cat)+'</td><td class="num-right">'+(p.market_scale?p.market_scale.toLocaleString('zh-CN',{maximumFractionDigits:0}):'\u2014')+'</td><td class="num-right">'+(p.checked_qty?p.checked_qty.toLocaleString('zh-CN',{maximumFractionDigits:0}):'\u2014')+'</td><td class="num-right" style="color:var(--text-mid)">'+(p.sales_25?p.sales_25.toLocaleString('zh-CN',{maximumFractionDigits:0}):'\u2014')+'</td><td class="num-right num-actual">'+(p.current_sales?p.current_sales.toLocaleString('zh-CN',{maximumFractionDigits:0}):'\u2014')+'</td><td class="num-right num-target">'+(p.target_qty?p.target_qty.toLocaleString('zh-CN',{maximumFractionDigits:0}):'\u2014')+'</td><td class="num-right" style="color:'+(p.costRate>30?'var(--orange)':'var(--text-mid)')+'">'+(p.costRate>0?Math.round(p.costRate)+'%':'\u2014')+'</td></tr>';
+  }).join('');
+}
+
+// TERM_PRODUCTS data removed (product data is in PRODUCT_DATA)
+
+// Init
+filteredTerms = sortTerms(TERMINALS.slice());
+document.addEventListener('DOMContentLoaded', function(){ updateTime(); renderKPI(); renderDonut(); renderBar(); renderTable(); renderProductTable(); });
+</script>
+</body>
+</html>
